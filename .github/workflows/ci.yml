@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --extra dev
 
       - name: Run ruff check
         run: uv run ruff check .
@@ -53,7 +53,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --extra dev
 
       - name: Run mypy
         run: uv run mypy fastapi_gen
@@ -80,7 +80,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --extra dev
 
       - name: Run tests with coverage
         run: uv run pytest --cov=fastapi_gen --cov-report=xml --cov-report=term-missing
@@ -109,10 +109,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --extra dev
 
       - name: Install pip-audit
         run: uv pip install pip-audit
 
       - name: Run pip-audit
-        run: uv run pip-audit --require-hashes=false --progress-spinner=off
+        run: uv run pip-audit --progress-spinner=off
