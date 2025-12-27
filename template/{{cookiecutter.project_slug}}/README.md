@@ -61,7 +61,7 @@
 - 🗄️ **Admin Panel** - SQLAdmin UI
 {%- endif %}
 {%- if cookiecutter.enable_logfire %}
-- 📊 **Logfire** - Observability and tracing
+- 📊 **Logfire** - Full-stack observability (see [Logfire section](#logfire-observability))
 {%- endif %}
 {%- if cookiecutter.enable_sentry %}
 - 🛡️ **Sentry** - Error tracking
@@ -531,6 +531,55 @@ SENTRY_DSN=https://xxx@sentry.io/xxx
 {%- endif %}
 
 ---
+{%- if cookiecutter.enable_logfire %}
+
+## Logfire Observability
+
+[Logfire](https://logfire.pydantic.dev) provides complete observability for your application. Built by the Pydantic team, it offers first-class support for the Python ecosystem.
+
+### What Gets Instrumented
+
+| Component | What You See |
+|-----------|-------------|
+{%- if cookiecutter.enable_ai_agent %}
+| **PydanticAI** | Agent runs, tool calls, LLM requests, token usage |
+{%- endif %}
+| **FastAPI** | Request/response traces, latency, status codes |
+{%- if cookiecutter.use_postgresql %}
+| **PostgreSQL** | Query execution time, slow queries, connection pool |
+{%- endif %}
+{%- if cookiecutter.use_mongodb %}
+| **MongoDB** | Collection operations, query filters, execution time |
+{%- endif %}
+{%- if cookiecutter.enable_redis %}
+| **Redis** | Cache hits/misses, command latency, key patterns |
+{%- endif %}
+{%- if cookiecutter.use_celery %}
+| **Celery** | Task execution, queue depth, worker performance |
+{%- endif %}
+{%- if cookiecutter.logfire_httpx %}
+| **HTTPX** | External API calls, response times, error rates |
+{%- endif %}
+
+### Custom Instrumentation
+
+```python
+import logfire
+
+# Manual spans for important operations
+with logfire.span("process_order", order_id=str(order.id)):
+    await validate_order(order)
+    await charge_payment(order)
+    await send_confirmation(order)
+
+# Structured logging
+logfire.info("User registered", user_id=user.id, email=user.email)
+```
+
+> 📚 For detailed Logfire documentation, see the [template observability guide](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/observability.md).
+{%- endif %}
+
+---
 
 ## API Examples
 
@@ -654,6 +703,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 {%- endif %}
 {%- if cookiecutter.enable_ai_agent %}
 | AI Agent Guide | [docs/ai-agent.md](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/ai-agent.md) |
+{%- endif %}
+{%- if cookiecutter.enable_logfire %}
+| Observability Guide | [docs/observability.md](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/observability.md) |
 {%- endif %}
 | Deployment Guide | [docs/deployment.md](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/deployment.md) |
 | Development Guide | [docs/development.md](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/development.md) |

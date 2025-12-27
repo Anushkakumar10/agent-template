@@ -144,9 +144,7 @@ class TestGeneratedTemplateSyntax:
     """Test that generated Python files have valid syntax."""
 
     @pytest.mark.slow
-    def test_minimal_project_valid_python_syntax(
-        self, generated_project_minimal: Path
-    ) -> None:
+    def test_minimal_project_valid_python_syntax(self, generated_project_minimal: Path) -> None:
         """Test all Python files in minimal project have valid syntax."""
         backend_path = generated_project_minimal / "backend"
         python_files = list(backend_path.rglob("*.py"))
@@ -157,14 +155,10 @@ class TestGeneratedTemplateSyntax:
                 capture_output=True,
                 text=True,
             )
-            assert (
-                result.returncode == 0
-            ), f"Syntax error in {py_file}:\n{result.stderr}"
+            assert result.returncode == 0, f"Syntax error in {py_file}:\n{result.stderr}"
 
     @pytest.mark.slow
-    def test_full_project_valid_python_syntax(
-        self, generated_project_full: Path
-    ) -> None:
+    def test_full_project_valid_python_syntax(self, generated_project_full: Path) -> None:
         """Test all Python files in full project have valid syntax."""
         backend_path = generated_project_full / "backend"
         python_files = list(backend_path.rglob("*.py"))
@@ -175,6 +169,4 @@ class TestGeneratedTemplateSyntax:
                 capture_output=True,
                 text=True,
             )
-            assert (
-                result.returncode == 0
-            ), f"Syntax error in {py_file}:\n{result.stderr}"
+            assert result.returncode == 0, f"Syntax error in {py_file}:\n{result.stderr}"

@@ -19,6 +19,7 @@
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-architecture">Architecture</a> •
   <a href="#-ai-agent">AI Agent</a> •
+  <a href="#-observability-with-logfire">Logfire</a> •
   <a href="#-documentation">Documentation</a>
 </p>
 
@@ -90,7 +91,6 @@ This template gives you all of that out of the box, with **20+ configurable inte
 | **Security** | Rate limiting, CORS, CSRF protection |
 | **Observability** | Logfire, Sentry, Prometheus |
 | **Admin** | SQLAdmin panel with auth |
-| **Storage** | S3/MinIO file uploads |
 | **Events** | Webhooks, WebSockets |
 | **DevOps** | Docker, GitHub Actions, GitLab CI, Kubernetes |
 
@@ -121,7 +121,6 @@ graph TB
 
     subgraph External
         LLM[OpenAI/Anthropic]
-        S3[S3/MinIO]
         Webhook[Webhook Endpoints]
     end
 
@@ -134,7 +133,6 @@ graph TB
     Agent --> LLM
     Services --> Redis
     Services --> Queue
-    Services --> S3
     Services --> Webhook
 ```
 
@@ -274,6 +272,85 @@ See [AI Agent Documentation](./docs/ai-agent.md) for more.
 
 ---
 
+## 📊 Observability with Logfire
+
+[Logfire](https://logfire.pydantic.dev) provides complete observability for your application - from AI agents to database queries. Built by the Pydantic team, it offers first-class support for the entire Python ecosystem.
+
+### What Gets Instrumented
+
+```mermaid
+graph LR
+    subgraph Your App
+        API[FastAPI]
+        Agent[PydanticAI]
+        DB[(Database)]
+        Cache[(Redis)]
+        Queue[Celery/Taskiq]
+        HTTP[HTTPX]
+    end
+
+    subgraph Logfire
+        Traces[Traces]
+        Metrics[Metrics]
+        Logs[Logs]
+    end
+
+    API --> Traces
+    Agent --> Traces
+    DB --> Traces
+    Cache --> Traces
+    Queue --> Traces
+    HTTP --> Traces
+```
+
+| Component | What You See |
+|-----------|-------------|
+| **PydanticAI** | Agent runs, tool calls, LLM requests, token usage, streaming events |
+| **FastAPI** | Request/response traces, latency, status codes, route performance |
+| **PostgreSQL/MongoDB** | Query execution time, slow queries, connection pool stats |
+| **Redis** | Cache hits/misses, command latency, key patterns |
+| **Celery/Taskiq** | Task execution, queue depth, worker performance |
+| **HTTPX** | External API calls, response times, error rates |
+
+### Configuration
+
+Enable Logfire and select which components to instrument:
+
+```bash
+fastapi-gen new
+# ✓ Enable Logfire observability
+#   ✓ Instrument FastAPI
+#   ✓ Instrument Database
+#   ✓ Instrument Redis
+#   ✓ Instrument Celery
+#   ✓ Instrument HTTPX
+```
+
+### Usage
+
+```python
+# Automatic instrumentation in app/main.py
+import logfire
+
+logfire.configure()
+logfire.instrument_fastapi(app)
+logfire.instrument_asyncpg()
+logfire.instrument_redis()
+logfire.instrument_httpx()
+```
+
+```python
+# Manual spans for custom logic
+with logfire.span("process_order", order_id=order.id):
+    await validate_order(order)
+    await charge_payment(order)
+    await send_confirmation(order)
+```
+
+For more details, see [Logfire Documentation](https://logfire.pydantic.dev/docs/integrations/).
+
+---
+
 ## 🛠️ Django-style CLI
 
 Each generated project includes a powerful CLI inspired by Django's management commands:
@@ -386,7 +463,6 @@ fastapi-gen new
 # ✓ Admin Panel (SQLAdmin)
 # ✓ AI Agent (PydanticAI)
 # ✓ Webhooks
-# ✓ File Storage (S3/MinIO)
 # ✓ Sentry
 # ✓ Logfire
 # ✓ Prometheus
@@ -402,6 +478,7 @@ fastapi-gen new
 | [Architecture](./docs/architecture.md) | Repository + Service pattern, layered design |
 | [Frontend](./docs/frontend.md) | Next.js setup, auth, state management |
 | [AI Agent](./docs/ai-agent.md) | PydanticAI, tools, WebSocket streaming |
+| [Observability](./docs/observability.md) | Logfire integration, tracing, metrics |
 | [Deployment](./docs/deployment.md) | Docker, Kubernetes, production setup |
 | [Development](./docs/development.md) | Local setup, testing, debugging |
 

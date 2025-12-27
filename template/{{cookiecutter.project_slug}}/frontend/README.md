@@ -422,6 +422,54 @@ setTheme('dark');  // 'light' | 'dark' | 'system'
 ```
 
 ---
+{%- if cookiecutter.enable_logfire %}
+
+## Logfire Observability
+
+[Logfire](https://logfire.pydantic.dev) provides frontend observability through OpenTelemetry instrumentation.
+
+### What Gets Traced
+
+- **Page navigations** - Route changes and load times
+- **API calls** - Fetch requests to backend
+- **Web Vitals** - Core Web Vitals metrics (LCP, FID, CLS)
+- **Errors** - Client-side exceptions
+
+### Configuration
+
+Set environment variables in `.env.local`:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=https://logfire-api.pydantic.dev
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=your-write-token
+```
+
+### Manual Instrumentation
+
+```typescript
+import { trace } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('frontend');
+
+async function processCheckout(order: Order) {
+  const span = tracer.startSpan('checkout.process');
+  try {
+    span.setAttribute('order.id', order.id);
+    await submitOrder(order);
+    span.setStatus({ code: SpanStatusCode.OK });
+  } catch (error) {
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+```
+
+> 📚 For more details, see [Logfire Browser Integration](https://logfire.pydantic.dev/docs/integrations/browser/).
+{%- endif %}
+
+---
 {%- if cookiecutter.enable_i18n %}
 
 ## Internationalization (i18n)
@@ -631,6 +679,9 @@ NODE_ENV=production
 | Frontend Guide | [docs/frontend.md](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/frontend.md) |
 {%- if cookiecutter.enable_ai_agent %}
 | AI Agent Guide | [docs/ai-agent.md](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/ai-agent.md) |
+{%- endif %}
+{%- if cookiecutter.enable_logfire %}
+| Observability Guide | [docs/observability.md](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/observability.md) |
 {%- endif %}
 | Next.js Docs | [nextjs.org/docs](https://nextjs.org/docs) |
 | Tailwind CSS Docs | [tailwindcss.com/docs](https://tailwindcss.com/docs) |
