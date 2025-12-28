@@ -7,12 +7,16 @@ See: https://anyio.readthedocs.io/en/stable/testing.html
 
 import pytest
 from collections.abc import AsyncGenerator
+{%- if cookiecutter.enable_redis or cookiecutter.use_database %}
 from unittest.mock import AsyncMock, MagicMock
+{%- endif %}
 
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+{%- if cookiecutter.use_api_key %}
 from app.core.config import settings
+{%- endif %}
 {%- if cookiecutter.enable_redis %}
 from app.api.deps import get_redis
 from app.clients.redis import RedisClient

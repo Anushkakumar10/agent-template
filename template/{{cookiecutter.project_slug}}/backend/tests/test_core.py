@@ -1,9 +1,5 @@
 """Tests for core modules."""
 
-from unittest.mock import MagicMock, patch
-
-import pytest
-
 from app.core.config import settings
 from app.core.exceptions import (
     AlreadyExistsError,
@@ -112,6 +108,9 @@ class TestRateLimit:
 
 
 {%- if cookiecutter.enable_logfire %}
+
+
+from unittest.mock import patch
 
 
 class TestLogfireSetup:

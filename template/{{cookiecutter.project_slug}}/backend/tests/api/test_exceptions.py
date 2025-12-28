@@ -1,18 +1,9 @@
 """Exception handler tests."""
 
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import AsyncClient
 
 from app.core.config import settings
-from app.main import app
-{%- if cookiecutter.enable_redis %}
-from app.api.deps import get_redis
-{%- endif %}
-{%- if cookiecutter.use_database %}
-from app.api.deps import get_db_session
-{%- endif %}
 
 
 @pytest.mark.anyio
@@ -24,6 +15,18 @@ async def test_not_found_error_format(client: AsyncClient):
 
 
 {%- if cookiecutter.use_jwt %}
+
+from unittest.mock import AsyncMock, MagicMock
+
+from httpx import ASGITransport
+
+from app.main import app
+{%- if cookiecutter.enable_redis %}
+from app.api.deps import get_redis
+{%- endif %}
+{%- if cookiecutter.use_database %}
+from app.api.deps import get_db_session
+{%- endif %}
 
 
 @pytest.mark.anyio

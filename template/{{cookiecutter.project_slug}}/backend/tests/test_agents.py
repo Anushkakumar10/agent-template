@@ -1,7 +1,7 @@
 {%- if cookiecutter.enable_ai_agent %}
 """Tests for AI agent module."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

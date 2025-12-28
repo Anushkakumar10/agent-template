@@ -2,7 +2,7 @@
 
 import pytest
 from httpx import AsyncClient
-{%- if cookiecutter.enable_redis %}
+{%- if cookiecutter.enable_redis or cookiecutter.use_postgresql or cookiecutter.use_mongodb %}
 from unittest.mock import AsyncMock
 {%- endif %}
 
