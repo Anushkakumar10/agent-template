@@ -40,6 +40,7 @@ jobs:
 
       - name: Generate minimal project
         run: |
+          mkdir -p /tmp/projects
           uv run fastapi-gen create test_minimal --minimal -o /tmp/projects
 
       - name: Install generated project
@@ -94,6 +95,7 @@ jobs:
 
       - name: Generate PostgreSQL project
         run: |
+          mkdir -p /tmp/projects
           uv run fastapi-gen create test_pg --database postgresql --auth jwt -o /tmp/projects
 
       - name: Install generated project
@@ -163,6 +165,7 @@ jobs:
 
       - name: Generate full-featured project
         run: |
+          mkdir -p /tmp/projects
           uv run fastapi-gen create test_full \
             --database postgresql \
             --auth jwt \
