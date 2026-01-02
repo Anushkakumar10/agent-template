@@ -32,41 +32,41 @@ if not generate_env:
 # Run ruff to auto-fix import sorting and other linting issues
 backend_dir = os.path.join(os.getcwd(), "backend")
 if os.path.exists(backend_dir):
-    # Try multiple methods to find ruff
-    ruff_commands = [
-        ["ruff"],  # ruff in PATH
-        ["uv", "run", "ruff"],  # via uv
-        [sys.executable, "-m", "ruff"],  # via current Python
-    ]
-
     ruff_cmd = None
-    for cmd in ruff_commands:
-        try:
-            result = subprocess.run(
-                cmd + ["--version"],
-                capture_output=True,
-                check=True,
-            )
-            ruff_cmd = cmd
-            break
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            continue
+
+    # Try multiple methods to find/run ruff
+    # 1. Check if ruff is in PATH
+    ruff_path = shutil.which("ruff")
+    if ruff_path:
+        ruff_cmd = [ruff_path]
+    # 2. Try uvx ruff (if uv is installed)
+    elif shutil.which("uvx"):
+        ruff_cmd = ["uvx", "ruff"]
+    # 3. Try python -m ruff
+    else:
+        # Test if ruff is available as a module
+        result = subprocess.run(
+            [sys.executable, "-m", "ruff", "--version"],
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            ruff_cmd = [sys.executable, "-m", "ruff"]
 
     if ruff_cmd:
-        try:
-            # First run ruff check --fix to auto-fix issues
-            subprocess.run(
-                ruff_cmd + ["check", "--fix", "--quiet", backend_dir],
-                capture_output=True,
-                check=False,
-            )
-            # Then run ruff format for consistent formatting
-            subprocess.run(
-                ruff_cmd + ["format", "--quiet", backend_dir],
-                capture_output=True,
-                check=False,
-            )
-        except Exception:
-            pass
+        print(f"Running ruff to format code (using: {' '.join(ruff_cmd)})...")
+        # Run ruff check --fix to auto-fix issues
+        subprocess.run(
+            [*ruff_cmd, "check", "--fix", "--quiet", backend_dir],
+            check=False,
+        )
+        # Run ruff format for consistent formatting
+        subprocess.run(
+            [*ruff_cmd, "format", "--quiet", backend_dir],
+            check=False,
+        )
+        print("Code formatting complete.")
+    else:
+        print("Warning: ruff not found. Run 'ruff format .' in backend/ to format code.")
 
 print("Project generated successfully!")
