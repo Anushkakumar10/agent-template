@@ -18,10 +18,10 @@ This guide covers setting up a local development environment for your generated 
 
 ```bash
 # Interactive mode
-fastapi-gen new
+ak-agent-template new
 
 # Or quick mode
-fastapi-gen create my_project --database postgresql --auth jwt
+ak-agent-template create my_project --database postgresql --auth jwt
 ```
 
 ### 2. Backend Setup

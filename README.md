@@ -4,7 +4,7 @@
   <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/stargazers"><img src="https://img.shields.io/github/stars/ak-labs/full-stack-fastapi-nextjs-llm-template?style=flat&logo=github&color=yellow" alt="GitHub Stars"></a>
   <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ak-labs/full-stack-fastapi-nextjs-llm-template?color=blue" alt="License"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue?logo=python&logoColor=white" alt="Python"></a>
-  <a href="https://pypi.org/project/fastapi-gen/"><img src="https://img.shields.io/pypi/v/fastapi-gen?color=green&logo=pypi&logoColor=white" alt="PyPI"></a>
+  <a href="https://pypi.org/project/ak-agent-template/"><img src="https://img.shields.io/pypi/v/ak-agent-template?color=green&logo=pypi&logoColor=white" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/integrations-20%2B-brightgreen" alt="20+ Integrations">
 </p>
 
@@ -22,20 +22,6 @@
   <a href="#-observability-with-logfire">Logfire</a> •
   <a href="#-documentation">Documentation</a>
 </p>
-
----
-
-## Star History
-
-<a href="https://www.star-history.com/#ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date" />
- </picture>
-</a>
-
----
 
 ## 🎯 Why This Template
 
@@ -166,23 +152,23 @@ See [Architecture Documentation](./docs/architecture.md) for details.
 
 ```bash
 # pip
-pip install fastapi-gen
+pip install ak-agent-template
 
 # uv (recommended)
-uv tool install fastapi-gen
+uv tool install ak-agent-template
 
 # pipx
-pipx install fastapi-gen
+pipx install ak-agent-template
 ```
 
 ### Create Your Project
 
 ```bash
 # Interactive wizard (recommended)
-fastapi-gen new
+ak-agent-template new
 
 # Quick mode with options
-fastapi-gen create my_ai_app \
+ak-agent-template create my_ai_app \
   --database postgresql \
   --auth jwt \
   --frontend nextjs
@@ -317,7 +303,7 @@ graph LR
 Enable Logfire and select which components to instrument:
 
 ```bash
-fastapi-gen new
+ak-agent-template new
 # ✓ Enable Logfire observability
 #   ✓ Instrument FastAPI
 #   ✓ Instrument Database
@@ -456,7 +442,7 @@ my_project/
 Select what you need:
 
 ```bash
-fastapi-gen new
+ak-agent-template new
 # ✓ Redis (caching/sessions)
 # ✓ Rate limiting (slowapi)
 # ✓ Pagination (fastapi-pagination)
@@ -481,6 +467,18 @@ fastapi-gen new
 | [Observability](./docs/observability.md) | Logfire integration, tracing, metrics |
 | [Deployment](./docs/deployment.md) | Docker, Kubernetes, production setup |
 | [Development](./docs/development.md) | Local setup, testing, debugging |
+
+---
+
+## Star History
+
+<a href="https://www.star-history.com/#ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ak-labs/full-stack-fastapi-nextjs-llm-template&type=Date" />
+ </picture>
+</a>
 
 ---
 
