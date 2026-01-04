@@ -1,6 +1,6 @@
 [project]
 name = "ak-agent-template"
-version = "0.1.0"
+version = "0.1.1"
 description = "Interactive FastAPI project generator with Logfire observability"
 readme = "README.md"
 requires-python = ">=3.11"
