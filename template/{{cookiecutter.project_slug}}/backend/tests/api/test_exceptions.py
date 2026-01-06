@@ -135,17 +135,17 @@ async def test_invalid_login_returns_401(error_client: AsyncClient):
 @pytest.mark.anyio
 async def test_missing_api_key_returns_401(client: AsyncClient):
     """Test that missing API key returns 401."""
-    response = await client.get(f"{settings.API_V1_STR}/health")
     # Health endpoint might not require auth, but we test the middleware
     # For endpoints that require API key, they should return 401
+    await client.get(f"{settings.API_V1_STR}/health")
 
 
 @pytest.mark.anyio
 async def test_invalid_api_key_returns_403(client: AsyncClient):
     """Test that invalid API key returns 403."""
-    response = await client.get(
+    # Health endpoint might not require auth
+    await client.get(
         f"{settings.API_V1_STR}/health",
         headers={settings.API_KEY_HEADER: "invalid-key"},
     )
-    # Health endpoint might not require auth
 {%- endif %}

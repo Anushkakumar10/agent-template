@@ -222,12 +222,12 @@ async def agent_websocket(
 
                 # Save user message
 {%- if cookiecutter.use_postgresql %}
-                user_msg = await conv_service.add_message(
+                await conv_service.add_message(
                     UUID(current_conversation_id),
                     MessageCreate(role="user", content=user_message),
                 )
 {%- else %}
-                user_msg = conv_service.add_message(
+                conv_service.add_message(
                     current_conversation_id,
                     MessageCreate(role="user", content=user_message),
                 )
@@ -261,7 +261,7 @@ async def agent_websocket(
                 )
 
             # Save user message
-            user_msg = await conv_service.add_message(
+            await conv_service.add_message(
                 current_conversation_id,
                 MessageCreate(role="user", content=user_message),
             )
