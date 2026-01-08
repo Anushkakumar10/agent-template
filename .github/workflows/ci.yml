@@ -147,7 +147,7 @@ jobs:
       - name: Generate minimal project
         run: |
           mkdir -p /tmp/projects
-          uv run fastapi-gen create test_minimal --minimal -o /tmp/projects
+          uv run ak-agent-template create test_minimal --minimal -o /tmp/projects
 
       - name: Install generated project
         working-directory: /tmp/projects/test_minimal/backend
@@ -201,7 +201,7 @@ jobs:
       - name: Generate PostgreSQL project
         run: |
           mkdir -p /tmp/projects
-          uv run fastapi-gen create test_pg --database postgresql --auth jwt -o /tmp/projects
+          uv run ak-agent-template create test_pg --database postgresql --auth jwt -o /tmp/projects
 
       - name: Install generated project
         working-directory: /tmp/projects/test_pg/backend
@@ -270,7 +270,7 @@ jobs:
       - name: Generate full-featured project
         run: |
           mkdir -p /tmp/projects
-          uv run fastapi-gen create test_full \
+          uv run ak-agent-template create test_full \
             --database postgresql \
             --auth jwt \
             -o /tmp/projects
@@ -329,7 +329,7 @@ jobs:
       - name: Generate project with frontend
         run: |
           mkdir -p /tmp/projects
-          uv run fastapi-gen create test_frontend \
+          uv run ak-agent-template create test_frontend \
             --frontend nextjs \
             --auth jwt \
             -o /tmp/projects
