@@ -278,8 +278,8 @@ wheels = [
 ]
 
 [[package]]
-name = "fastapi-gen"
-version = "0.1.0"
+name = "ak-agent-template"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

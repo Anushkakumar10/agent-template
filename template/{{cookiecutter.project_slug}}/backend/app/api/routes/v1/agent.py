@@ -184,55 +184,69 @@ async def agent_websocket(
 {%- if cookiecutter.enable_conversation_persistence and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
 
             # Handle conversation persistence
-            db_gen = get_db_session()
-            db = await anext(db_gen) if hasattr(db_gen, "__anext__") else next(db_gen)
             try:
-                conv_service = get_conversation_service(db)
+{%- if cookiecutter.use_postgresql %}
+                async with get_db_session() as db:
+                    conv_service = get_conversation_service(db)
 
-                # Get or create conversation
-                requested_conv_id = data.get("conversation_id")
-                if requested_conv_id:
-{%- if cookiecutter.use_postgresql %}
-                    current_conversation_id = requested_conv_id
-                    # Verify conversation exists
-                    await conv_service.get_conversation(UUID(requested_conv_id))
-{%- else %}
-                    current_conversation_id = requested_conv_id
-                    conv_service.get_conversation(requested_conv_id)
+                    # Get or create conversation
+                    requested_conv_id = data.get("conversation_id")
+                    if requested_conv_id:
+                        current_conversation_id = requested_conv_id
+                        # Verify conversation exists
+                        await conv_service.get_conversation(UUID(requested_conv_id))
+                    elif not current_conversation_id:
+                        # Create new conversation
+                        conv_data = ConversationCreate(
+{%- if cookiecutter.websocket_auth_jwt %}
+                            user_id=user.id,
 {%- endif %}
-                elif not current_conversation_id:
-                    # Create new conversation
-                    conv_data = ConversationCreate(
-{%- if cookiecutter.use_jwt %}
-                        user_id={% if cookiecutter.use_postgresql %}user.id{% else %}str(user.id){% endif %},
-{%- endif %}
-                        title=user_message[:50] if len(user_message) > 50 else user_message,
-                    )
-{%- if cookiecutter.use_postgresql %}
-                    conversation = await conv_service.create_conversation(conv_data)
-{%- else %}
-                    conversation = conv_service.create_conversation(conv_data)
-{%- endif %}
-                    current_conversation_id = str(conversation.id)
-                    await manager.send_event(
-                        websocket,
-                        "conversation_started",
-                        {"conversation_id": current_conversation_id},
-                    )
+                            title=user_message[:50] if len(user_message) > 50 else user_message,
+                        )
+                        conversation = await conv_service.create_conversation(conv_data)
+                        current_conversation_id = str(conversation.id)
+                        await manager.send_event(
+                            websocket,
+                            "conversation_started",
+                            {"conversation_id": current_conversation_id},
+                        )
 
-                # Save user message
-{%- if cookiecutter.use_postgresql %}
-                await conv_service.add_message(
-                    UUID(current_conversation_id),
-                    MessageCreate(role="user", content=user_message),
-                )
+                    # Save user message
+                    await conv_service.add_message(
+                        UUID(current_conversation_id),
+                        MessageCreate(role="user", content=user_message),
+                    )
 {%- else %}
-                conv_service.add_message(
-                    current_conversation_id,
-                    MessageCreate(role="user", content=user_message),
-                )
+                with get_db_session() as db:
+                    conv_service = get_conversation_service(db)
+
+                    # Get or create conversation
+                    requested_conv_id = data.get("conversation_id")
+                    if requested_conv_id:
+                        current_conversation_id = requested_conv_id
+                        conv_service.get_conversation(requested_conv_id)
+                    elif not current_conversation_id:
+                        # Create new conversation
+                        conv_data = ConversationCreate(
+{%- if cookiecutter.websocket_auth_jwt %}
+                            user_id=str(user.id),
 {%- endif %}
-                await db.commit()
+                            title=user_message[:50] if len(user_message) > 50 else user_message,
+                        )
+                        conversation = conv_service.create_conversation(conv_data)
+                        current_conversation_id = str(conversation.id)
+                        await manager.send_event(
+                            websocket,
+                            "conversation_started",
+                            {"conversation_id": current_conversation_id},
+                        )
+
+                    # Save user message
+                    conv_service.add_message(
+                        current_conversation_id,
+                        MessageCreate(role="user", content=user_message),
+                    )
+{%- endif %}
             except Exception as e:
                 logger.warning(f"Failed to persist conversation: {e}")
                 # Continue without persistence
@@ -247,7 +261,7 @@ async def agent_websocket(
                 await conv_service.get_conversation(requested_conv_id)
             elif not current_conversation_id:
                 conv_data = ConversationCreate(
-{%- if cookiecutter.use_jwt %}
+{%- if cookiecutter.websocket_auth_jwt %}
                     user_id=str(user.id),
 {%- endif %}
                     title=user_message[:50] if len(user_message) > 50 else user_message,
@@ -385,25 +399,27 @@ async def agent_websocket(
                 if current_conversation_id and agent_run.result:
                     try:
 {%- if cookiecutter.use_postgresql %}
-                        await conv_service.add_message(
-                            UUID(current_conversation_id),
-                            MessageCreate(
-                                role="assistant",
-                                content=agent_run.result.output,
-                                model_name=assistant.model_name if hasattr(assistant, "model_name") else None,
-                            ),
-                        )
-                        await db.commit()
+                        async with get_db_session() as db:
+                            conv_service = get_conversation_service(db)
+                            await conv_service.add_message(
+                                UUID(current_conversation_id),
+                                MessageCreate(
+                                    role="assistant",
+                                    content=agent_run.result.output,
+                                    model_name=assistant.model_name if hasattr(assistant, "model_name") else None,
+                                ),
+                            )
 {%- else %}
-                        conv_service.add_message(
-                            current_conversation_id,
-                            MessageCreate(
-                                role="assistant",
-                                content=agent_run.result.output,
-                                model_name=assistant.model_name if hasattr(assistant, "model_name") else None,
-                            ),
-                        )
-                        db.commit()
+                        with get_db_session() as db:
+                            conv_service = get_conversation_service(db)
+                            conv_service.add_message(
+                                current_conversation_id,
+                                MessageCreate(
+                                    role="assistant",
+                                    content=agent_run.result.output,
+                                    model_name=assistant.model_name if hasattr(assistant, "model_name") else None,
+                                ),
+                            )
 {%- endif %}
                     except Exception as e:
                         logger.warning(f"Failed to persist assistant response: {e}")

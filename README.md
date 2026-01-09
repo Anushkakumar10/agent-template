@@ -16,6 +16,7 @@
 <p align="center">
   <a href="#-why-this-template">Why This Template</a> •
   <a href="#-features">Features</a> •
+  <a href="#-demo">Demo</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-architecture">Architecture</a> •
   <a href="#-ai-agent">AI Agent</a> •
@@ -79,6 +80,43 @@ This template gives you all of that out of the box, with **20+ configurable inte
 | **Admin** | SQLAdmin panel with auth |
 | **Events** | Webhooks, WebSockets |
 | **DevOps** | Docker, GitHub Actions, GitLab CI, Kubernetes |
+
+---
+
+## 🎬 Demo
+
+<p align="center">
+  <img src="assets/app_start.gif" alt="FastAPI Fullstack Generator Demo" width="800">
+</p>
+
+### Screenshots
+
+<table>
+  <tr>
+    <td align="center"><b>API Documentation</b></td>
+    <td align="center"><b>Admin Panel</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/docs_1.png" alt="API Docs" width="400"></td>
+    <td><img src="assets/admin.png" alt="Admin Panel" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Chat Interface (Light)</b></td>
+    <td align="center"><b>Chat Interface (Dark)</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/chat_view_light.png" alt="Chat Light Mode" width="400"></td>
+    <td><img src="assets/chat_view_dark.png" alt="Chat Dark Mode" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Login</b></td>
+    <td align="center"><b>Register</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/login.png" alt="Login Page" width="400"></td>
+    <td><img src="assets/register.png" alt="Register Page" width="400"></td>
+  </tr>
+</table>
 
 ---
 

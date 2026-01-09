@@ -9,6 +9,7 @@ import sys
 # Get cookiecutter variables
 use_frontend = "{{ cookiecutter.use_frontend }}" == "True"
 generate_env = "{{ cookiecutter.generate_env }}" == "True"
+enable_i18n = "{{ cookiecutter.enable_i18n }}" == "True"
 
 # Remove frontend folder if not using frontend
 if not use_frontend:
@@ -16,6 +17,13 @@ if not use_frontend:
     if os.path.exists(frontend_dir):
         shutil.rmtree(frontend_dir)
         print("Removed frontend/ directory (frontend not enabled)")
+
+# Remove middleware.ts if i18n is not enabled (Next.js requires middleware to export a function)
+if use_frontend and not enable_i18n:
+    middleware_file = os.path.join(os.getcwd(), "frontend", "src", "middleware.ts")
+    if os.path.exists(middleware_file):
+        os.remove(middleware_file)
+        print("Removed middleware.ts (i18n not enabled)")
 
 # Remove .env files if generate_env is false
 if not generate_env:
