@@ -91,32 +91,14 @@ This template gives you all of that out of the box, with **20+ configurable inte
 
 ### Screenshots
 
-<table>
-  <tr>
-    <td align="center"><b>API Documentation</b></td>
-    <td align="center"><b>Admin Panel</b></td>
-  </tr>
-  <tr>
-    <td><img src="assets/docs_1.png" alt="API Docs" width="400"></td>
-    <td><img src="assets/admin.png" alt="Admin Panel" width="400"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Chat Interface (Light)</b></td>
-    <td align="center"><b>Chat Interface (Dark)</b></td>
-  </tr>
-  <tr>
-    <td><img src="assets/chat_view_light.png" alt="Chat Light Mode" width="400"></td>
-    <td><img src="assets/chat_view_dark.png" alt="Chat Dark Mode" width="400"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Login</b></td>
-    <td align="center"><b>Register</b></td>
-  </tr>
-  <tr>
-    <td><img src="assets/login.png" alt="Login Page" width="400"></td>
-    <td><img src="assets/register.png" alt="Register Page" width="400"></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="assets/docs_2.png" alt="API Documentation" width="700"><br><br>
+  <img src="assets/admin.png" alt="Admin Panel" width="700"><br><br>
+  <img src="assets/chat_view_light.png" alt="Chat Interface - Light Mode" width="700"><br><br>
+  <img src="assets/chat_view_dark.png" alt="Chat Interface - Dark Mode" width="700"><br><br>
+  <img src="assets/login.png" alt="Login Page" width="700"><br><br>
+  <img src="assets/register.png" alt="Register Page" width="700">
+</p>
 
 ---
 

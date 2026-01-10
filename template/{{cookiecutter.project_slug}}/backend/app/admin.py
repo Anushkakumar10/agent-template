@@ -18,7 +18,7 @@ from app.db.models.user import User
 {%- if cookiecutter.enable_session_management %}
 from app.db.models.session import Session
 {%- endif %}
-{%- if cookiecutter.enable_crud_example %}
+{%- if cookiecutter.include_example_crud %}
 from app.db.models.item import Item
 {%- endif %}
 {%- if cookiecutter.enable_conversation_persistence %}
@@ -148,7 +148,7 @@ class SessionAdmin(ModelView, model=Session):  # type: ignore[call-arg]
     can_view_details: ClassVar = True
 {%- endif %}
 
-{%- if cookiecutter.enable_crud_example %}
+{%- if cookiecutter.include_example_crud %}
 
 
 # === Items (Example CRUD) ===
@@ -332,7 +332,7 @@ def setup_admin(app):
     admin.add_view(SessionAdmin)
 {%- endif %}
 
-{%- if cookiecutter.enable_crud_example %}
+{%- if cookiecutter.include_example_crud %}
     # Items
     admin.add_view(ItemAdmin)
 {%- endif %}
