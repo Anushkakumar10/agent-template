@@ -58,7 +58,7 @@
 - 🚦 **Rate Limiting** - Request throttling
 {%- endif %}
 {%- if cookiecutter.enable_admin_panel %}
-- 🗄️ **Admin Panel** - SQLAdmin UI
+- 🗄️ **Admin Panel** - SQLAdmin with automatic model discovery
 {%- endif %}
 {%- if cookiecutter.enable_logfire %}
 - 📊 **Logfire** - Full-stack observability (see [Logfire section](#logfire-observability))
@@ -378,6 +378,9 @@ def seed_database(count: int):
 │   │   ├── db/
 │   │   │   ├── models/          # Database models
 │   │   │   └── session.py       # Connection management
+{%- if cookiecutter.enable_admin_panel %}
+│   │   ├── admin.py             # SQLAdmin with auto-discovery
+{%- endif %}
 │   │   ├── schemas/             # Pydantic schemas
 │   │   ├── repositories/        # Data access layer
 │   │   ├── services/            # Business logic
@@ -432,6 +435,80 @@ API Routes → Services → Repositories → Database
 > 📚 For detailed architecture documentation, see the [template repository](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/architecture.md).
 
 ---
+{%- if cookiecutter.enable_admin_panel %}
+
+## Admin Panel
+
+The admin panel provides a web-based interface for managing database records. It uses [SQLAdmin](https://aminalaee.dev/sqladmin/) with **automatic model discovery** - all SQLAlchemy models are automatically registered without manual configuration.
+
+### Access
+
+- URL: `http://localhost:{{ cookiecutter.backend_port }}/admin`
+{%- if cookiecutter.admin_require_auth %}
+- **Authentication required**: Login with superuser credentials
+{%- endif %}
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-Discovery** | All models from `Base.registry` are automatically registered |
+| **Smart Defaults** | Searchable columns (String types), sortable columns, form exclusions |
+| **Sensitive Data Protection** | Password, token, secret fields auto-excluded from forms |
+| **Custom Overrides** | Per-model configuration in `CUSTOM_MODEL_CONFIGS` |
+
+### Customizing Model Views
+
+To customize a model's admin view, add it to `CUSTOM_MODEL_CONFIGS` in `app/admin.py`:
+
+```python
+CUSTOM_MODEL_CONFIGS: dict[type, dict[str, Any]] = {
+    User: {
+        "icon": "fa-solid fa-user",
+        "form_excluded_columns": [User.hashed_password],
+        "can_delete": False,  # Prevent deletion
+    },
+    Order: {
+        "name": "Customer Order",
+        "name_plural": "Customer Orders",
+        "column_list": [Order.id, Order.status, Order.created_at],
+        "can_create": False,  # Read-only
+    },
+}
+```
+
+### Available Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `name` | `str` | Display name in admin |
+| `name_plural` | `str` | Plural name for list view |
+| `icon` | `str` | Font Awesome icon class |
+| `column_list` | `list` | Columns to show in list view |
+| `column_searchable_list` | `list` | Columns to enable search |
+| `column_sortable_list` | `list` | Columns to enable sorting |
+| `form_excluded_columns` | `list` | Columns to hide in forms |
+| `can_create` | `bool` | Allow creating records |
+| `can_edit` | `bool` | Allow editing records |
+| `can_delete` | `bool` | Allow deleting records |
+| `can_view_details` | `bool` | Allow viewing record details |
+
+### Excluding Models
+
+To exclude a model from auto-registration:
+
+```python
+# In app/admin.py setup_admin()
+register_models_auto(
+    admin,
+    Base,
+    exclude_models=[InternalLog, TempData],  # These won't appear in admin
+    custom_configs=CUSTOM_MODEL_CONFIGS,
+)
+```
+
+---
+{%- endif %}
 
 ## Configuration
 
