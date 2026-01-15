@@ -201,36 +201,102 @@ ak-agent-template create my_ai_app \
   --frontend nextjs
 ```
 
-### Start Development
+### Option 1: Local Development (without Docker)
 
 ```bash
 cd my_ai_app
 
-# Backend
-cd backend
-uv sync
+# Install dependencies
+make install
+
+# Configure environment
 cp .env.example .env
-alembic upgrade head
+# Edit .env with your database credentials, API keys, etc.
 
-# Create admin user
-uv run my_ai_app user create --email admin@example.com --password secret123 --superuser
+# Start PostgreSQL (requires Docker) or use existing database
+make docker-db
 
-# Start server
-uv run uvicorn app.main:app --reload
+# Initialize database
+make db-init
 
-# Frontend (new terminal)
-cd frontend
+# Create admin user (interactive)
+make user-create
+
+# Start development server
+make run
+```
+
+**Frontend (new terminal):**
+
+```bash
+cd my_ai_app/frontend
 bun install
 bun dev
 ```
 
-> **Note:** The admin user is required to access the SQLAdmin panel at `/admin`. Use the `--superuser` flag to grant full admin privileges.
+### Option 2: Full Docker Setup
+
+```bash
+cd my_ai_app
+
+# Install dependencies (generates uv.lock required for Docker)
+make install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# Start all backend services (API, PostgreSQL, Redis, Celery)
+make docker-up
+
+# Run database migrations
+make db-upgrade
+
+# Create admin user
+make user-create
+
+# Start frontend (separate container)
+make docker-frontend
+```
+
+### Available Commands
+
+Run `make help` to see all available commands:
+
+```bash
+make help
+
+# Common commands:
+make install          # Install dependencies + pre-commit hooks
+make run              # Start dev server (with hot reload)
+make test             # Run tests
+make lint             # Check code quality
+make format           # Auto-format code
+
+# Database:
+make db-init          # Initialize database (start + migrate)
+make db-migrate       # Create new migration
+make db-upgrade       # Apply migrations
+
+# Users:
+make user-create      # Create new user (interactive)
+make user-list        # List all users
+
+# Docker:
+make docker-up        # Start backend services
+make docker-frontend  # Start frontend
+make docker-down      # Stop all services
+make docker-logs      # View logs
+```
+
+> **Note:** The admin user is required to access the SQLAdmin panel at `/admin`. Select "superuser" when prompted to grant full admin privileges.
 
 **Access:**
 - API: http://localhost:8000
 - Docs: http://localhost:8000/docs
 - Admin Panel: http://localhost:8000/admin
 - Frontend: http://localhost:3000
+- Flower (Celery): http://localhost:5555
 
 ---
 

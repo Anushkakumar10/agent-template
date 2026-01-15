@@ -11,7 +11,7 @@
 
 <p align="center">
   <b>Production-ready project generator for AI/LLM applications with 20+ enterprise integrations.</b><br>
-  <sub>Built with FastAPI, Next.js 15, PydanticAI, and everything you need for professional business applications.</sub>
+  <sub>Built with FastAPI, Next.js 15, PydanticAI/LangChain, and everything you need for professional business applications.</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ This template gives you all of that out of the box, with **20+ configurable inte
 
 ### Perfect For
 
-- 🤖 **AI Chatbots & Assistants** - PydanticAI agents with streaming responses
+- 🤖 **AI Chatbots & Assistants** - PydanticAI or LangChain agents with streaming responses
 - 📊 **ML Applications** - Background task processing with Celery/Taskiq
 - 🏢 **Enterprise SaaS** - Full auth, admin panel, webhooks, and more
 - 🚀 **Startups** - Ship fast with production-ready infrastructure
@@ -56,11 +56,12 @@ This template gives you all of that out of the box, with **20+ configurable inte
 
 ### 🤖 AI/LLM First
 
-- **[PydanticAI](https://ai.pydantic.dev)** - Type-safe AI agents with tool support
-- **WebSocket Streaming** - Real-time responses using `iter()` method
+- **[PydanticAI](https://ai.pydantic.dev)** or **[LangChain](https://python.langchain.com)** - Choose your preferred AI framework
+- **WebSocket Streaming** - Real-time responses with full event access
 - **Conversation Persistence** - Save chat history to database
 - **Custom Tools** - Easily extend agent capabilities
 - **Multi-model Support** - OpenAI, Anthropic, and more
+- **Observability** - Logfire for PydanticAI, LangSmith for LangChain
 
 ### ⚡ Backend (FastAPI)
 
@@ -81,9 +82,10 @@ This template gives you all of that out of the box, with **20+ configurable inte
 
 | Category | Integrations |
 |----------|-------------|
+| **AI Frameworks** | PydanticAI, LangChain |
 | **Caching & State** | Redis, fastapi-cache2 |
 | **Security** | Rate limiting, CORS, CSRF protection |
-| **Observability** | Logfire, Sentry, Prometheus |
+| **Observability** | Logfire, LangSmith, Sentry, Prometheus |
 | **Admin** | SQLAdmin panel with auth |
 | **Events** | Webhooks, WebSockets |
 | **DevOps** | Docker, GitHub Actions, GitLab CI, Kubernetes |
@@ -123,7 +125,7 @@ graph TB
         API[API Routes]
         Services[Services Layer]
         Repos[Repositories]
-        Agent[PydanticAI Agent]
+        Agent[AI Agent]
     end
 
     subgraph Infrastructure
@@ -236,9 +238,19 @@ bun dev
 
 ## 🤖 AI Agent
 
+Choose between **PydanticAI** or **LangChain** when generating your project:
+
+```bash
+# PydanticAI (default)
+ak-agent-template create my_app --ai-agent --ai-framework pydantic_ai
+
+# LangChain
+ak-agent-template create my_app --ai-agent --ai-framework langchain
+```
+
 ### PydanticAI Integration
 
-The template includes a fully configured AI agent with:
+Type-safe agents with full dependency injection:
 
 ```python
 # app/agents/assistant.py
@@ -261,43 +273,62 @@ async def search_database(ctx: RunContext[Deps], query: str) -> list[dict]:
     ...
 ```
 
+### LangChain Integration
+
+Flexible agents with LangGraph:
+
+```python
+# app/agents/langchain_assistant.py
+from langchain.tools import tool
+from langgraph.prebuilt import create_react_agent
+
+@tool
+def search_database(query: str) -> list[dict]:
+    """Search the database for relevant information."""
+    ...
+
+agent = create_react_agent(
+    model=ChatOpenAI(model="gpt-4o-mini"),
+    tools=[search_database],
+    prompt="You are a helpful assistant.",
+)
+```
+
 ### WebSocket Streaming
 
-Real-time responses with full event access:
+Both frameworks use the same WebSocket endpoint with real-time streaming:
 
 ```python
 @router.websocket("/ws")
 async def agent_ws(websocket: WebSocket):
     await websocket.accept()
 
-    async for event in agent.iter(user_input, deps=deps):
-        if isinstance(event, PartDeltaEvent):
-            await websocket.send_json({
-                "type": "token",
-                "content": event.delta.content
-            })
+    # Works with both PydanticAI and LangChain
+    async for event in agent.stream(user_input):
+        await websocket.send_json({
+            "type": "text_delta",
+            "content": event.content
+        })
 ```
 
-### Adding Custom Tools
+### Observability
 
-```python
-@agent.tool
-async def get_weather(ctx: RunContext[Deps], city: str) -> dict:
-    """Get current weather for a city."""
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"https://api.weather.com/{city}")
-        return response.json()
-```
+Each framework has its own observability solution:
+
+| Framework | Observability | Dashboard |
+|-----------|--------------|-----------|
+| **PydanticAI** | [Logfire](https://logfire.pydantic.dev) | Agent runs, tool calls, token usage |
+| **LangChain** | [LangSmith](https://smith.langchain.com) | Traces, feedback, datasets |
 
 See [AI Agent Documentation](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/ai-agent.md) for more.
 
 ---
 
-## 📊 Observability with Logfire
+## 📊 Observability
+
+### Logfire (for PydanticAI)
 
 [Logfire](https://logfire.pydantic.dev) provides complete observability for your application - from AI agents to database queries. Built by the Pydantic team, it offers first-class support for the entire Python ecosystem.
-
-### What Gets Instrumented
 
 ```mermaid
 graph LR
@@ -332,6 +363,26 @@ graph LR
 | **Redis** | Cache hits/misses, command latency, key patterns |
 | **Celery/Taskiq** | Task execution, queue depth, worker performance |
 | **HTTPX** | External API calls, response times, error rates |
+
+### LangSmith (for LangChain)
+
+[LangSmith](https://smith.langchain.com) provides observability specifically designed for LangChain applications:
+
+| Feature | Description |
+|---------|-------------|
+| **Traces** | Full execution traces for agent runs and chains |
+| **Feedback** | Collect user feedback on agent responses |
+| **Datasets** | Build evaluation datasets from production data |
+| **Monitoring** | Track latency, errors, and token usage |
+
+LangSmith is automatically configured when you choose LangChain:
+
+```bash
+# .env
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your-api-key
+LANGCHAIN_PROJECT=my_project
+```
 
 ### Configuration
 
@@ -440,7 +491,7 @@ my_project/
 │   │   ├── schemas/             # Pydantic schemas
 │   │   ├── repositories/        # Data access layer
 │   │   ├── services/            # Business logic
-│   │   ├── agents/              # PydanticAI agents
+│   │   ├── agents/              # AI agents (PydanticAI or LangChain)
 │   │   ├── commands/            # Django-style CLI commands
 │   │   └── worker/              # Background tasks
 │   ├── cli/                     # Project CLI
@@ -469,6 +520,7 @@ my_project/
 | **Database** | `postgresql`, `mongodb`, `sqlite`, `none` | Async by default |
 | **Auth** | `jwt`, `api_key`, `both`, `none` | JWT includes user management |
 | **OAuth** | `none`, `google` | Social login |
+| **AI Framework** | `pydantic_ai`, `langchain` | Choose your AI agent framework |
 | **Background Tasks** | `none`, `celery`, `taskiq`, `arq` | Distributed queues |
 | **Frontend** | `none`, `nextjs` | Next.js 15 + React 19 |
 
@@ -482,10 +534,10 @@ ak-agent-template new
 # ✓ Rate limiting (slowapi)
 # ✓ Pagination (fastapi-pagination)
 # ✓ Admin Panel (SQLAdmin)
-# ✓ AI Agent (PydanticAI)
+# ✓ AI Agent (PydanticAI or LangChain)
 # ✓ Webhooks
 # ✓ Sentry
-# ✓ Logfire
+# ✓ Logfire / LangSmith
 # ✓ Prometheus
 # ... and more
 ```

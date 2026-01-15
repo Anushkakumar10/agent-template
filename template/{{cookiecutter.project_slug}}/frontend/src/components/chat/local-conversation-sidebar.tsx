@@ -1,41 +1,38 @@
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConversations } from "@/hooks";
+import { useState } from "react";
 import { Button } from "@/components/ui";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { useChatSidebarStore } from "@/stores";
+import { useLocalChatStore, useChatSidebarStore } from "@/stores";
+import type { LocalConversation } from "@/stores/local-chat-store";
 import {
   MessageSquarePlus,
   MessageSquare,
   Trash2,
-  Archive,
   MoreVertical,
   Pencil,
   ChevronLeft,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
-import type { Conversation } from "@/types";
 
-interface ConversationItemProps {
-  conversation: Conversation;
+interface LocalConversationItemProps {
+  conversation: LocalConversation;
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
-  onArchive: () => void;
   onRename: (title: string) => void;
 }
 
-function ConversationItem({
+function LocalConversationItem({
   conversation,
   isActive,
   onSelect,
   onDelete,
-  onArchive,
   onRename,
-}: ConversationItemProps) {
+}: LocalConversationItemProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(conversation.title || "");
@@ -49,7 +46,7 @@ function ConversationItem({
 
   const displayTitle =
     conversation.title ||
-    `Chat ${new Date(conversation.created_at).toLocaleDateString()}`;
+    `Chat ${new Date(conversation.createdAt).toLocaleDateString()}`;
 
   return (
     <div
@@ -115,17 +112,6 @@ function ConversationItem({
                 Rename
               </button>
               <button
-                className="flex w-full items-center gap-2 px-3 py-3 text-sm hover:bg-secondary min-h-[44px]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onArchive();
-                  setShowMenu(false);
-                }}
-              >
-                <Archive className="h-4 w-4" />
-                Archive
-              </button>
-              <button
                 className="flex w-full items-center gap-2 px-3 py-3 text-sm text-destructive hover:bg-destructive/10 min-h-[44px]"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -144,38 +130,23 @@ function ConversationItem({
   );
 }
 
-interface ConversationListProps {
-  conversations: Conversation[];
-  currentConversationId: string | null;
-  isLoading: boolean;
-  onSelect: (id: string) => void;
-  onDelete: (id: string) => void;
-  onArchive: (id: string) => void;
-  onRename: (id: string, title: string) => void;
-  onNewChat: () => void;
-  onNavigate?: () => void;
-}
-
-function ConversationList({
-  conversations,
-  currentConversationId,
-  isLoading,
-  onSelect,
-  onDelete,
-  onArchive,
-  onRename,
-  onNewChat,
-  onNavigate,
-}: ConversationListProps) {
-  const activeConversations = conversations.filter((c) => !c.is_archived);
+function ConversationList({ onNavigate }: { onNavigate?: () => void }) {
+  const {
+    conversations,
+    currentConversationId,
+    selectConversation,
+    deleteConversation,
+    renameConversation,
+    createConversation,
+  } = useLocalChatStore();
 
   const handleSelect = (id: string) => {
-    onSelect(id);
+    selectConversation(id);
     onNavigate?.();
   };
 
   const handleNewChat = () => {
-    onNewChat();
+    createConversation();
     onNavigate?.();
   };
 
@@ -194,11 +165,7 @@ function ConversationList({
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin">
-        {isLoading && conversations.length === 0 ? (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            Loading...
-          </div>
-        ) : activeConversations.length === 0 ? (
+        {conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center text-sm text-muted-foreground">
             <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
             <p>No conversations yet</p>
@@ -206,57 +173,38 @@ function ConversationList({
           </div>
         ) : (
           <div className="space-y-1">
-            {activeConversations.map((conversation) => (
-              <ConversationItem
+            {conversations.map((conversation) => (
+              <LocalConversationItem
                 key={conversation.id}
                 conversation={conversation}
                 isActive={conversation.id === currentConversationId}
                 onSelect={() => handleSelect(conversation.id)}
-                onDelete={() => onDelete(conversation.id)}
-                onArchive={() => onArchive(conversation.id)}
-                onRename={(title) => onRename(conversation.id, title)}
+                onDelete={() => deleteConversation(conversation.id)}
+                onRename={(title) => renameConversation(conversation.id, title)}
               />
             ))}
           </div>
         )}
       </div>
+
+      <div className="border-t px-3 py-2">
+        <p className="text-xs text-muted-foreground text-center">
+          Stored in browser
+        </p>
+      </div>
     </>
   );
 }
 
-interface ConversationSidebarProps {
+interface LocalConversationSidebarProps {
   className?: string;
 }
 
-export function ConversationSidebar({ className }: ConversationSidebarProps) {
+export function LocalConversationSidebar({
+  className,
+}: LocalConversationSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { isOpen, close } = useChatSidebarStore();
-  const {
-    conversations,
-    currentConversationId,
-    isLoading,
-    fetchConversations,
-    selectConversation,
-    deleteConversation,
-    archiveConversation,
-    renameConversation,
-    startNewChat,
-  } = useConversations();
-
-  useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
-
-  const listProps = {
-    conversations,
-    currentConversationId,
-    isLoading,
-    onSelect: selectConversation,
-    onDelete: deleteConversation,
-    onArchive: archiveConversation,
-    onRename: renameConversation,
-    onNewChat: startNewChat,
-  };
 
   if (isCollapsed) {
     return (
@@ -278,7 +226,9 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
           variant="ghost"
           size="sm"
           className="h-10 w-10 p-0"
-          onClick={startNewChat}
+          onClick={() => {
+            useLocalChatStore.getState().createConversation();
+          }}
           title="New Chat"
         >
           <MessageSquarePlus className="h-4 w-4" />
@@ -296,7 +246,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
         )}
       >
         <div className="flex items-center justify-between border-b px-4 py-3 h-12">
-          <h2 className="font-semibold text-sm">Conversations</h2>
+          <h2 className="font-semibold text-sm">Local Chats</h2>
           <Button
             variant="ghost"
             size="sm"
@@ -306,23 +256,40 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
             <ChevronLeft className="h-4 w-4" />
           </Button>
         </div>
-        <ConversationList {...listProps} />
+        <ConversationList />
       </aside>
 
       <Sheet open={isOpen} onOpenChange={close}>
         <SheetContent side="left" className="w-80 p-0">
           <SheetHeader className="h-12 px-4">
-            <SheetTitle>Conversations</SheetTitle>
+            <SheetTitle>Local Chats</SheetTitle>
             <SheetClose onClick={close} />
           </SheetHeader>
           <div className="flex flex-col h-[calc(100%-48px)]">
-            <ConversationList {...listProps} onNavigate={close} />
+            <ConversationList onNavigate={close} />
           </div>
         </SheetContent>
       </Sheet>
     </>
   );
 }
-{%- else %}
-export {};
-{%- endif %}
+
+export function ChatSidebarToggle() {
+  const { toggle, isOpen } = useChatSidebarStore();
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-10 w-10 p-0 md:hidden"
+      onClick={toggle}
+    >
+      {isOpen ? (
+        <PanelLeftClose className="h-5 w-5" />
+      ) : (
+        <PanelLeft className="h-5 w-5" />
+      )}
+      <span className="sr-only">Toggle chat list</span>
+    </Button>
+  );
+}
