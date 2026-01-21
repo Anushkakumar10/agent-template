@@ -60,7 +60,7 @@ This template gives you all of that out of the box, with **20+ configurable inte
 - **WebSocket Streaming** - Real-time responses with full event access
 - **Conversation Persistence** - Save chat history to database
 - **Custom Tools** - Easily extend agent capabilities
-- **Multi-model Support** - OpenAI, Anthropic, and more
+- **Multi-provider Support** - OpenAI, Anthropic, OpenRouter
 - **Observability** - Logfire for PydanticAI, LangSmith for LangChain
 
 ### ⚡ Backend (FastAPI)
@@ -126,6 +126,13 @@ ak-agent-template create my_ai_app \
   --database postgresql \
   --auth jwt \
   --frontend nextjs
+
+# Use presets for common setups
+ak-agent-template create my_ai_app --preset production   # Full production setup
+ak-agent-template create my_ai_app --preset ai-agent     # AI agent with streaming
+
+# Minimal project (no extras)
+ak-agent-template create my_ai_app --minimal
 ```
 
 ### Start Development
@@ -136,7 +143,7 @@ cd my_ai_app
 # Backend
 cd backend
 uv sync
-cp .env.example .env
+# .env is pre-configured for development - just add your API keys
 alembic upgrade head
 
 # Create admin user
@@ -255,15 +262,31 @@ See [Architecture Documentation](https://github.com/ak-labs/full-stack-fastapi-n
 
 ## 🤖 AI Agent
 
-Choose between **PydanticAI** or **LangChain** when generating your project:
+Choose between **PydanticAI** or **LangChain** when generating your project, with support for multiple LLM providers:
 
 ```bash
-# PydanticAI (default)
+# PydanticAI with OpenAI (default)
 ak-agent-template create my_app --ai-agent --ai-framework pydantic_ai
 
-# LangChain
+# PydanticAI with Anthropic
+ak-agent-template create my_app --ai-agent --ai-framework pydantic_ai --llm-provider anthropic
+
+# PydanticAI with OpenRouter
+ak-agent-template create my_app --ai-agent --ai-framework pydantic_ai --llm-provider openrouter
+
+# LangChain with OpenAI
 ak-agent-template create my_app --ai-agent --ai-framework langchain
+
+# LangChain with Anthropic
+ak-agent-template create my_app --ai-agent --ai-framework langchain --llm-provider anthropic
 ```
+
+### Supported LLM Providers
+
+| Framework | OpenAI | Anthropic | OpenRouter |
+|-----------|:------:|:---------:|:----------:|
+| **PydanticAI** | ✓ | ✓ | ✓ |
+| **LangChain** | ✓ | ✓ | - |
 
 ### PydanticAI Integration
 
@@ -508,7 +531,7 @@ my_project/
 │   │   ├── schemas/             # Pydantic schemas
 │   │   ├── repositories/        # Data access layer
 │   │   ├── services/            # Business logic
-│   │   ├── agents/              # AI agents (PydanticAI or LangChain)
+│   │   ├── agents/              # AI agents with centralized prompts
 │   │   ├── commands/            # Django-style CLI commands
 │   │   └── worker/              # Background tasks
 │   ├── cli/                     # Project CLI
@@ -526,6 +549,14 @@ my_project/
 └── README.md
 ```
 
+Generated projects include version metadata in `pyproject.toml` for tracking:
+
+```toml
+[tool.ak-agent-template]
+generator_version = "0.1.5"
+generated_at = "2024-12-21T10:30:00+00:00"
+```
+
 ---
 
 ## ⚙️ Configuration Options
@@ -538,8 +569,17 @@ my_project/
 | **Auth** | `jwt`, `api_key`, `both`, `none` | JWT includes user management |
 | **OAuth** | `none`, `google` | Social login |
 | **AI Framework** | `pydantic_ai`, `langchain` | Choose your AI agent framework |
+| **LLM Provider** | `openai`, `anthropic`, `openrouter` | OpenRouter only with PydanticAI |
 | **Background Tasks** | `none`, `celery`, `taskiq`, `arq` | Distributed queues |
 | **Frontend** | `none`, `nextjs` | Next.js 15 + React 19 |
+
+### Presets
+
+| Preset | Description |
+|--------|-------------|
+| `--preset production` | Full production setup with Redis, Sentry, Kubernetes, Prometheus |
+| `--preset ai-agent` | AI agent with WebSocket streaming and conversation persistence |
+| `--minimal` | Minimal project with no extras |
 
 ### Integrations
 

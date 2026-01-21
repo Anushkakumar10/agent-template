@@ -1035,6 +1035,171 @@ class TestRunInteractivePrompts:
         mock_admin_config.assert_called_once()
 
     @patch("fastapi_gen.prompts.questionary")
+    @patch("fastapi_gen.prompts.prompt_admin_config")
+    @patch("fastapi_gen.prompts.prompt_ports")
+    @patch("fastapi_gen.prompts.prompt_python_version")
+    @patch("fastapi_gen.prompts.prompt_frontend")
+    @patch("fastapi_gen.prompts.prompt_dev_tools")
+    @patch("fastapi_gen.prompts.prompt_integrations")
+    @patch("fastapi_gen.prompts.prompt_background_tasks")
+    @patch("fastapi_gen.prompts.prompt_logfire")
+    @patch("fastapi_gen.prompts.prompt_oauth")
+    @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_database")
+    @patch("fastapi_gen.prompts.prompt_basic_info")
+    @patch("fastapi_gen.prompts.show_header")
+    def test_admin_panel_with_sqlite(
+        self,
+        mock_header: MagicMock,
+        mock_basic_info: MagicMock,
+        mock_database: MagicMock,
+        mock_auth: MagicMock,
+        mock_oauth: MagicMock,
+        mock_logfire: MagicMock,
+        mock_background_tasks: MagicMock,
+        mock_integrations: MagicMock,
+        mock_dev_tools: MagicMock,
+        mock_frontend: MagicMock,
+        mock_python_version: MagicMock,
+        mock_ports: MagicMock,
+        mock_admin_config: MagicMock,
+        mock_questionary: MagicMock,
+    ) -> None:
+        """Test admin panel prompts config when SQLite is selected."""
+        mock_basic_info.return_value = {
+            "project_name": "test_project",
+            "project_description": "Test",
+            "author_name": "Test Author",
+            "author_email": "test@test.com",
+        }
+        mock_database.return_value = DatabaseType.SQLITE
+        mock_auth.return_value = AuthType.JWT
+        mock_oauth.return_value = OAuthProvider.NONE
+        mock_logfire.return_value = (True, LogfireFeatures())
+        mock_background_tasks.return_value = BackgroundTaskType.NONE
+        mock_integrations.return_value = {
+            "enable_redis": False,
+            "enable_caching": False,
+            "enable_rate_limiting": False,
+            "enable_pagination": True,
+            "enable_sentry": False,
+            "enable_prometheus": False,
+            "enable_admin_panel": True,  # Admin panel enabled
+            "enable_websockets": False,
+            "enable_file_storage": False,
+            "enable_ai_agent": False,
+            "include_example_crud": True,
+            "enable_cors": True,
+            "enable_orjson": True,
+        }
+        mock_dev_tools.return_value = {
+            "enable_pytest": True,
+            "enable_precommit": True,
+            "enable_makefile": True,
+            "enable_docker": True,
+            "enable_kubernetes": False,
+            "ci_type": CIType.GITHUB,
+        }
+        mock_frontend.return_value = FrontendType.NONE
+        mock_python_version.return_value = "3.12"
+        mock_ports.return_value = {"backend_port": 8000}
+        mock_admin_config.return_value = (AdminEnvironmentType.DEV_ONLY, True)
+
+        # Mock session management confirm
+        mock_confirm = MagicMock()
+        mock_confirm.ask.return_value = False
+        mock_questionary.confirm.return_value = mock_confirm
+
+        config = run_interactive_prompts()
+
+        # Admin config should be set for SQLite too
+        assert config.enable_admin_panel is True
+        assert config.admin_environments == AdminEnvironmentType.DEV_ONLY
+        assert config.admin_require_auth is True
+        mock_admin_config.assert_called_once()
+
+    @patch("fastapi_gen.prompts.questionary")
+    @patch("fastapi_gen.prompts.prompt_admin_config")
+    @patch("fastapi_gen.prompts.prompt_ports")
+    @patch("fastapi_gen.prompts.prompt_python_version")
+    @patch("fastapi_gen.prompts.prompt_frontend")
+    @patch("fastapi_gen.prompts.prompt_dev_tools")
+    @patch("fastapi_gen.prompts.prompt_integrations")
+    @patch("fastapi_gen.prompts.prompt_background_tasks")
+    @patch("fastapi_gen.prompts.prompt_logfire")
+    @patch("fastapi_gen.prompts.prompt_oauth")
+    @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_database")
+    @patch("fastapi_gen.prompts.prompt_basic_info")
+    @patch("fastapi_gen.prompts.show_header")
+    def test_admin_panel_not_prompted_with_mongodb(
+        self,
+        mock_header: MagicMock,
+        mock_basic_info: MagicMock,
+        mock_database: MagicMock,
+        mock_auth: MagicMock,
+        mock_oauth: MagicMock,
+        mock_logfire: MagicMock,
+        mock_background_tasks: MagicMock,
+        mock_integrations: MagicMock,
+        mock_dev_tools: MagicMock,
+        mock_frontend: MagicMock,
+        mock_python_version: MagicMock,
+        mock_ports: MagicMock,
+        mock_admin_config: MagicMock,
+        mock_questionary: MagicMock,
+    ) -> None:
+        """Test admin panel config is NOT prompted when MongoDB is selected."""
+        mock_basic_info.return_value = {
+            "project_name": "test_project",
+            "project_description": "Test",
+            "author_name": "Test Author",
+            "author_email": "test@test.com",
+        }
+        mock_database.return_value = DatabaseType.MONGODB
+        mock_auth.return_value = AuthType.NONE
+        mock_oauth.return_value = OAuthProvider.NONE
+        mock_logfire.return_value = (True, LogfireFeatures())
+        mock_background_tasks.return_value = BackgroundTaskType.NONE
+        mock_integrations.return_value = {
+            "enable_redis": False,
+            "enable_caching": False,
+            "enable_rate_limiting": False,
+            "enable_pagination": True,
+            "enable_sentry": False,
+            "enable_prometheus": False,
+            "enable_admin_panel": False,  # Admin panel disabled for MongoDB
+            "enable_websockets": False,
+            "enable_file_storage": False,
+            "enable_ai_agent": False,
+            "include_example_crud": True,
+            "enable_cors": True,
+            "enable_orjson": True,
+        }
+        mock_dev_tools.return_value = {
+            "enable_pytest": True,
+            "enable_precommit": True,
+            "enable_makefile": True,
+            "enable_docker": True,
+            "enable_kubernetes": False,
+            "ci_type": CIType.GITHUB,
+        }
+        mock_frontend.return_value = FrontendType.NONE
+        mock_python_version.return_value = "3.12"
+        mock_ports.return_value = {"backend_port": 8000}
+
+        # Mock session management confirm
+        mock_confirm = MagicMock()
+        mock_confirm.ask.return_value = False
+        mock_questionary.confirm.return_value = mock_confirm
+
+        config = run_interactive_prompts()
+
+        # Admin config should NOT be prompted for MongoDB
+        assert config.enable_admin_panel is False
+        mock_admin_config.assert_not_called()
+
+    @patch("fastapi_gen.prompts.questionary")
     @patch("fastapi_gen.prompts.prompt_frontend_features")
     @patch("fastapi_gen.prompts.prompt_ports")
     @patch("fastapi_gen.prompts.prompt_python_version")
