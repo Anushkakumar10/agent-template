@@ -5,7 +5,7 @@ from enum import Enum
 from importlib.metadata import version
 from typing import Any
 
-from pydantic import BaseModel, Field, computed_field, model_validator
+from pydantic import BaseModel, EmailStr, Field, computed_field, model_validator
 
 GENERATOR_NAME = "ak-agent-template"
 
@@ -117,7 +117,7 @@ class ProjectConfig(BaseModel):
     project_description: str = "A FastAPI project"
 
     author_name: str = "Your Name"
-    author_email: str = "your@email.com"
+    author_email: EmailStr = "your@email.com"
 
     # Database
     database: DatabaseType = DatabaseType.POSTGRESQL

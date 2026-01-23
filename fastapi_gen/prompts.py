@@ -1,5 +1,6 @@
 """Interactive prompts for project configuration."""
 
+import re
 from typing import Any, cast
 
 import questionary
@@ -63,6 +64,19 @@ def _normalize_project_name(name: str) -> str:
     return name.lower().replace(" ", "_").replace("-", "_")
 
 
+def _validate_email(email: str) -> bool | str:
+    """Validate email format.
+
+    Returns True if valid, or an error message string if invalid.
+    """
+    if not email:
+        return "Email cannot be empty"
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    if not re.match(pattern, email):
+        return "Please enter a valid email address"
+    return True
+
+
 def prompt_basic_info() -> dict[str, str]:
     """Prompt for basic project information."""
     console.print("[bold cyan]Basic Information[/]")
@@ -99,6 +113,7 @@ def prompt_basic_info() -> dict[str, str]:
         questionary.text(
             "Author email:",
             default="your@email.com",
+            validate=_validate_email,
         ).ask()
     )
 

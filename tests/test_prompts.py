@@ -21,6 +21,7 @@ from fastapi_gen.config import (
 from fastapi_gen.prompts import (
     _check_cancelled,
     _normalize_project_name,
+    _validate_email,
     _validate_project_name,
     confirm_generation,
     prompt_admin_config,
@@ -134,6 +135,30 @@ class TestNormalizeProjectName:
         """Test already normalized name is unchanged."""
         assert _normalize_project_name("my_project") == "my_project"
         assert _normalize_project_name("project123") == "project123"
+
+
+class TestValidateEmail:
+    """Tests for _validate_email helper."""
+
+    def test_valid_email_returns_true(self) -> None:
+        """Test valid email returns True."""
+        assert _validate_email("user@example.com") is True
+        assert _validate_email("user.name@example.com") is True
+        assert _validate_email("user+tag@example.com") is True
+        assert _validate_email("user@subdomain.example.com") is True
+        assert _validate_email("user123@example.co.uk") is True
+
+    def test_empty_email_returns_error(self) -> None:
+        """Test empty email returns error message."""
+        result = _validate_email("")
+        assert result == "Email cannot be empty"
+
+    def test_invalid_email_returns_error(self) -> None:
+        """Test invalid email returns error message."""
+        assert _validate_email("not-an-email") == "Please enter a valid email address"
+        assert _validate_email("missing@tld") == "Please enter a valid email address"
+        assert _validate_email("@no-local-part.com") == "Please enter a valid email address"
+        assert _validate_email("spaces in@email.com") == "Please enter a valid email address"
 
 
 class TestShowHeader:

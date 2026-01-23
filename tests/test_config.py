@@ -488,3 +488,33 @@ class TestOptionCombinationValidation:
         )
         assert config.llm_provider == LLMProviderType.OPENROUTER
         assert config.ai_framework == AIFrameworkType.PYDANTIC_AI
+
+
+class TestEmailValidation:
+    """Tests for author_email validation."""
+
+    def test_valid_email_accepted(self) -> None:
+        """Test valid email addresses are accepted."""
+        valid_emails = [
+            "user@example.com",
+            "user.name@example.com",
+            "user+tag@example.com",
+            "user@subdomain.example.com",
+            "user123@example.co.uk",
+        ]
+        for email in valid_emails:
+            config = ProjectConfig(project_name="test", author_email=email)
+            assert config.author_email == email
+
+    def test_invalid_email_raises_error(self) -> None:
+        """Test invalid email addresses raise ValidationError."""
+        invalid_emails = [
+            "not-an-email",
+            "missing@tld",
+            "@no-local-part.com",
+            "spaces in@email.com",
+            "",
+        ]
+        for email in invalid_emails:
+            with pytest.raises(ValidationError):
+                ProjectConfig(project_name="test", author_email=email)
