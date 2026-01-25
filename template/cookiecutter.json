@@ -1,6 +1,7 @@
 {
   "generator_name": "ak-agent-template",
-  "generator_version": "0.1.5",
+  "_generator_version_note": "Value below is overwritten by generator at runtime",
+  "generator_version": "DYNAMIC",
   "generated_at": "",
   "project_name": "my_project",
   "project_slug": "{{ cookiecutter.project_name.lower().replace('-', '_') }}",
