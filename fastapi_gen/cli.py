@@ -24,7 +24,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option(version=__version__, prog_name="fastapi-gen")
+@click.version_option(version=__version__, prog_name="ak-agent-template")
 def cli() -> None:
     """FastAPI Project Generator with Logfire observability."""
 
