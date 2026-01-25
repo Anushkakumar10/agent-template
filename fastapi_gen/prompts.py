@@ -20,6 +20,7 @@ from .config import (
     LogfireFeatures,
     OAuthProvider,
     ProjectConfig,
+    RateLimitStorageType,
     WebSocketAuthType,
 )
 
@@ -307,6 +308,72 @@ def prompt_integrations() -> dict[str, bool]:
         "enable_cors": "cors" in features,
         "enable_orjson": "orjson" in features,
     }
+
+
+def _validate_positive_integer(value: str) -> bool | str:
+    """Validate that input is a positive integer.
+
+    Returns True if valid, or an error message string if invalid.
+    """
+    if not value:
+        return "Value cannot be empty"
+    if not value.isdigit():
+        return "Must be a positive number"
+    if int(value) <= 0:
+        return "Must be greater than 0"
+    return True
+
+
+def prompt_rate_limit_config(redis_enabled: bool) -> tuple[int, int, RateLimitStorageType]:
+    """Prompt for rate limiting configuration.
+
+    Args:
+        redis_enabled: Whether Redis is enabled (affects storage choices).
+
+    Returns:
+        Tuple of (requests, period, storage).
+    """
+    console.print()
+    console.print("[bold cyan]Rate Limiting Configuration[/]")
+    console.print()
+
+    requests_str = _check_cancelled(
+        questionary.text(
+            "Requests per period:",
+            default="100",
+            validate=_validate_positive_integer,
+        ).ask()
+    )
+
+    period_str = _check_cancelled(
+        questionary.text(
+            "Period in seconds:",
+            default="60",
+            validate=_validate_positive_integer,
+        ).ask()
+    )
+
+    # Build storage choices based on whether Redis is enabled
+    storage_choices = [
+        questionary.Choice("Memory (single instance)", value=RateLimitStorageType.MEMORY),
+    ]
+    if redis_enabled:
+        storage_choices.append(
+            questionary.Choice("Redis (distributed)", value=RateLimitStorageType.REDIS)
+        )
+
+    storage = cast(
+        RateLimitStorageType,
+        _check_cancelled(
+            questionary.select(
+                "Storage backend:",
+                choices=storage_choices,
+                default=storage_choices[0],
+            ).ask()
+        ),
+    )
+
+    return int(requests_str), int(period_str), storage
 
 
 def prompt_dev_tools() -> dict[str, Any]:
@@ -653,6 +720,15 @@ def run_interactive_prompts() -> ProjectConfig:
     if integrations.get("enable_admin_panel") and database in (DatabaseType.POSTGRESQL, DatabaseType.SQLITE):
         admin_environments, admin_require_auth = prompt_admin_config()
 
+    # Rate limit configuration (when rate limiting is enabled)
+    rate_limit_requests = 100
+    rate_limit_period = 60
+    rate_limit_storage = RateLimitStorageType.MEMORY
+    if integrations.get("enable_rate_limiting"):
+        rate_limit_requests, rate_limit_period, rate_limit_storage = prompt_rate_limit_config(
+            redis_enabled=integrations.get("enable_redis", False)
+        )
+
     # Frontend features (i18n, etc.)
     frontend_features: dict[str, bool] = {}
     if frontend != FrontendType.NONE:
@@ -680,6 +756,9 @@ def run_interactive_prompts() -> ProjectConfig:
         enable_conversation_persistence=enable_conversation_persistence,
         admin_environments=admin_environments,
         admin_require_auth=admin_require_auth,
+        rate_limit_requests=rate_limit_requests,
+        rate_limit_period=rate_limit_period,
+        rate_limit_storage=rate_limit_storage,
         python_version=python_version,
         ci_type=ci_type,
         frontend=frontend,
@@ -715,7 +794,8 @@ def show_summary(config: ProjectConfig) -> None:
     if config.enable_caching:
         enabled_features.append("Caching")
     if config.enable_rate_limiting:
-        enabled_features.append("Rate Limiting")
+        rate_info = f"Rate Limiting ({config.rate_limit_requests}/{config.rate_limit_period}s, {config.rate_limit_storage.value})"
+        enabled_features.append(rate_info)
     if config.enable_admin_panel:
         admin_info = "Admin Panel"
         if config.admin_environments.value != "all":

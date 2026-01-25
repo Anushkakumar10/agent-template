@@ -16,12 +16,14 @@ from fastapi_gen.config import (
     LLMProviderType,
     LogfireFeatures,
     OAuthProvider,
+    RateLimitStorageType,
     WebSocketAuthType,
 )
 from fastapi_gen.prompts import (
     _check_cancelled,
     _normalize_project_name,
     _validate_email,
+    _validate_positive_integer,
     _validate_project_name,
     confirm_generation,
     prompt_admin_config,
@@ -37,6 +39,7 @@ from fastapi_gen.prompts import (
     prompt_oauth,
     prompt_ports,
     prompt_python_version,
+    prompt_rate_limit_config,
     prompt_websocket_auth,
     run_interactive_prompts,
     show_header,
@@ -159,6 +162,30 @@ class TestValidateEmail:
         assert _validate_email("missing@tld") == "Please enter a valid email address"
         assert _validate_email("@no-local-part.com") == "Please enter a valid email address"
         assert _validate_email("spaces in@email.com") == "Please enter a valid email address"
+
+
+class TestValidatePositiveInteger:
+    """Tests for _validate_positive_integer helper."""
+
+    def test_valid_positive_integers(self) -> None:
+        """Test valid positive integers return True."""
+        assert _validate_positive_integer("1") is True
+        assert _validate_positive_integer("100") is True
+        assert _validate_positive_integer("999999") is True
+
+    def test_empty_value_returns_error(self) -> None:
+        """Test empty value returns error message."""
+        assert _validate_positive_integer("") == "Value cannot be empty"
+
+    def test_non_digit_returns_error(self) -> None:
+        """Test non-digit input returns error message."""
+        assert _validate_positive_integer("abc") == "Must be a positive number"
+        assert _validate_positive_integer("12.5") == "Must be a positive number"
+        assert _validate_positive_integer("-10") == "Must be a positive number"
+
+    def test_zero_returns_error(self) -> None:
+        """Test zero returns error message."""
+        assert _validate_positive_integer("0") == "Must be greater than 0"
 
 
 class TestShowHeader:
@@ -367,6 +394,94 @@ class TestPromptIntegrations:
         assert result["enable_websockets"] is True
         assert result["enable_pagination"] is False
         assert result["enable_sentry"] is False
+
+
+class TestPromptRateLimitConfig:
+    """Tests for prompt_rate_limit_config function."""
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_config_values(self, mock_questionary: MagicMock) -> None:
+        """Test rate limit config values are returned."""
+        mock_text = MagicMock()
+        mock_text.ask.side_effect = ["50", "30"]
+        mock_questionary.text.return_value = mock_text
+
+        mock_select = MagicMock()
+        mock_select.ask.return_value = RateLimitStorageType.MEMORY
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        requests, period, storage = prompt_rate_limit_config(redis_enabled=False)
+
+        assert requests == 50
+        assert period == 30
+        assert storage == RateLimitStorageType.MEMORY
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_redis_storage_when_redis_enabled(self, mock_questionary: MagicMock) -> None:
+        """Test Redis storage can be selected when Redis is enabled."""
+        mock_text = MagicMock()
+        mock_text.ask.side_effect = ["100", "60"]
+        mock_questionary.text.return_value = mock_text
+
+        mock_select = MagicMock()
+        mock_select.ask.return_value = RateLimitStorageType.REDIS
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        requests, period, storage = prompt_rate_limit_config(redis_enabled=True)
+
+        assert requests == 100
+        assert period == 60
+        assert storage == RateLimitStorageType.REDIS
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_redis_option_not_shown_when_redis_disabled(self, mock_questionary: MagicMock) -> None:
+        """Test Redis storage option is not shown when Redis is disabled."""
+        mock_text = MagicMock()
+        mock_text.ask.side_effect = ["100", "60"]
+        mock_questionary.text.return_value = mock_text
+
+        mock_select = MagicMock()
+        mock_select.ask.return_value = RateLimitStorageType.MEMORY
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_rate_limit_config(redis_enabled=False)
+
+        # Check that select was called with only one choice (Memory)
+        select_call = mock_questionary.select.call_args
+        choices = select_call[1]["choices"]
+        assert len(choices) == 1
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_redis_option_shown_when_redis_enabled(self, mock_questionary: MagicMock) -> None:
+        """Test Redis storage option is shown when Redis is enabled."""
+        mock_text = MagicMock()
+        mock_text.ask.side_effect = ["100", "60"]
+        mock_questionary.text.return_value = mock_text
+
+        mock_select = MagicMock()
+        mock_select.ask.return_value = RateLimitStorageType.MEMORY
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_rate_limit_config(redis_enabled=True)
+
+        # Check that select was called with two choices (Memory and Redis)
+        select_call = mock_questionary.select.call_args
+        choices = select_call[1]["choices"]
+        assert len(choices) == 2
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_raises_on_cancel(self, mock_questionary: MagicMock) -> None:
+        """Test KeyboardInterrupt on cancel."""
+        mock_text = MagicMock()
+        mock_text.ask.return_value = None
+        mock_questionary.text.return_value = mock_text
+
+        with pytest.raises(KeyboardInterrupt):
+            prompt_rate_limit_config(redis_enabled=False)
 
 
 class TestPromptDevTools:
@@ -1305,6 +1420,173 @@ class TestRunInteractivePrompts:
         assert config.frontend == FrontendType.NEXTJS
         assert config.enable_i18n is True
         mock_frontend_features.assert_called_once()
+
+    @patch("fastapi_gen.prompts.questionary")
+    @patch("fastapi_gen.prompts.prompt_rate_limit_config")
+    @patch("fastapi_gen.prompts.prompt_ports")
+    @patch("fastapi_gen.prompts.prompt_python_version")
+    @patch("fastapi_gen.prompts.prompt_frontend")
+    @patch("fastapi_gen.prompts.prompt_dev_tools")
+    @patch("fastapi_gen.prompts.prompt_integrations")
+    @patch("fastapi_gen.prompts.prompt_background_tasks")
+    @patch("fastapi_gen.prompts.prompt_logfire")
+    @patch("fastapi_gen.prompts.prompt_oauth")
+    @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_database")
+    @patch("fastapi_gen.prompts.prompt_basic_info")
+    @patch("fastapi_gen.prompts.show_header")
+    def test_rate_limit_config_prompted_when_enabled(
+        self,
+        mock_header: MagicMock,
+        mock_basic_info: MagicMock,
+        mock_database: MagicMock,
+        mock_auth: MagicMock,
+        mock_oauth: MagicMock,
+        mock_logfire: MagicMock,
+        mock_background_tasks: MagicMock,
+        mock_integrations: MagicMock,
+        mock_dev_tools: MagicMock,
+        mock_frontend: MagicMock,
+        mock_python_version: MagicMock,
+        mock_ports: MagicMock,
+        mock_rate_limit_config: MagicMock,
+        mock_questionary: MagicMock,
+    ) -> None:
+        """Test rate limit config is prompted when rate limiting is enabled."""
+        mock_basic_info.return_value = {
+            "project_name": "test_project",
+            "project_description": "Test",
+            "author_name": "Test Author",
+            "author_email": "test@test.com",
+        }
+        mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_auth.return_value = AuthType.JWT
+        mock_oauth.return_value = OAuthProvider.NONE
+        mock_logfire.return_value = (False, LogfireFeatures())
+        mock_background_tasks.return_value = BackgroundTaskType.NONE
+        mock_integrations.return_value = {
+            "enable_redis": True,
+            "enable_caching": False,
+            "enable_rate_limiting": True,  # Rate limiting enabled
+            "enable_pagination": True,
+            "enable_sentry": False,
+            "enable_prometheus": False,
+            "enable_admin_panel": False,
+            "enable_websockets": False,
+            "enable_file_storage": False,
+            "enable_ai_agent": False,
+            "enable_cors": True,
+            "enable_orjson": True,
+        }
+        mock_dev_tools.return_value = {
+            "enable_pytest": True,
+            "enable_precommit": True,
+            "enable_makefile": True,
+            "enable_docker": True,
+            "enable_kubernetes": False,
+            "ci_type": CIType.GITHUB,
+        }
+        mock_frontend.return_value = FrontendType.NONE
+        mock_python_version.return_value = "3.12"
+        mock_ports.return_value = {"backend_port": 8000}
+        mock_rate_limit_config.return_value = (50, 30, RateLimitStorageType.REDIS)
+
+        # Mock session management confirm
+        mock_confirm = MagicMock()
+        mock_confirm.ask.return_value = False
+        mock_questionary.confirm.return_value = mock_confirm
+
+        config = run_interactive_prompts()
+
+        # Rate limit config should be called and values set
+        assert config.enable_rate_limiting is True
+        assert config.rate_limit_requests == 50
+        assert config.rate_limit_period == 30
+        assert config.rate_limit_storage == RateLimitStorageType.REDIS
+        mock_rate_limit_config.assert_called_once_with(redis_enabled=True)
+
+    @patch("fastapi_gen.prompts.questionary")
+    @patch("fastapi_gen.prompts.prompt_rate_limit_config")
+    @patch("fastapi_gen.prompts.prompt_ports")
+    @patch("fastapi_gen.prompts.prompt_python_version")
+    @patch("fastapi_gen.prompts.prompt_frontend")
+    @patch("fastapi_gen.prompts.prompt_dev_tools")
+    @patch("fastapi_gen.prompts.prompt_integrations")
+    @patch("fastapi_gen.prompts.prompt_background_tasks")
+    @patch("fastapi_gen.prompts.prompt_logfire")
+    @patch("fastapi_gen.prompts.prompt_oauth")
+    @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_database")
+    @patch("fastapi_gen.prompts.prompt_basic_info")
+    @patch("fastapi_gen.prompts.show_header")
+    def test_rate_limit_config_not_prompted_when_disabled(
+        self,
+        mock_header: MagicMock,
+        mock_basic_info: MagicMock,
+        mock_database: MagicMock,
+        mock_auth: MagicMock,
+        mock_oauth: MagicMock,
+        mock_logfire: MagicMock,
+        mock_background_tasks: MagicMock,
+        mock_integrations: MagicMock,
+        mock_dev_tools: MagicMock,
+        mock_frontend: MagicMock,
+        mock_python_version: MagicMock,
+        mock_ports: MagicMock,
+        mock_rate_limit_config: MagicMock,
+        mock_questionary: MagicMock,
+    ) -> None:
+        """Test rate limit config is NOT prompted when rate limiting is disabled."""
+        mock_basic_info.return_value = {
+            "project_name": "test_project",
+            "project_description": "Test",
+            "author_name": "Test Author",
+            "author_email": "test@test.com",
+        }
+        mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_auth.return_value = AuthType.JWT
+        mock_oauth.return_value = OAuthProvider.NONE
+        mock_logfire.return_value = (False, LogfireFeatures())
+        mock_background_tasks.return_value = BackgroundTaskType.NONE
+        mock_integrations.return_value = {
+            "enable_redis": False,
+            "enable_caching": False,
+            "enable_rate_limiting": False,  # Rate limiting disabled
+            "enable_pagination": True,
+            "enable_sentry": False,
+            "enable_prometheus": False,
+            "enable_admin_panel": False,
+            "enable_websockets": False,
+            "enable_file_storage": False,
+            "enable_ai_agent": False,
+            "enable_cors": True,
+            "enable_orjson": True,
+        }
+        mock_dev_tools.return_value = {
+            "enable_pytest": True,
+            "enable_precommit": True,
+            "enable_makefile": True,
+            "enable_docker": True,
+            "enable_kubernetes": False,
+            "ci_type": CIType.GITHUB,
+        }
+        mock_frontend.return_value = FrontendType.NONE
+        mock_python_version.return_value = "3.12"
+        mock_ports.return_value = {"backend_port": 8000}
+
+        # Mock session management confirm
+        mock_confirm = MagicMock()
+        mock_confirm.ask.return_value = False
+        mock_questionary.confirm.return_value = mock_confirm
+
+        config = run_interactive_prompts()
+
+        # Rate limit config should NOT be called
+        assert config.enable_rate_limiting is False
+        assert config.rate_limit_requests == 100  # Default value
+        assert config.rate_limit_period == 60  # Default value
+        assert config.rate_limit_storage == RateLimitStorageType.MEMORY  # Default value
+        mock_rate_limit_config.assert_not_called()
 
 
 class TestShowSummary:

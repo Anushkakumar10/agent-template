@@ -12,6 +12,7 @@ from fastapi_gen.config import (
     LLMProviderType,
     LogfireFeatures,
     ProjectConfig,
+    RateLimitStorageType,
 )
 
 
@@ -44,6 +45,11 @@ class TestEnums:
         assert CIType.GITHUB.value == "github"
         assert CIType.GITLAB.value == "gitlab"
         assert CIType.NONE.value == "none"
+
+    def test_rate_limit_storage_type_values(self) -> None:
+        """Test RateLimitStorageType enum values."""
+        assert RateLimitStorageType.MEMORY.value == "memory"
+        assert RateLimitStorageType.REDIS.value == "redis"
 
 
 class TestLogfireFeatures:
@@ -518,3 +524,77 @@ class TestEmailValidation:
         for email in invalid_emails:
             with pytest.raises(ValidationError):
                 ProjectConfig(project_name="test", author_email=email)
+
+
+class TestRateLimitConfig:
+    """Tests for rate limit configuration."""
+
+    def test_default_rate_limit_values(self) -> None:
+        """Test default rate limit configuration values."""
+        config = ProjectConfig(project_name="test")
+        assert config.rate_limit_requests == 100
+        assert config.rate_limit_period == 60
+        assert config.rate_limit_storage == RateLimitStorageType.MEMORY
+
+    def test_custom_rate_limit_values(self) -> None:
+        """Test custom rate limit configuration values."""
+        config = ProjectConfig(
+            project_name="test",
+            enable_rate_limiting=True,
+            rate_limit_requests=50,
+            rate_limit_period=30,
+            rate_limit_storage=RateLimitStorageType.MEMORY,
+        )
+        assert config.rate_limit_requests == 50
+        assert config.rate_limit_period == 30
+        assert config.rate_limit_storage == RateLimitStorageType.MEMORY
+
+    def test_rate_limit_memory_storage_context_flags(self) -> None:
+        """Test rate limit memory storage sets correct context flags."""
+        config = ProjectConfig(
+            project_name="test",
+            enable_rate_limiting=True,
+            rate_limit_storage=RateLimitStorageType.MEMORY,
+        )
+        context = config.to_cookiecutter_context()
+
+        assert context["rate_limit_storage"] == "memory"
+        assert context["rate_limit_storage_memory"] is True
+        assert context["rate_limit_storage_redis"] is False
+
+    def test_rate_limit_redis_storage_context_flags(self) -> None:
+        """Test rate limit Redis storage sets correct context flags."""
+        config = ProjectConfig(
+            project_name="test",
+            enable_rate_limiting=True,
+            enable_redis=True,
+            rate_limit_storage=RateLimitStorageType.REDIS,
+        )
+        context = config.to_cookiecutter_context()
+
+        assert context["rate_limit_storage"] == "redis"
+        assert context["rate_limit_storage_memory"] is False
+        assert context["rate_limit_storage_redis"] is True
+
+    def test_rate_limit_redis_storage_requires_redis(self) -> None:
+        """Test that Redis storage for rate limiting requires Redis to be enabled."""
+        with pytest.raises(
+            ValidationError, match="Rate limiting with Redis storage requires Redis to be enabled"
+        ):
+            ProjectConfig(
+                project_name="test",
+                enable_rate_limiting=True,
+                enable_redis=False,
+                rate_limit_storage=RateLimitStorageType.REDIS,
+            )
+
+    def test_rate_limit_redis_storage_with_redis_is_valid(self) -> None:
+        """Test that Redis storage with Redis enabled is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            enable_rate_limiting=True,
+            enable_redis=True,
+            rate_limit_storage=RateLimitStorageType.REDIS,
+        )
+        assert config.rate_limit_storage == RateLimitStorageType.REDIS
+        assert config.enable_redis is True

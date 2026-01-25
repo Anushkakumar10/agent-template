@@ -99,6 +99,13 @@ class LLMProviderType(str, Enum):
     OPENROUTER = "openrouter"
 
 
+class RateLimitStorageType(str, Enum):
+    """Rate limiting storage backends."""
+
+    MEMORY = "memory"
+    REDIS = "redis"
+
+
 class LogfireFeatures(BaseModel):
     """Logfire instrumentation features."""
 
@@ -143,6 +150,7 @@ class ProjectConfig(BaseModel):
     enable_rate_limiting: bool = False
     rate_limit_requests: int = 100
     rate_limit_period: int = 60
+    rate_limit_storage: RateLimitStorageType = RateLimitStorageType.MEMORY
     enable_pagination: bool = True
     enable_sentry: bool = False
     enable_prometheus: bool = False
@@ -218,6 +226,12 @@ class ProjectConfig(BaseModel):
             and self.llm_provider == LLMProviderType.OPENROUTER
         ):
             raise ValueError("OpenRouter is not supported with LangChain")
+        if (
+            self.enable_rate_limiting
+            and self.rate_limit_storage == RateLimitStorageType.REDIS
+            and not self.enable_redis
+        ):
+            raise ValueError("Rate limiting with Redis storage requires Redis to be enabled")
         return self
 
     def to_cookiecutter_context(self) -> dict[str, Any]:
@@ -271,6 +285,9 @@ class ProjectConfig(BaseModel):
             "enable_rate_limiting": self.enable_rate_limiting,
             "rate_limit_requests": self.rate_limit_requests,
             "rate_limit_period": self.rate_limit_period,
+            "rate_limit_storage": self.rate_limit_storage.value,
+            "rate_limit_storage_memory": self.rate_limit_storage == RateLimitStorageType.MEMORY,
+            "rate_limit_storage_redis": self.rate_limit_storage == RateLimitStorageType.REDIS,
             "enable_pagination": self.enable_pagination,
             "enable_sentry": self.enable_sentry,
             "enable_prometheus": self.enable_prometheus,
