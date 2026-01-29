@@ -23,7 +23,7 @@ class TestVariablesDocumentation:
         with cookiecutter_json.open() as f:
             data = json.load(f)
         # Exclude private variables (prefixed with _)
-        return {k for k in data.keys() if not k.startswith("_")}
+        return {k for k in data if not k.startswith("_")}
 
     @pytest.fixture
     def documented_variables(self) -> set[str]:
