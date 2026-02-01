@@ -47,6 +47,12 @@ services:
 {%- endif %}
 {%- endif %}
     restart: unless-stopped
+{%- if cookiecutter.enable_prometheus %}
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port={{ cookiecutter.backend_port }}"
+      - "prometheus.path=/metrics"
+{%- endif %}
 
 {%- if cookiecutter.use_postgresql %}
 
@@ -219,6 +225,39 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    restart: unless-stopped
+{%- endif %}
+
+{%- if cookiecutter.use_arq %}
+
+  arq_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: {{ cookiecutter.project_slug }}_arq_worker
+    volumes:
+      - ./backend/app:/app/app:ro
+    command: arq app.worker.arq_app.WorkerSettings
+    env_file:
+      - ./backend/.env
+    environment:
+      - DEBUG=true
+{%- if cookiecutter.use_postgresql %}
+      - POSTGRES_HOST=db
+{%- endif %}
+      - REDIS_HOST=redis
+      - ARQ_REDIS_HOST=redis
+      - ARQ_REDIS_PORT=6379
+      - ARQ_REDIS_DB=2
+    networks:
+      - backend
+    depends_on:
+      redis:
+        condition: service_healthy
+{%- if cookiecutter.use_postgresql %}
+      db:
+        condition: service_healthy
+{%- endif %}
     restart: unless-stopped
 {%- endif %}
 

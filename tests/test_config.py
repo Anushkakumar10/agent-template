@@ -1,5 +1,7 @@
 """Tests for fastapi_gen.config module."""
 
+from unittest.mock import patch
+
 import pytest
 from pydantic import ValidationError
 
@@ -13,7 +15,26 @@ from fastapi_gen.config import (
     LogfireFeatures,
     ProjectConfig,
     RateLimitStorageType,
+    get_generator_version,
 )
+
+
+class TestGetGeneratorVersion:
+    """Tests for get_generator_version function."""
+
+    def test_returns_version_when_package_exists(self) -> None:
+        """Test version is returned when package is installed."""
+        # The package should be installed in the test environment
+        version = get_generator_version()
+        # Should return either a real version or fallback
+        assert version is not None
+        assert isinstance(version, str)
+
+    def test_returns_fallback_when_package_not_found(self) -> None:
+        """Test fallback version is returned when package is not found."""
+        with patch("fastapi_gen.config.version", side_effect=Exception("Package not found")):
+            version = get_generator_version()
+            assert version == "0.0.0"
 
 
 class TestEnums:

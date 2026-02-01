@@ -36,11 +36,13 @@ from fastapi_gen.prompts import (
     prompt_frontend,
     prompt_frontend_features,
     prompt_integrations,
+    prompt_llm_provider,
     prompt_logfire,
     prompt_oauth,
     prompt_ports,
     prompt_python_version,
     prompt_rate_limit_config,
+    prompt_reverse_proxy,
     prompt_websocket_auth,
     run_interactive_prompts,
     show_header,
@@ -806,6 +808,138 @@ class TestPromptOAuth:
         result = prompt_oauth()
 
         assert result == OAuthProvider.NONE
+
+
+class TestPromptReverseProxy:
+    """Tests for prompt_reverse_proxy function."""
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_traefik_included(self, mock_questionary: MagicMock) -> None:
+        """Test Traefik included is returned."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = ReverseProxyType.TRAEFIK_INCLUDED
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_reverse_proxy()
+
+        assert result == ReverseProxyType.TRAEFIK_INCLUDED
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_traefik_external(self, mock_questionary: MagicMock) -> None:
+        """Test Traefik external is returned."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = ReverseProxyType.TRAEFIK_EXTERNAL
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_reverse_proxy()
+
+        assert result == ReverseProxyType.TRAEFIK_EXTERNAL
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_none(self, mock_questionary: MagicMock) -> None:
+        """Test None is returned."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = ReverseProxyType.NONE
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_reverse_proxy()
+
+        assert result == ReverseProxyType.NONE
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_raises_on_cancel(self, mock_questionary: MagicMock) -> None:
+        """Test KeyboardInterrupt on cancel."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = None
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        with pytest.raises(KeyboardInterrupt):
+            prompt_reverse_proxy()
+
+
+class TestPromptLLMProvider:
+    """Tests for prompt_llm_provider function."""
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_openai(self, mock_questionary: MagicMock) -> None:
+        """Test OpenAI provider is returned."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = LLMProviderType.OPENAI
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_llm_provider(AIFrameworkType.PYDANTIC_AI)
+
+        assert result == LLMProviderType.OPENAI
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_anthropic(self, mock_questionary: MagicMock) -> None:
+        """Test Anthropic provider is returned."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = LLMProviderType.ANTHROPIC
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_llm_provider(AIFrameworkType.LANGCHAIN)
+
+        assert result == LLMProviderType.ANTHROPIC
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_openrouter_for_pydanticai(self, mock_questionary: MagicMock) -> None:
+        """Test OpenRouter provider is returned for PydanticAI."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = LLMProviderType.OPENROUTER
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_llm_provider(AIFrameworkType.PYDANTIC_AI)
+
+        assert result == LLMProviderType.OPENROUTER
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_openrouter_option_added_for_pydanticai(self, mock_questionary: MagicMock) -> None:
+        """Test OpenRouter option is added when using PydanticAI."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = LLMProviderType.OPENAI
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_llm_provider(AIFrameworkType.PYDANTIC_AI)
+
+        # Check that select was called with 3 choices (OpenAI, Anthropic, OpenRouter)
+        select_call = mock_questionary.select.call_args
+        choices = select_call[1]["choices"]
+        assert len(choices) == 3
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_openrouter_option_not_added_for_langchain(self, mock_questionary: MagicMock) -> None:
+        """Test OpenRouter option is NOT added when using LangChain."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = LLMProviderType.OPENAI
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_llm_provider(AIFrameworkType.LANGCHAIN)
+
+        # Check that select was called with 2 choices (OpenAI, Anthropic)
+        select_call = mock_questionary.select.call_args
+        choices = select_call[1]["choices"]
+        assert len(choices) == 2
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_raises_on_cancel(self, mock_questionary: MagicMock) -> None:
+        """Test KeyboardInterrupt on cancel."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = None
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        with pytest.raises(KeyboardInterrupt):
+            prompt_llm_provider(AIFrameworkType.PYDANTIC_AI)
 
 
 class TestPromptFrontendFeatures:

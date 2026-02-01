@@ -198,10 +198,26 @@ class Settings(BaseSettings):
     TASKIQ_RESULT_BACKEND: str = "redis://localhost:6379/1"
 {%- endif %}
 
+{%- if cookiecutter.use_arq %}
+
+    # === ARQ (Async Redis Queue) ===
+    ARQ_REDIS_HOST: str = "localhost"
+    ARQ_REDIS_PORT: int = 6379
+    ARQ_REDIS_PASSWORD: str | None = None
+    ARQ_REDIS_DB: int = 2
+{%- endif %}
+
 {%- if cookiecutter.enable_sentry %}
 
     # === Sentry ===
     SENTRY_DSN: str | None = None
+{%- endif %}
+
+{%- if cookiecutter.enable_prometheus %}
+
+    # === Prometheus ===
+    PROMETHEUS_METRICS_PATH: str = "/metrics"
+    PROMETHEUS_INCLUDE_IN_SCHEMA: bool = False
 {%- endif %}
 
 {%- if cookiecutter.enable_file_storage %}

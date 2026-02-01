@@ -33,6 +33,9 @@ use_jwt = "{{ cookiecutter.use_jwt }}" == "True"
 use_celery = "{{ cookiecutter.use_celery }}" == "True"
 use_taskiq = "{{ cookiecutter.use_taskiq }}" == "True"
 use_arq = "{{ cookiecutter.use_arq }}" == "True"
+use_github_actions = "{{ cookiecutter.use_github_actions }}" == "True"
+use_gitlab_ci = "{{ cookiecutter.use_gitlab_ci }}" == "True"
+enable_kubernetes = "{{ cookiecutter.enable_kubernetes }}" == "True"
 
 
 def remove_file(path: str) -> None:
@@ -171,6 +174,25 @@ for subdir in ["clients", "agents", "worker", "worker/tasks"]:
         remove_empty_dirs(dir_path)
 
 print("File cleanup complete.")
+
+# --- CI/CD files cleanup ---
+if not use_github_actions:
+    github_dir = os.path.join(os.getcwd(), ".github")
+    if os.path.exists(github_dir):
+        shutil.rmtree(github_dir)
+        print("Removed .github/ directory (GitHub Actions not enabled)")
+
+if not use_gitlab_ci:
+    gitlab_ci_file = os.path.join(os.getcwd(), ".gitlab-ci.yml")
+    if os.path.exists(gitlab_ci_file):
+        os.remove(gitlab_ci_file)
+        print("Removed .gitlab-ci.yml (GitLab CI not enabled)")
+
+if not enable_kubernetes:
+    kubernetes_dir = os.path.join(os.getcwd(), "kubernetes")
+    if os.path.exists(kubernetes_dir):
+        shutil.rmtree(kubernetes_dir)
+        print("Removed kubernetes/ directory (Kubernetes not enabled)")
 
 # Remove frontend folder if not using frontend
 if not use_frontend:
