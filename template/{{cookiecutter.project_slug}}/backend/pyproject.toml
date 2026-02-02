@@ -31,7 +31,11 @@ dependencies = [
     "logfire[{{ logfire_extras | join(',') }}]>=2.0.0",
 {%- endif %}
 {%- if cookiecutter.use_postgresql %}
+{%- if cookiecutter.use_sqlmodel %}
+    "sqlmodel>=0.0.22",
+{%- else %}
     "sqlalchemy[asyncio]>=2.0.0",
+{%- endif %}
     "asyncpg>=0.30.0",
     "psycopg2-binary>=2.9.0",
     "alembic>=1.14.0",
@@ -42,7 +46,11 @@ dependencies = [
     "beanie>=1.27.0",
 {%- endif %}
 {%- if cookiecutter.use_sqlite %}
+{%- if cookiecutter.use_sqlmodel %}
+    "sqlmodel>=0.0.22",
+{%- else %}
     "sqlalchemy>=2.0.0",
+{%- endif %}
     "alembic>=1.14.0",
 {%- endif %}
 {%- if cookiecutter.use_jwt %}

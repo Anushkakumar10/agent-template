@@ -16,6 +16,7 @@ from fastapi_gen.config import (
     LLMProviderType,
     LogfireFeatures,
     OAuthProvider,
+    OrmType,
     RateLimitStorageType,
     ReverseProxyType,
     WebSocketAuthType,
@@ -39,6 +40,7 @@ from fastapi_gen.prompts import (
     prompt_llm_provider,
     prompt_logfire,
     prompt_oauth,
+    prompt_orm_type,
     prompt_ports,
     prompt_python_version,
     prompt_rate_limit_config,
@@ -308,6 +310,45 @@ class TestPromptDatabase:
 
         with pytest.raises(KeyboardInterrupt):
             prompt_database()
+
+
+class TestPromptOrmType:
+    """Tests for prompt_orm_type function."""
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_sqlalchemy(self, mock_questionary: MagicMock) -> None:
+        """Test SQLAlchemy is returned when selected."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = OrmType.SQLALCHEMY
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_orm_type()
+
+        assert result == OrmType.SQLALCHEMY
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_returns_sqlmodel(self, mock_questionary: MagicMock) -> None:
+        """Test SQLModel is returned when selected."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = OrmType.SQLMODEL
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_orm_type()
+
+        assert result == OrmType.SQLMODEL
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_raises_on_cancel(self, mock_questionary: MagicMock) -> None:
+        """Test KeyboardInterrupt on cancel."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = None
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        with pytest.raises(KeyboardInterrupt):
+            prompt_orm_type()
 
 
 class TestPromptAuth:
@@ -984,6 +1025,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -992,6 +1034,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1012,6 +1055,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (True, LogfireFeatures())
@@ -1068,6 +1112,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -1076,6 +1121,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1096,6 +1142,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (False, LogfireFeatures())
@@ -1151,6 +1198,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -1159,6 +1207,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1182,6 +1231,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (True, LogfireFeatures())
@@ -1242,6 +1292,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -1250,6 +1301,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1271,6 +1323,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (True, LogfireFeatures())
@@ -1328,6 +1381,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -1336,6 +1390,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1357,6 +1412,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.SQLITE
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (True, LogfireFeatures())
@@ -1497,6 +1553,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -1505,6 +1562,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1526,6 +1584,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (False, LogfireFeatures())
@@ -1581,6 +1640,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -1589,6 +1649,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1610,6 +1671,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (False, LogfireFeatures())
@@ -1667,6 +1729,7 @@ class TestRunInteractivePrompts:
     @patch("fastapi_gen.prompts.prompt_logfire")
     @patch("fastapi_gen.prompts.prompt_oauth")
     @patch("fastapi_gen.prompts.prompt_auth")
+    @patch("fastapi_gen.prompts.prompt_orm_type")
     @patch("fastapi_gen.prompts.prompt_database")
     @patch("fastapi_gen.prompts.prompt_basic_info")
     @patch("fastapi_gen.prompts.show_header")
@@ -1675,6 +1738,7 @@ class TestRunInteractivePrompts:
         mock_header: MagicMock,
         mock_basic_info: MagicMock,
         mock_database: MagicMock,
+        mock_orm_type: MagicMock,
         mock_auth: MagicMock,
         mock_oauth: MagicMock,
         mock_logfire: MagicMock,
@@ -1696,6 +1760,7 @@ class TestRunInteractivePrompts:
             "author_email": "test@test.com",
         }
         mock_database.return_value = DatabaseType.POSTGRESQL
+        mock_orm_type.return_value = OrmType.SQLALCHEMY
         mock_auth.return_value = AuthType.JWT
         mock_oauth.return_value = OAuthProvider.NONE
         mock_logfire.return_value = (False, LogfireFeatures())

@@ -59,6 +59,19 @@ These variables are set automatically by the generator.
 | `db_max_overflow` | int | `10` | Max overflow connections above pool size | Requires SQL database |
 | `db_pool_timeout` | int | `30` | Timeout (seconds) waiting for connection | Requires SQL database |
 
+### ORM Library
+
+| Variable | Type | Default | Description | Dependencies |
+|----------|------|---------|-------------|--------------|
+| `orm_type` | enum | `"sqlalchemy"` | ORM library. Values: `sqlalchemy`, `sqlmodel` | Requires SQL database |
+| `use_sqlalchemy` | bool | `true` | SQLAlchemy is selected | Computed from `orm_type` |
+| `use_sqlmodel` | bool | `false` | SQLModel is selected | Computed from `orm_type` |
+
+**Notes:**
+- SQLModel provides simplified syntax combining SQLAlchemy and Pydantic
+- SQLModel is only available for PostgreSQL and SQLite (not MongoDB)
+- SQLModel uses the same database session and migrations as SQLAlchemy
+
 **Notes:**
 - PostgreSQL uses `asyncpg` for async operations
 - MongoDB uses `motor` for async operations
@@ -265,6 +278,10 @@ database = "postgresql"
   → use_mongodb = false
   → use_sqlite = false
   → use_database = true
+
+orm_type = "sqlmodel"
+  → use_sqlalchemy = false
+  → use_sqlmodel = true
 ```
 
 These computed variables are used in Jinja2 conditionals within templates:

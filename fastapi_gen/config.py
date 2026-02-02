@@ -114,6 +114,13 @@ class ReverseProxyType(str, Enum):
     NONE = "none"  # No reverse proxy, expose ports directly
 
 
+class OrmType(str, Enum):
+    """Supported ORM libraries for SQL databases."""
+
+    SQLALCHEMY = "sqlalchemy"
+    SQLMODEL = "sqlmodel"
+
+
 class LogfireFeatures(BaseModel):
     """Logfire instrumentation features."""
 
@@ -136,6 +143,7 @@ class ProjectConfig(BaseModel):
 
     # Database
     database: DatabaseType = DatabaseType.POSTGRESQL
+    orm_type: OrmType = OrmType.SQLALCHEMY
     db_pool_size: int = 5
     db_max_overflow: int = 10
     db_pool_timeout: int = 30
@@ -208,6 +216,18 @@ class ProjectConfig(BaseModel):
         """Return project slug (underscores instead of hyphens)."""
         return self.project_name.replace("-", "_")
 
+    @computed_field
+    @property
+    def use_sqlalchemy(self) -> bool:
+        """Check if SQLAlchemy ORM is selected."""
+        return self.orm_type == OrmType.SQLALCHEMY
+
+    @computed_field
+    @property
+    def use_sqlmodel(self) -> bool:
+        """Check if SQLModel ORM is selected."""
+        return self.orm_type == OrmType.SQLMODEL
+
     @model_validator(mode="after")
     def validate_option_combinations(self) -> "ProjectConfig":
         """Validate that option combinations are valid.
@@ -218,11 +238,17 @@ class ProjectConfig(BaseModel):
         - Caching requires Redis to be enabled
         - Session management requires a database
         - Conversation persistence requires a database
+        - SQLModel requires a SQL database (PostgreSQL or SQLite)
         """
         if self.enable_admin_panel and self.database == DatabaseType.NONE:
             raise ValueError("Admin panel requires a database")
         if self.enable_admin_panel and self.database == DatabaseType.MONGODB:
             raise ValueError("Admin panel (SQLAdmin) requires PostgreSQL or SQLite")
+        if self.orm_type == OrmType.SQLMODEL and self.database not in (
+            DatabaseType.POSTGRESQL,
+            DatabaseType.SQLITE,
+        ):
+            raise ValueError("SQLModel requires PostgreSQL or SQLite database")
         if self.enable_caching and not self.enable_redis:
             raise ValueError("Caching requires Redis to be enabled")
         if self.enable_session_management and self.database == DatabaseType.NONE:
@@ -265,6 +291,10 @@ class ProjectConfig(BaseModel):
             "db_pool_size": self.db_pool_size,
             "db_max_overflow": self.db_max_overflow,
             "db_pool_timeout": self.db_pool_timeout,
+            # ORM
+            "orm_type": self.orm_type.value,
+            "use_sqlalchemy": self.use_sqlalchemy,
+            "use_sqlmodel": self.use_sqlmodel,
             # Auth
             "auth": self.auth.value,
             "use_jwt": self.auth in (AuthType.JWT, AuthType.BOTH),

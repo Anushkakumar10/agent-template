@@ -6,11 +6,16 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+{%- if cookiecutter.use_sqlmodel %}
+from sqlmodel import SQLModel
+{%- endif %}
 
 from app.core.config import settings
+{%- if not cookiecutter.use_sqlmodel %}
 from app.db.base import Base
+{%- endif %}
 
-# Import all models here to ensure they are registered with Base.metadata
+# Import all models here to ensure they are registered with metadata
 {%- if cookiecutter.use_jwt %}
 from app.db.models.user import User  # noqa: F401
 {%- endif %}
@@ -20,7 +25,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+{%- if cookiecutter.use_sqlmodel %}
+target_metadata = SQLModel.metadata
+{%- else %}
 target_metadata = Base.metadata
+{%- endif %}
 
 
 def get_url() -> str:

@@ -624,6 +624,7 @@ generated_at = "2024-12-21T10:30:00+00:00"
 | Option | Values | Description |
 |--------|--------|-------------|
 | **Database** | `postgresql`, `mongodb`, `sqlite`, `none` | Async by default |
+| **ORM** | `sqlalchemy`, `sqlmodel` | SQLModel for simplified syntax |
 | **Auth** | `jwt`, `api_key`, `both`, `none` | JWT includes user management |
 | **OAuth** | `none`, `google` | Social login |
 | **AI Framework** | `pydantic_ai`, `langchain` | Choose your AI agent framework |

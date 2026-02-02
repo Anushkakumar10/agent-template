@@ -19,6 +19,7 @@ from .config import (
     LLMProviderType,
     LogfireFeatures,
     OAuthProvider,
+    OrmType,
     ProjectConfig,
     RateLimitStorageType,
     ReverseProxyType,
@@ -145,6 +146,31 @@ def prompt_database() -> DatabaseType:
         _check_cancelled(
             questionary.select(
                 "Select database:",
+                choices=choices,
+                default=choices[0],
+            ).ask()
+        ),
+    )
+
+
+def prompt_orm_type() -> OrmType:
+    """Prompt for ORM library selection."""
+    choices = [
+        questionary.Choice(
+            "SQLAlchemy (recommended - full control, mature)",
+            value=OrmType.SQLALCHEMY,
+        ),
+        questionary.Choice(
+            "SQLModel (simplified - less boilerplate, FastAPI-native)",
+            value=OrmType.SQLMODEL,
+        ),
+    ]
+
+    return cast(
+        OrmType,
+        _check_cancelled(
+            questionary.select(
+                "ORM Library:",
                 choices=choices,
                 default=choices[0],
             ).ask()
@@ -679,6 +705,11 @@ def run_interactive_prompts() -> ProjectConfig:
     # Database
     database = prompt_database()
 
+    # ORM type (only for PostgreSQL or SQLite)
+    orm_type = OrmType.SQLALCHEMY
+    if database in (DatabaseType.POSTGRESQL, DatabaseType.SQLITE):
+        orm_type = prompt_orm_type()
+
     # Auth
     auth = prompt_auth()
 
@@ -781,6 +812,7 @@ def run_interactive_prompts() -> ProjectConfig:
         author_name=basic_info["author_name"],
         author_email=basic_info["author_email"],
         database=database,
+        orm_type=orm_type,
         auth=auth,
         oauth_provider=oauth_provider,
         enable_session_management=enable_session_management,
@@ -818,6 +850,8 @@ def show_summary(config: ProjectConfig) -> None:
 
     console.print(f"  [cyan]Project:[/] {config.project_name}")
     console.print(f"  [cyan]Database:[/] {config.database.value}")
+    if config.database in (DatabaseType.POSTGRESQL, DatabaseType.SQLITE):
+        console.print(f"  [cyan]ORM:[/] {config.orm_type.value}")
     auth_str = config.auth.value
     if config.oauth_provider != OAuthProvider.NONE:
         auth_str += f" + {config.oauth_provider.value} OAuth"

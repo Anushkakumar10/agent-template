@@ -15,6 +15,7 @@ from .config import (
     FrontendType,
     LLMProviderType,
     OAuthProvider,
+    OrmType,
     ProjectConfig,
 )
 from .generator import generate_project, post_generation_tasks
@@ -86,6 +87,12 @@ def new(output: Path | None, no_input: bool, name: str | None) -> None:
     type=click.Choice(["postgresql", "mongodb", "sqlite", "none"]),
     default="postgresql",
     help="Database type",
+)
+@click.option(
+    "--orm",
+    type=click.Choice(["sqlalchemy", "sqlmodel"]),
+    default="sqlalchemy",
+    help="ORM library (sqlalchemy or sqlmodel). SQLModel only works with PostgreSQL/SQLite",
 )
 @click.option(
     "--auth",
@@ -188,6 +195,7 @@ def create(
     name: str,
     output: Path | None,
     database: str,
+    orm: str,
     auth: str,
     no_logfire: bool,
     no_docker: bool,
@@ -295,6 +303,7 @@ def create(
             config = ProjectConfig(
                 project_name=name,
                 database=DatabaseType(database),
+                orm_type=OrmType(orm),
                 auth=AuthType(auth),
                 enable_logfire=not no_logfire,
                 enable_docker=not no_docker,

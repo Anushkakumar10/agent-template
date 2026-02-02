@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2025-12-26
+
+### Added
+
+#### SQLModel Support
+
+- **Optional SQLModel ORM** as alternative to SQLAlchemy for PostgreSQL and SQLite
+- New `--orm` CLI option: `--orm sqlalchemy` (default) or `--orm sqlmodel`
+- Interactive prompt for ORM library selection when using `ak-agent-template new`
+- SQLModel provides simplified syntax combining SQLAlchemy and Pydantic:
+  ```python
+  from sqlmodel import SQLModel, Field
+
+  class User(SQLModel, table=True):
+      id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+      email: str = Field(max_length=255, unique=True)
+      is_active: bool = Field(default=True)
+  ```
+- Full Alembic compatibility maintained with SQLModel
+- SQLAdmin works seamlessly with SQLModel models
+- All database models updated with SQLModel variants:
+  - `User`, `Item`, `Conversation`, `Message`, `Session`, `Webhook`, `WebhookDelivery`
+- `VARIABLES.md` updated with new ORM variables: `orm_type`, `use_sqlalchemy`, `use_sqlmodel`
+
+### Changed
+
+- Database model templates now support conditional SQLModel/SQLAlchemy syntax
+- `alembic/env.py` uses `SQLModel.metadata` when SQLModel is selected
+- Repositories remain unchanged (SQLModel uses same AsyncSession and methods)
+
+### Tests Added
+
+- Tests for `OrmType` enum values
+- Tests for `use_sqlalchemy` and `use_sqlmodel` computed fields
+- Tests for SQLModel validation (requires PostgreSQL or SQLite)
+- Tests for `prompt_orm_type()` function
+- Updated `run_interactive_prompts()` tests with `prompt_orm_type` mocks
+
 ## [0.1.7] - 2025-12-23
 
 ### Added
