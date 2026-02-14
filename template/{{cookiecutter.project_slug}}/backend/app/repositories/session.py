@@ -2,7 +2,7 @@
 {%- if cookiecutter.use_postgresql %}
 """Session repository (PostgreSQL async)."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -74,7 +74,7 @@ async def update_last_used(db: AsyncSession, session_id: UUID) -> None:
     await db.execute(
         update(Session)
         .where(Session.id == session_id)
-        .values(last_used_at=datetime.utcnow())
+        .values(last_used_at=datetime.now(UTC))
     )
     await db.flush()
 
@@ -113,7 +113,7 @@ async def deactivate_by_refresh_token_hash(db: AsyncSession, token_hash: str) ->
 {%- elif cookiecutter.use_sqlite %}
 """Session repository (SQLite sync)."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session as DBSession
@@ -184,7 +184,7 @@ def update_last_used(db: DBSession, session_id: str) -> None:
     db.execute(
         update(Session)
         .where(Session.id == session_id)
-        .values(last_used_at=datetime.utcnow())
+        .values(last_used_at=datetime.now(UTC))
     )
     db.flush()
 

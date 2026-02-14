@@ -11,9 +11,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 {%- endif %}
 
+{%- if cookiecutter.use_sqlmodel %}
+from sqlmodel import SQLModel
+
+ModelType = TypeVar("ModelType", bound=SQLModel)
+{%- else %}
 from app.db.base import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
+{%- endif %}
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 

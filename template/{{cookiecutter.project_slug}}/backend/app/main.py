@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
     await redis_client.connect()
 {%- endif %}
 
-{%- if cookiecutter.enable_caching %}
+{%- if cookiecutter.enable_caching and cookiecutter.enable_redis %}
     from app.core.cache import setup_cache
     setup_cache(redis_client)
 {%- endif %}

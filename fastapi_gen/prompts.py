@@ -157,11 +157,11 @@ def prompt_orm_type() -> OrmType:
     """Prompt for ORM library selection."""
     choices = [
         questionary.Choice(
-            "SQLAlchemy (recommended - full control, mature)",
+            "SQLAlchemy — full control, supports admin panel",
             value=OrmType.SQLALCHEMY,
         ),
         questionary.Choice(
-            "SQLModel (simplified - less boilerplate, FastAPI-native)",
+            "SQLModel — less boilerplate, no admin panel support",
             value=OrmType.SQLMODEL,
         ),
     ]
@@ -289,37 +289,119 @@ def prompt_background_tasks() -> BackgroundTaskType:
     )
 
 
-def prompt_integrations() -> dict[str, bool]:
-    """Prompt for optional integrations."""
+def prompt_integrations(
+    database: DatabaseType,
+    orm_type: OrmType,
+) -> dict[str, bool]:
+    """Prompt for optional integrations.
+
+    Args:
+        database: Selected database type (affects which options are shown).
+        orm_type: Selected ORM type (SQLModel doesn't support admin panel).
+    """
     console.print()
     console.print("[bold cyan]Optional Integrations[/]")
     console.print()
 
+    # Build choices dynamically based on context
+    choices: list[questionary.Choice] = [
+        questionary.Choice(
+            "Redis — required for caching, rate limiting (Redis), task queues",
+            value="redis",
+        ),
+        questionary.Choice(
+            "Caching (fastapi-cache2) — requires Redis",
+            value="caching",
+        ),
+        questionary.Choice(
+            "Rate limiting (slowapi) — optional Redis storage",
+            value="rate_limiting",
+        ),
+        questionary.Choice(
+            "Pagination (fastapi-pagination)",
+            value="pagination",
+            checked=True,
+        ),
+        questionary.Choice(
+            "Sentry — error tracking & monitoring",
+            value="sentry",
+        ),
+        questionary.Choice(
+            "Prometheus — metrics endpoint for monitoring",
+            value="prometheus",
+        ),
+    ]
+
+    # Admin Panel only available with SQLAlchemy (not SQLModel) and SQL database
+    if (
+        database in (DatabaseType.POSTGRESQL, DatabaseType.SQLITE)
+        and orm_type == OrmType.SQLALCHEMY
+    ):
+        choices.append(
+            questionary.Choice(
+                "Admin Panel (SQLAdmin) — web UI for database management",
+                value="admin_panel",
+            )
+        )
+
+    choices.extend(
+        [
+            questionary.Choice(
+                "WebSockets — real-time bidirectional communication",
+                value="websockets",
+            ),
+            questionary.Choice(
+                "File Storage (S3/MinIO) — file upload/download support",
+                value="file_storage",
+            ),
+            questionary.Choice(
+                "AI Agent (PydanticAI/LangGraph/CrewAI) — LLM-powered assistant",
+                value="ai_agent",
+                checked=True,
+            ),
+        ]
+    )
+
+    # Webhooks require database
+    if database != DatabaseType.NONE:
+        choices.append(
+            questionary.Choice(
+                "Webhooks — outbound event notifications",
+                value="webhooks",
+            )
+        )
+
+    choices.extend(
+        [
+            questionary.Choice(
+                "Example CRUD (Item model) — sample API endpoints",
+                value="example_crud",
+                checked=True,
+            ),
+            questionary.Choice(
+                "CORS middleware — cross-origin request support",
+                value="cors",
+                checked=True,
+            ),
+            questionary.Choice(
+                "orjson — faster JSON serialization",
+                value="orjson",
+                checked=True,
+            ),
+        ]
+    )
+
     features = _check_cancelled(
         questionary.checkbox(
             "Select additional features:",
-            choices=[
-                questionary.Choice("Redis (caching/sessions)", value="redis"),
-                questionary.Choice("Caching (fastapi-cache2)", value="caching"),
-                questionary.Choice("Rate limiting (slowapi)", value="rate_limiting"),
-                questionary.Choice(
-                    "Pagination (fastapi-pagination)", value="pagination", checked=True
-                ),
-                questionary.Choice("Sentry (error tracking)", value="sentry"),
-                questionary.Choice("Prometheus (metrics)", value="prometheus"),
-                questionary.Choice("Admin Panel (SQLAdmin)", value="admin_panel"),
-                questionary.Choice("WebSockets", value="websockets"),
-                questionary.Choice("File Storage (S3/MinIO)", value="file_storage"),
-                questionary.Choice(
-                    "AI Agent (PydanticAI/LangGraph/CrewAI)", value="ai_agent", checked=True
-                ),
-                questionary.Choice("Webhooks (outbound events)", value="webhooks"),
-                questionary.Choice("Example CRUD (Item model)", value="example_crud", checked=True),
-                questionary.Choice("CORS middleware", value="cors", checked=True),
-                questionary.Choice("orjson (faster JSON)", value="orjson", checked=True),
-            ],
+            choices=choices,
         ).ask()
     )
+
+    # Auto-enable Redis for caching (show info message)
+    if "caching" in features and "redis" not in features:
+        console.print("[yellow]ℹ Caching requires Redis — auto-enabled[/]")
+        features.append("redis")
 
     return {
         "enable_redis": "redis" in features,
@@ -582,17 +664,30 @@ def prompt_llm_provider(ai_framework: AIFrameworkType) -> LLMProviderType:
     )
 
 
-def prompt_websocket_auth() -> WebSocketAuthType:
-    """Prompt for WebSocket authentication method for AI Agent."""
+def prompt_websocket_auth(auth: AuthType) -> WebSocketAuthType:
+    """Prompt for WebSocket authentication method for AI Agent.
+
+    Args:
+        auth: The main auth type. JWT WebSocket auth is only available
+            if JWT is enabled (JWT or BOTH).
+    """
     console.print()
     console.print("[bold cyan]AI Agent WebSocket Authentication[/]")
     console.print()
 
     choices = [
         questionary.Choice("None (public access)", value=WebSocketAuthType.NONE),
-        questionary.Choice("JWT token required", value=WebSocketAuthType.JWT),
-        questionary.Choice("API Key required (query param)", value=WebSocketAuthType.API_KEY),
     ]
+
+    # JWT WebSocket auth only available if main auth uses JWT
+    if auth in (AuthType.JWT, AuthType.BOTH):
+        choices.append(questionary.Choice("JWT token required", value=WebSocketAuthType.JWT))
+
+    # API Key WebSocket auth available if main auth uses API keys
+    if auth in (AuthType.API_KEY, AuthType.BOTH):
+        choices.append(
+            questionary.Choice("API Key required (query param)", value=WebSocketAuthType.API_KEY)
+        )
 
     return cast(
         WebSocketAuthType,
@@ -744,8 +839,8 @@ def run_interactive_prompts() -> ProjectConfig:
     # Background tasks
     background_tasks = prompt_background_tasks()
 
-    # Integrations
-    integrations = prompt_integrations()
+    # Integrations (pass context for dynamic option filtering)
+    integrations = prompt_integrations(database=database, orm_type=orm_type)
 
     # Dev tools
     dev_tools = prompt_dev_tools()
@@ -780,7 +875,7 @@ def run_interactive_prompts() -> ProjectConfig:
     if integrations.get("enable_ai_agent"):
         ai_framework = prompt_ai_framework()
         llm_provider = prompt_llm_provider(ai_framework)
-        websocket_auth = prompt_websocket_auth()
+        websocket_auth = prompt_websocket_auth(auth=auth)
         # Only offer persistence if database is enabled
         if database != DatabaseType.NONE:
             enable_conversation_persistence = _check_cancelled(

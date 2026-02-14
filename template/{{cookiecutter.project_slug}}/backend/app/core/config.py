@@ -1,11 +1,11 @@
 """Application configuration using Pydantic BaseSettings."""
-{% if cookiecutter.use_database -%}
+{% if cookiecutter.use_database or cookiecutter.enable_redis -%}
 # ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 {% endif %}
 from pathlib import Path
 from typing import Literal
 
-{% if cookiecutter.use_database -%}
+{% if cookiecutter.use_database or cookiecutter.enable_redis -%}
 from pydantic import computed_field, field_validator{% if cookiecutter.use_jwt or cookiecutter.use_api_key or cookiecutter.enable_cors %}, ValidationInfo{% endif %}
 {% else -%}
 from pydantic import field_validator{% if cookiecutter.use_jwt or cookiecutter.use_api_key or cookiecutter.enable_cors %}, ValidationInfo{% endif %}
@@ -109,13 +109,10 @@ class Settings(BaseSettings):
         return f"sqlite:///{self.SQLITE_PATH}"
 {%- endif %}
 
-{%- if cookiecutter.use_jwt %}
+{%- if cookiecutter.use_jwt or (cookiecutter.enable_admin_panel and cookiecutter.admin_require_auth) or cookiecutter.enable_oauth %}
 
-    # === Auth (JWT) ===
+    # === Auth (SECRET_KEY for JWT/Session/Admin) ===
     SECRET_KEY: str = "change-me-in-production-use-openssl-rand-hex-32"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    ALGORITHM: str = "HS256"
 
     @field_validator("SECRET_KEY")
     @classmethod
@@ -131,6 +128,14 @@ class Settings(BaseSettings):
                 "Generate a secure key with: openssl rand -hex 32"
             )
         return v
+{%- endif %}
+
+{%- if cookiecutter.use_jwt %}
+
+    # === JWT Settings ===
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ALGORITHM: str = "HS256"
 {%- endif %}
 
 {%- if cookiecutter.enable_oauth_google %}

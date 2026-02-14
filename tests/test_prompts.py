@@ -431,13 +431,121 @@ class TestPromptIntegrations:
         mock_questionary.checkbox.return_value = mock_checkbox
         mock_questionary.Choice = MagicMock()
 
-        result = prompt_integrations()
+        result = prompt_integrations(
+            database=DatabaseType.POSTGRESQL,
+            orm_type=OrmType.SQLALCHEMY,
+        )
 
         assert result["enable_redis"] is True
         assert result["enable_caching"] is True
         assert result["enable_websockets"] is True
         assert result["enable_pagination"] is False
         assert result["enable_sentry"] is False
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_admin_panel_shown_with_sqlalchemy(self, mock_questionary: MagicMock) -> None:
+        """Test admin panel option IS shown when SQLAlchemy is selected."""
+        mock_checkbox = MagicMock()
+        mock_checkbox.ask.return_value = []
+        mock_questionary.checkbox.return_value = mock_checkbox
+        mock_questionary.Choice = MagicMock()
+
+        prompt_integrations(
+            database=DatabaseType.POSTGRESQL,
+            orm_type=OrmType.SQLALCHEMY,
+        )
+
+        # Check that checkbox was called WITH admin_panel in choices
+        # Each call in call_args_list is (args, kwargs) tuple
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert "admin_panel" in choice_values
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_admin_panel_hidden_with_sqlmodel(self, mock_questionary: MagicMock) -> None:
+        """Test admin panel option is not shown when SQLModel is selected."""
+        mock_checkbox = MagicMock()
+        mock_checkbox.ask.return_value = []
+        mock_questionary.checkbox.return_value = mock_checkbox
+        mock_questionary.Choice = MagicMock()
+
+        prompt_integrations(
+            database=DatabaseType.POSTGRESQL,
+            orm_type=OrmType.SQLMODEL,
+        )
+
+        # Check that checkbox was called without admin_panel in choices
+        # Each call in call_args_list is (args, kwargs) tuple
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert "admin_panel" not in choice_values
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_admin_panel_hidden_with_mongodb(self, mock_questionary: MagicMock) -> None:
+        """Test admin panel option is not shown when MongoDB is selected."""
+        mock_checkbox = MagicMock()
+        mock_checkbox.ask.return_value = []
+        mock_questionary.checkbox.return_value = mock_checkbox
+        mock_questionary.Choice = MagicMock()
+
+        prompt_integrations(
+            database=DatabaseType.MONGODB,
+            orm_type=OrmType.SQLALCHEMY,  # Doesn't apply for MongoDB
+        )
+
+        # Check that checkbox was called without admin_panel in choices
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert "admin_panel" not in choice_values
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_webhooks_shown_with_database(self, mock_questionary: MagicMock) -> None:
+        """Test webhooks option IS shown when a database is selected."""
+        mock_checkbox = MagicMock()
+        mock_checkbox.ask.return_value = []
+        mock_questionary.checkbox.return_value = mock_checkbox
+        mock_questionary.Choice = MagicMock()
+
+        prompt_integrations(
+            database=DatabaseType.POSTGRESQL,
+            orm_type=OrmType.SQLALCHEMY,
+        )
+
+        # Check that checkbox was called WITH webhooks in choices
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert "webhooks" in choice_values
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_webhooks_hidden_without_database(self, mock_questionary: MagicMock) -> None:
+        """Test webhooks option is not shown when no database is selected."""
+        mock_checkbox = MagicMock()
+        mock_checkbox.ask.return_value = []
+        mock_questionary.checkbox.return_value = mock_checkbox
+        mock_questionary.Choice = MagicMock()
+
+        prompt_integrations(
+            database=DatabaseType.NONE,
+            orm_type=OrmType.SQLALCHEMY,
+        )
+
+        # Check that checkbox was called without webhooks in choices
+        # Each call in call_args_list is (args, kwargs) tuple
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert "webhooks" not in choice_values
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_auto_enables_redis_for_caching(self, mock_questionary: MagicMock) -> None:
+        """Test that Redis is auto-enabled when caching is selected without Redis."""
+        mock_checkbox = MagicMock()
+        mock_checkbox.ask.return_value = ["caching"]  # caching without redis
+        mock_questionary.checkbox.return_value = mock_checkbox
+        mock_questionary.Choice = MagicMock()
+
+        result = prompt_integrations(
+            database=DatabaseType.POSTGRESQL,
+            orm_type=OrmType.SQLALCHEMY,
+        )
+
+        # Redis should be auto-enabled
+        assert result["enable_redis"] is True
+        assert result["enable_caching"] is True
 
 
 class TestPromptRateLimitConfig:
@@ -602,7 +710,7 @@ class TestPromptWebsocketAuth:
         mock_questionary.select.return_value = mock_select
         mock_questionary.Choice = MagicMock()
 
-        result = prompt_websocket_auth()
+        result = prompt_websocket_auth(auth=AuthType.JWT)
 
         assert result == WebSocketAuthType.NONE
 
@@ -614,7 +722,7 @@ class TestPromptWebsocketAuth:
         mock_questionary.select.return_value = mock_select
         mock_questionary.Choice = MagicMock()
 
-        result = prompt_websocket_auth()
+        result = prompt_websocket_auth(auth=AuthType.JWT)
 
         assert result == WebSocketAuthType.JWT
 
@@ -626,9 +734,70 @@ class TestPromptWebsocketAuth:
         mock_questionary.select.return_value = mock_select
         mock_questionary.Choice = MagicMock()
 
-        result = prompt_websocket_auth()
+        result = prompt_websocket_auth(auth=AuthType.API_KEY)
 
         assert result == WebSocketAuthType.API_KEY
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_jwt_option_shown_with_jwt_auth(self, mock_questionary: MagicMock) -> None:
+        """Test JWT option is shown when main auth is JWT."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = WebSocketAuthType.NONE
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_websocket_auth(auth=AuthType.JWT)
+
+        # Check that JWT option was included
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert WebSocketAuthType.JWT in choice_values
+        assert WebSocketAuthType.API_KEY not in choice_values  # Not shown for JWT-only
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_jwt_option_hidden_with_api_key_auth(self, mock_questionary: MagicMock) -> None:
+        """Test JWT option is hidden when main auth is API key only."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = WebSocketAuthType.NONE
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_websocket_auth(auth=AuthType.API_KEY)
+
+        # Check that JWT option was NOT included
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert WebSocketAuthType.JWT not in choice_values
+        assert WebSocketAuthType.API_KEY in choice_values
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_both_options_shown_with_both_auth(self, mock_questionary: MagicMock) -> None:
+        """Test both JWT and API key options are shown when main auth is BOTH."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = WebSocketAuthType.NONE
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_websocket_auth(auth=AuthType.BOTH)
+
+        # Check that both options were included
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert WebSocketAuthType.JWT in choice_values
+        assert WebSocketAuthType.API_KEY in choice_values
+
+    @patch("fastapi_gen.prompts.questionary")
+    def test_no_auth_options_with_none_auth(self, mock_questionary: MagicMock) -> None:
+        """Test only None option is available when main auth is NONE."""
+        mock_select = MagicMock()
+        mock_select.ask.return_value = WebSocketAuthType.NONE
+        mock_questionary.select.return_value = mock_select
+        mock_questionary.Choice = MagicMock()
+
+        prompt_websocket_auth(auth=AuthType.NONE)
+
+        # Check that only None option was included
+        choice_values = [call[1].get("value") for call in mock_questionary.Choice.call_args_list]
+        assert WebSocketAuthType.NONE in choice_values
+        assert WebSocketAuthType.JWT not in choice_values
+        assert WebSocketAuthType.API_KEY not in choice_values
 
 
 class TestPromptAIFramework:

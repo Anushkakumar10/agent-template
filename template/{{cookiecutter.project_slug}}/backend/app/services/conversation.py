@@ -4,7 +4,7 @@
 Contains business logic for conversation, message, and tool call operations.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -264,7 +264,7 @@ class ConversationService:
             tool_call_id=data.tool_call_id,
             tool_name=data.tool_name,
             args=data.args,
-            started_at=data.started_at or datetime.utcnow(),
+            started_at=data.started_at or datetime.now(UTC),
         )
 
     async def complete_tool_call(
@@ -282,7 +282,7 @@ class ConversationService:
             self.db,
             db_tool_call=tool_call,
             result=data.result,
-            completed_at=data.completed_at or datetime.utcnow(),
+            completed_at=data.completed_at or datetime.now(UTC),
             success=data.success,
         )
 
@@ -293,7 +293,7 @@ class ConversationService:
 Contains business logic for conversation, message, and tool call operations.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -550,7 +550,7 @@ class ConversationService:
             tool_call_id=data.tool_call_id,
             tool_name=data.tool_name,
             args=data.args,
-            started_at=data.started_at or datetime.utcnow(),
+            started_at=data.started_at or datetime.now(UTC),
         )
 
     def complete_tool_call(
@@ -568,7 +568,7 @@ class ConversationService:
             self.db,
             db_tool_call=tool_call,
             result=data.result,
-            completed_at=data.completed_at or datetime.utcnow(),
+            completed_at=data.completed_at or datetime.now(UTC),
             success=data.success,
         )
 
@@ -579,7 +579,7 @@ class ConversationService:
 Contains business logic for conversation, message, and tool call operations.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.core.exceptions import NotFoundError
 from app.db.models.conversation import Conversation, Message, ToolCall
@@ -823,7 +823,7 @@ class ConversationService:
             tool_call_id=data.tool_call_id,
             tool_name=data.tool_name,
             args=data.args,
-            started_at=data.started_at or datetime.utcnow(),
+            started_at=data.started_at or datetime.now(UTC),
         )
 
     async def complete_tool_call(
@@ -840,7 +840,7 @@ class ConversationService:
         return await conversation_repo.complete_tool_call(
             db_tool_call=tool_call,
             result=data.result,
-            completed_at=data.completed_at or datetime.utcnow(),
+            completed_at=data.completed_at or datetime.now(UTC),
             success=data.success,
         )
 

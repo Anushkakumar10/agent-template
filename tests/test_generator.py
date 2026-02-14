@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fastapi_gen.config import DatabaseType, FrontendType, ProjectConfig
+from fastapi_gen.config import DatabaseType, FrontendType, LogfireFeatures, ProjectConfig
 from fastapi_gen.generator import (
     TEMPLATE_DIR,
     _find_template_dir,
@@ -62,31 +62,34 @@ class TestGetDatabaseSetupCommands:
         commands = _get_database_setup_commands(DatabaseType.POSTGRESQL)
 
         assert len(commands) == 3
-        assert "docker-db" in commands[0]
-        assert "PostgreSQL" in commands[0]
-        assert "db-migrate" in commands[1]
-        assert "db-upgrade" in commands[2]
+        # Commands are now tuples of (command, description)
+        assert "docker-db" in commands[0][0]
+        assert "PostgreSQL" in commands[0][1]
+        assert "db-migrate" in commands[1][0]
+        assert "db-upgrade" in commands[2][0]
 
     def test_sqlite_commands(self) -> None:
         """Test SQLite returns auto-create message and migration commands."""
         commands = _get_database_setup_commands(DatabaseType.SQLITE)
 
         assert len(commands) == 3
-        assert "automatically" in commands[0]
-        assert "db-migrate" in commands[1]
-        assert "db-upgrade" in commands[2]
+        # Commands are now tuples of (command, description)
+        assert "automatically" in commands[0][0]
+        assert "db-migrate" in commands[1][0]
+        assert "db-upgrade" in commands[2][0]
         # Should not mention docker
-        assert "docker" not in commands[0].lower()
+        assert "docker" not in commands[0][0].lower()
 
     def test_mongodb_commands(self) -> None:
         """Test MongoDB returns docker-mongo command."""
         commands = _get_database_setup_commands(DatabaseType.MONGODB)
 
         assert len(commands) == 2
-        assert "docker-mongo" in commands[0]
-        assert "MongoDB" in commands[0]
+        # Commands are now tuples of (command, description)
+        assert "docker-mongo" in commands[0][0]
+        assert "MongoDB" in commands[0][1]
         # Should not mention migrations (MongoDB doesn't use them)
-        assert not any("migrate" in cmd for cmd in commands)
+        assert not any("migrate" in cmd[0] for cmd in commands)
 
 
 class TestGetTemplatePath:
@@ -266,6 +269,7 @@ class TestPostGenerationTasks:
             project_name="test",
             frontend=FrontendType.NEXTJS,
             database=DatabaseType.NONE,
+            logfire_features=LogfireFeatures(database=False),  # Disable logfire DB when no DB
         )
         project_path = temp_output_dir / "test"
         project_path.mkdir()
@@ -301,4 +305,19 @@ class TestPostGenerationTasks:
         project_path.mkdir()
 
         # Should not raise - tests lines 149-151
+        post_generation_tasks(project_path, config)
+
+    def test_displays_env_preconfigured_when_generate_env_true_backend_only(
+        self, temp_output_dir: Path
+    ) -> None:
+        """Test env pre-configured message is displayed when generate_env=True backend only."""
+        config = ProjectConfig(
+            project_name="test",
+            frontend=FrontendType.NONE,
+            generate_env=True,
+        )
+        project_path = temp_output_dir / "test"
+        project_path.mkdir()
+
+        # Should not raise - tests lines 172-174
         post_generation_tasks(project_path, config)

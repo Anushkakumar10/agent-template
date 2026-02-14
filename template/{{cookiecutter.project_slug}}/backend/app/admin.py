@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_admin_panel and cookiecutter.use_postgresql %}
+{%- if cookiecutter.enable_admin_panel and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) and cookiecutter.use_sqlalchemy %}
 """SQLAdmin configuration with automatic model discovery."""
 
 from typing import Any, ClassVar

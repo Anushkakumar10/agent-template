@@ -427,6 +427,45 @@ services:
           memory: 128M
 {%- endif %}
 
+{%- if cookiecutter.use_arq %}
+
+  arq_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: {{ cookiecutter.project_slug }}_arq_worker
+    command: arq app.worker.arq_app.WorkerSettings
+    env_file:
+      - .env.prod
+      - ./backend/.env
+    environment:
+      - DEBUG=false
+{%- if cookiecutter.use_postgresql %}
+      - POSTGRES_HOST=db
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+{%- endif %}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - ARQ_REDIS_HOST=redis
+      - ARQ_REDIS_PORT=6379
+      - ARQ_REDIS_DB=2
+    networks:
+      - backend-internal
+    depends_on:
+      redis:
+        condition: service_healthy
+{%- if cookiecutter.use_postgresql %}
+      db:
+        condition: service_healthy
+{%- endif %}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+{%- endif %}
+
 {%- if cookiecutter.use_frontend %}
 
   frontend:

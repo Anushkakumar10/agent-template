@@ -16,10 +16,14 @@ use_database = "{{ cookiecutter.use_database }}" == "True"
 use_postgresql = "{{ cookiecutter.use_postgresql }}" == "True"
 use_sqlite = "{{ cookiecutter.use_sqlite }}" == "True"
 use_mongodb = "{{ cookiecutter.use_mongodb }}" == "True"
+use_sqlalchemy = "{{ cookiecutter.use_sqlalchemy }}" == "True"
+use_sqlmodel = "{{ cookiecutter.use_sqlmodel }}" == "True"
 include_example_crud = "{{ cookiecutter.include_example_crud }}" == "True"
 enable_ai_agent = "{{ cookiecutter.enable_ai_agent }}" == "True"
 use_pydantic_ai = "{{ cookiecutter.use_pydantic_ai }}" == "True"
 use_langchain = "{{ cookiecutter.use_langchain }}" == "True"
+use_langgraph = "{{ cookiecutter.use_langgraph }}" == "True"
+use_crewai = "{{ cookiecutter.use_crewai }}" == "True"
 enable_admin_panel = "{{ cookiecutter.enable_admin_panel }}" == "True"
 enable_websockets = "{{ cookiecutter.enable_websockets }}" == "True"
 enable_redis = "{{ cookiecutter.enable_redis }}" == "True"
@@ -30,6 +34,7 @@ enable_conversation_persistence = "{{ cookiecutter.enable_conversation_persisten
 enable_webhooks = "{{ cookiecutter.enable_webhooks }}" == "True"
 enable_oauth = "{{ cookiecutter.enable_oauth }}" == "True"
 use_jwt = "{{ cookiecutter.use_jwt }}" == "True"
+use_api_key = "{{ cookiecutter.use_api_key }}" == "True"
 use_celery = "{{ cookiecutter.use_celery }}" == "True"
 use_taskiq = "{{ cookiecutter.use_taskiq }}" == "True"
 use_arq = "{{ cookiecutter.use_arq }}" == "True"
@@ -37,6 +42,7 @@ use_github_actions = "{{ cookiecutter.use_github_actions }}" == "True"
 use_gitlab_ci = "{{ cookiecutter.use_gitlab_ci }}" == "True"
 enable_kubernetes = "{{ cookiecutter.enable_kubernetes }}" == "True"
 use_nginx = "{{ cookiecutter.use_nginx }}" == "True"
+enable_logfire = "{{ cookiecutter.enable_logfire }}" == "True"
 
 
 def remove_file(path: str) -> None:
@@ -44,6 +50,23 @@ def remove_file(path: str) -> None:
     if os.path.exists(path):
         os.remove(path)
         print(f"  Removed: {os.path.relpath(path)}")
+
+
+def is_stub_file(filepath: str) -> bool:
+    """Check if file only contains a docstring stub with no real code."""
+    if not os.path.exists(filepath):
+        return False
+    with open(filepath) as f:
+        content = f.read().strip()
+    # Empty file
+    if not content:
+        return True
+    # File only has docstring (triple-quoted string)
+    if content.startswith('"""') and content.endswith('"""'):
+        # Check if there's only one docstring and no code
+        inner = content[3:-3].strip()
+        return '"""' not in inner and "def " not in content and "class " not in content
+    return False
 
 
 def remove_dir(path: str) -> None:
@@ -72,6 +95,10 @@ else:
         remove_file(os.path.join(backend_app, "agents", "assistant.py"))
     if not use_langchain:
         remove_file(os.path.join(backend_app, "agents", "langchain_assistant.py"))
+    if not use_langgraph:
+        remove_file(os.path.join(backend_app, "agents", "langgraph_assistant.py"))
+    if not use_crewai:
+        remove_file(os.path.join(backend_app, "agents", "crewai_assistant.py"))
 
 # --- Example CRUD files ---
 if not include_example_crud or not use_database:
@@ -109,8 +136,8 @@ if not enable_session_management or not use_jwt:
 if not enable_websockets:
     remove_file(os.path.join(backend_app, "api", "routes", "v1", "ws.py"))
 
-# --- Admin panel ---
-if not enable_admin_panel or (not use_postgresql and not use_sqlite):
+# --- Admin panel (requires SQLAlchemy, not SQLModel) ---
+if not enable_admin_panel or (not use_postgresql and not use_sqlite) or not use_sqlalchemy:
     remove_file(os.path.join(backend_app, "admin.py"))
 
 # --- Redis/Cache files ---
@@ -128,6 +155,32 @@ if not enable_rate_limiting:
 if not enable_oauth:
     remove_file(os.path.join(backend_app, "api", "routes", "v1", "oauth.py"))
     remove_file(os.path.join(backend_app, "core", "oauth.py"))
+
+# --- Security file (only when no auth at all) ---
+if not use_jwt and not use_api_key:
+    remove_file(os.path.join(backend_app, "core", "security.py"))
+
+# --- Auth/User files (when JWT is disabled) ---
+if not use_jwt:
+    remove_file(os.path.join(backend_app, "api", "routes", "v1", "auth.py"))
+    remove_file(os.path.join(backend_app, "api", "routes", "v1", "users.py"))
+    remove_file(os.path.join(backend_app, "db", "models", "user.py"))
+    remove_file(os.path.join(backend_app, "repositories", "user.py"))
+    remove_file(os.path.join(backend_app, "services", "user.py"))
+    remove_file(os.path.join(backend_app, "schemas", "user.py"))
+    remove_file(os.path.join(backend_app, "schemas", "token.py"))
+
+# --- Logfire setup file (when logfire is disabled) ---
+if not enable_logfire:
+    remove_file(os.path.join(backend_app, "core", "logfire_setup.py"))
+
+# --- Cleanup stub files (files with only docstring, no code) ---
+core_dir = os.path.join(backend_app, "core")
+for stub_candidate in ["security.py", "cache.py", "rate_limit.py", "oauth.py", "logfire_setup.py", "csrf.py"]:
+    filepath = os.path.join(core_dir, stub_candidate)
+    if is_stub_file(filepath):
+        remove_file(filepath)
+        print(f"  Removed stub: {os.path.relpath(filepath)}")
 
 # --- Worker/Background tasks ---
 use_any_background_tasks = use_celery or use_taskiq or use_arq

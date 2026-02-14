@@ -268,6 +268,7 @@ class WebhookDelivery(SQLModel, table=True):
 {%- elif cookiecutter.use_sqlite %}
 """Webhook database models (SQLite sync)."""
 
+import json
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -321,13 +322,11 @@ class Webhook(Base, TimestampMixin):
     @property
     def events(self) -> list[str]:
         """Parse events from JSON string."""
-        import json
         return json.loads(self.events_json) if self.events_json else []
 
     @events.setter
     def events(self, value: list[str]) -> None:
         """Store events as JSON string."""
-        import json
         self.events_json = json.dumps(value)
 
 

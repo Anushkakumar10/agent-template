@@ -17,6 +17,7 @@ from fastapi_gen.config import (
     ProjectConfig,
     RateLimitStorageType,
     ReverseProxyType,
+    WebSocketAuthType,
     get_generator_version,
 )
 
@@ -256,6 +257,7 @@ class TestCookiecutterContext:
         config = ProjectConfig(
             project_name="test",
             database=DatabaseType.NONE,
+            logfire_features=LogfireFeatures(database=False),  # Must disable logfire DB
         )
         context = config.to_cookiecutter_context()
 
@@ -322,6 +324,7 @@ class TestCookiecutterContext:
         config = ProjectConfig(
             project_name="test",
             background_tasks=BackgroundTaskType.CELERY,
+            enable_redis=True,  # Required for Celery
         )
         context = config.to_cookiecutter_context()
 
@@ -335,6 +338,7 @@ class TestCookiecutterContext:
         config = ProjectConfig(
             project_name="test",
             background_tasks=BackgroundTaskType.TASKIQ,
+            enable_redis=True,  # Required for Taskiq
         )
         context = config.to_cookiecutter_context()
 
@@ -348,6 +352,7 @@ class TestCookiecutterContext:
         config = ProjectConfig(
             project_name="test",
             background_tasks=BackgroundTaskType.ARQ,
+            enable_redis=True,  # Required for ARQ
         )
         context = config.to_cookiecutter_context()
 
@@ -465,6 +470,7 @@ class TestCookiecutterContext:
         config = ProjectConfig(
             project_name="test",
             enable_logfire=True,
+            enable_redis=True,  # Required for logfire redis feature
             logfire_features=LogfireFeatures(
                 fastapi=True,
                 database=False,
@@ -784,3 +790,287 @@ class TestRateLimitConfig:
         )
         assert config.rate_limit_storage == RateLimitStorageType.REDIS
         assert config.enable_redis is True
+
+
+class TestNewDependencyValidations:
+    """Tests for new dependency validation rules."""
+
+    def test_websocket_jwt_auth_requires_jwt_auth(self) -> None:
+        """Test that WebSocket JWT auth requires main JWT auth to be enabled."""
+        with pytest.raises(ValidationError, match="WebSocket JWT authentication requires JWT auth"):
+            ProjectConfig(
+                project_name="test",
+                auth=AuthType.API_KEY,
+                enable_ai_agent=True,
+                websocket_auth=WebSocketAuthType.JWT,
+            )
+
+    def test_websocket_jwt_auth_with_jwt_is_valid(self) -> None:
+        """Test that WebSocket JWT auth with main JWT auth is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            auth=AuthType.JWT,
+            enable_ai_agent=True,
+            websocket_auth=WebSocketAuthType.JWT,
+        )
+        assert config.websocket_auth == WebSocketAuthType.JWT
+
+    def test_websocket_jwt_auth_with_both_auth_is_valid(self) -> None:
+        """Test that WebSocket JWT auth with both auth types is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            auth=AuthType.BOTH,
+            enable_ai_agent=True,
+            websocket_auth=WebSocketAuthType.JWT,
+        )
+        assert config.websocket_auth == WebSocketAuthType.JWT
+
+    def test_websocket_api_key_auth_requires_api_key_auth(self) -> None:
+        """Test that WebSocket API key auth requires main API key auth to be enabled."""
+        with pytest.raises(
+            ValidationError, match="WebSocket API key authentication requires API key auth"
+        ):
+            ProjectConfig(
+                project_name="test",
+                auth=AuthType.JWT,
+                enable_ai_agent=True,
+                websocket_auth=WebSocketAuthType.API_KEY,
+            )
+
+    def test_websocket_api_key_auth_with_api_key_is_valid(self) -> None:
+        """Test that WebSocket API key auth with main API key auth is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            auth=AuthType.API_KEY,
+            enable_ai_agent=True,
+            websocket_auth=WebSocketAuthType.API_KEY,
+        )
+        assert config.websocket_auth == WebSocketAuthType.API_KEY
+
+    def test_admin_require_auth_requires_jwt(self) -> None:
+        """Test that admin panel with authentication requires JWT auth."""
+        with pytest.raises(ValidationError, match="Admin panel authentication requires JWT auth"):
+            ProjectConfig(
+                project_name="test",
+                database=DatabaseType.POSTGRESQL,
+                auth=AuthType.API_KEY,
+                enable_admin_panel=True,
+                admin_require_auth=True,
+            )
+
+    def test_admin_require_auth_with_jwt_is_valid(self) -> None:
+        """Test that admin panel with authentication and JWT is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            auth=AuthType.JWT,
+            enable_admin_panel=True,
+            admin_require_auth=True,
+        )
+        assert config.enable_admin_panel is True
+        assert config.admin_require_auth is True
+
+    def test_admin_without_auth_works_without_jwt(self) -> None:
+        """Test that admin panel without authentication works without JWT."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            auth=AuthType.API_KEY,
+            enable_admin_panel=True,
+            admin_require_auth=False,
+        )
+        assert config.enable_admin_panel is True
+        assert config.admin_require_auth is False
+
+    def test_admin_with_no_auth_at_all_works(self) -> None:
+        """Test that admin panel without auth works when no auth is configured."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            auth=AuthType.NONE,
+            enable_admin_panel=True,
+            admin_require_auth=False,
+        )
+        assert config.enable_admin_panel is True
+        assert config.admin_require_auth is False
+
+    def test_conversation_persistence_requires_ai_agent(self) -> None:
+        """Test that conversation persistence requires AI agent to be enabled."""
+        with pytest.raises(ValidationError, match="Conversation persistence requires AI agent"):
+            ProjectConfig(
+                project_name="test",
+                database=DatabaseType.POSTGRESQL,
+                enable_ai_agent=False,
+                enable_conversation_persistence=True,
+            )
+
+    def test_conversation_persistence_with_ai_agent_is_valid(self) -> None:
+        """Test that conversation persistence with AI agent is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            enable_ai_agent=True,
+            enable_conversation_persistence=True,
+        )
+        assert config.enable_conversation_persistence is True
+        assert config.enable_ai_agent is True
+
+    def test_admin_panel_requires_sqlalchemy(self) -> None:
+        """Test that admin panel requires SQLAlchemy (not SQLModel)."""
+        with pytest.raises(ValidationError, match="Admin panel.*requires SQLAlchemy ORM"):
+            ProjectConfig(
+                project_name="test",
+                database=DatabaseType.POSTGRESQL,
+                orm_type=OrmType.SQLMODEL,
+                enable_admin_panel=True,
+            )
+
+    def test_admin_panel_with_sqlalchemy_is_valid(self) -> None:
+        """Test that admin panel with SQLAlchemy is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            orm_type=OrmType.SQLALCHEMY,
+            enable_admin_panel=True,
+        )
+        assert config.enable_admin_panel is True
+        assert config.use_sqlalchemy is True
+
+    def test_session_management_requires_jwt(self) -> None:
+        """Test that session management requires JWT auth to be enabled."""
+        with pytest.raises(ValidationError, match="Session management requires JWT auth"):
+            ProjectConfig(
+                project_name="test",
+                database=DatabaseType.POSTGRESQL,
+                auth=AuthType.API_KEY,
+                enable_session_management=True,
+            )
+
+    def test_session_management_with_jwt_is_valid(self) -> None:
+        """Test that session management with JWT auth is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            auth=AuthType.JWT,
+            enable_session_management=True,
+        )
+        assert config.enable_session_management is True
+
+    def test_webhooks_requires_database(self) -> None:
+        """Test that webhooks require a database to be enabled."""
+        with pytest.raises(ValidationError, match="Webhooks require a database"):
+            ProjectConfig(
+                project_name="test",
+                database=DatabaseType.NONE,
+                enable_webhooks=True,
+                logfire_features=LogfireFeatures(database=False),  # Disable logfire DB
+            )
+
+    def test_webhooks_with_database_is_valid(self) -> None:
+        """Test that webhooks with a database is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            enable_webhooks=True,
+        )
+        assert config.enable_webhooks is True
+
+    def test_logfire_database_requires_database(self) -> None:
+        """Test that Logfire database instrumentation requires a database."""
+        with pytest.raises(
+            ValidationError, match="Logfire database instrumentation requires a database"
+        ):
+            ProjectConfig(
+                project_name="test",
+                database=DatabaseType.NONE,
+                enable_logfire=True,
+                logfire_features=LogfireFeatures(database=True),
+            )
+
+    def test_logfire_database_with_database_is_valid(self) -> None:
+        """Test that Logfire database instrumentation with database is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            database=DatabaseType.POSTGRESQL,
+            enable_logfire=True,
+            logfire_features=LogfireFeatures(database=True),
+        )
+        assert config.logfire_features.database is True
+
+    def test_logfire_redis_requires_redis(self) -> None:
+        """Test that Logfire Redis instrumentation requires Redis to be enabled."""
+        with pytest.raises(ValidationError, match="Logfire Redis instrumentation requires Redis"):
+            ProjectConfig(
+                project_name="test",
+                enable_logfire=True,
+                enable_redis=False,
+                logfire_features=LogfireFeatures(redis=True),
+            )
+
+    def test_logfire_redis_with_redis_is_valid(self) -> None:
+        """Test that Logfire Redis instrumentation with Redis is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            enable_logfire=True,
+            enable_redis=True,
+            logfire_features=LogfireFeatures(redis=True),
+        )
+        assert config.logfire_features.redis is True
+
+    def test_logfire_celery_requires_celery(self) -> None:
+        """Test that Logfire Celery instrumentation requires Celery as background task system."""
+        with pytest.raises(ValidationError, match="Logfire Celery instrumentation requires Celery"):
+            ProjectConfig(
+                project_name="test",
+                enable_logfire=True,
+                enable_redis=True,  # Required for Taskiq
+                background_tasks=BackgroundTaskType.TASKIQ,
+                logfire_features=LogfireFeatures(celery=True),
+            )
+
+    def test_logfire_celery_with_celery_is_valid(self) -> None:
+        """Test that Logfire Celery instrumentation with Celery is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            enable_logfire=True,
+            enable_redis=True,  # Required for Celery
+            background_tasks=BackgroundTaskType.CELERY,
+            logfire_features=LogfireFeatures(celery=True),
+        )
+        assert config.logfire_features.celery is True
+
+    def test_celery_requires_redis(self) -> None:
+        """Test that Celery requires Redis to be enabled."""
+        with pytest.raises(ValidationError, match="Celery requires Redis"):
+            ProjectConfig(
+                project_name="test",
+                background_tasks=BackgroundTaskType.CELERY,
+                enable_redis=False,
+            )
+
+    def test_celery_with_redis_is_valid(self) -> None:
+        """Test that Celery with Redis is valid."""
+        config = ProjectConfig(
+            project_name="test",
+            background_tasks=BackgroundTaskType.CELERY,
+            enable_redis=True,
+        )
+        assert config.background_tasks == BackgroundTaskType.CELERY
+
+    def test_taskiq_requires_redis(self) -> None:
+        """Test that Taskiq requires Redis to be enabled."""
+        with pytest.raises(ValidationError, match="Taskiq requires Redis"):
+            ProjectConfig(
+                project_name="test",
+                background_tasks=BackgroundTaskType.TASKIQ,
+                enable_redis=False,
+            )
+
+    def test_arq_requires_redis(self) -> None:
+        """Test that ARQ requires Redis to be enabled."""
+        with pytest.raises(ValidationError, match="Arq requires Redis"):
+            ProjectConfig(
+                project_name="test",
+                background_tasks=BackgroundTaskType.ARQ,
+                enable_redis=False,
+            )

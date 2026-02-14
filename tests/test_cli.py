@@ -561,7 +561,7 @@ class TestCreateCommand:
         """Test create with Celery task queue."""
         mock_generate.return_value = tmp_path / "myproject"
 
-        result = runner.invoke(create, ["myproject", "--task-queue", "celery"])
+        result = runner.invoke(create, ["myproject", "--task-queue", "celery", "--redis"])
 
         assert result.exit_code == 0
         assert "Task Queue: celery" in result.output
@@ -580,7 +580,7 @@ class TestCreateCommand:
         """Test create with Taskiq task queue."""
         mock_generate.return_value = tmp_path / "myproject"
 
-        result = runner.invoke(create, ["myproject", "--task-queue", "taskiq"])
+        result = runner.invoke(create, ["myproject", "--task-queue", "taskiq", "--redis"])
 
         assert result.exit_code == 0
         assert "Task Queue: taskiq" in result.output

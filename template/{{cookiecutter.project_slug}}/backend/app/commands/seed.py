@@ -7,13 +7,16 @@ This command is useful for development and testing.
 Uses random data generation - install faker for better data:
     uv add faker --group dev
 """
-
+{% if cookiecutter.use_postgresql %}
 import asyncio
+{% endif %}
 import random
 import string
 
 import click
+{% if cookiecutter.use_jwt or cookiecutter.include_example_crud %}
 from sqlalchemy import delete, select
+{% endif %}
 
 from app.commands import command, info, success, warning
 
@@ -109,7 +112,9 @@ def seed(
 {%- endif %}
         return
 
-{%- if cookiecutter.use_postgresql %}
+{%- if not cookiecutter.use_jwt and not cookiecutter.include_example_crud %}
+    info("No entities configured to seed. Enable JWT users or example CRUD to use this command.")
+{%- elif cookiecutter.use_postgresql %}
     from app.db.session import async_session_maker
 {%- if cookiecutter.use_jwt %}
     from app.db.models.user import User

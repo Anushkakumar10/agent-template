@@ -163,8 +163,10 @@ make docker-db
 
 #### 3. Create and apply database migrations
 
+> ⚠️ **Important:** Both commands are required! `db-migrate` creates the migration file, `db-upgrade` applies it to the database.
+
 ```bash
-# Create initial migration (first time only)
+# Create initial migration (REQUIRED first time)
 make db-migrate
 # Enter message: "Initial migration"
 

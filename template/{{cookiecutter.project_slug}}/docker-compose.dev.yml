@@ -50,6 +50,12 @@ services:
 {%- endif %}
 {%- endif %}
     restart: unless-stopped
+{%- if cookiecutter.enable_prometheus %}
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port={{ cookiecutter.backend_port }}"
+      - "prometheus.path=/metrics"
+{%- endif %}
 
 {%- if cookiecutter.use_postgresql %}
 

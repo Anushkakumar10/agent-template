@@ -35,9 +35,11 @@ class Session(SQLModel, table=True):
     user_agent: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     is_active: bool = Field(default=True)
     created_at: datetime = Field(
+        default_factory=datetime.utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     last_used_at: datetime = Field(
+        default_factory=datetime.utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     expires_at: datetime = Field(
@@ -136,8 +138,14 @@ class Session(SQLModel, table=True):
     ip_address: str | None = Field(default=None, max_length=45)
     user_agent: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
-    last_used_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime, nullable=False),
+    )
+    last_used_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime, nullable=False),
+    )
     expires_at: datetime = Field(sa_column=Column(DateTime, nullable=False))
 
     # Relationship

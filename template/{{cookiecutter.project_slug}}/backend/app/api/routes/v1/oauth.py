@@ -141,19 +141,15 @@ async def google_callback(request: Request, user_service: UserSvc):
 
 
 @router.get("/google/callback")
-def google_callback(request: Request, user_service: UserSvc):
+async def google_callback(request: Request, user_service: UserSvc):
     """Handle Google OAuth2 callback.
 
     Creates a new user if one doesn't exist with the Google email,
     or returns tokens for existing user. Redirects to frontend with tokens.
     """
-    import asyncio
-
     try:
-        # Run async OAuth in sync context
-        loop = asyncio.new_event_loop()
-        token = loop.run_until_complete(oauth.google.authorize_access_token(request))
-        loop.close()
+        # OAuth token exchange is async
+        token = await oauth.google.authorize_access_token(request)
 
         user_info = token.get("userinfo")
 

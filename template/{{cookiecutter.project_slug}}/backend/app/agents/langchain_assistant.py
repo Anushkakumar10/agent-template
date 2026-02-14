@@ -163,7 +163,7 @@ class LangChainAssistant:
 
         return output, tool_events, agent_context
 
-    def stream(
+    async def stream(
         self,
         user_input: str,
         history: list[dict[str, str]] | None = None,
@@ -186,11 +186,12 @@ class LangChainAssistant:
 
         agent_context: AgentContext = context if context is not None else {}
 
-        yield from self.agent.stream(
+        async for event in self.agent.astream(
             {"messages": messages},
             stream_mode=["messages", "updates"],
             config={"configurable": agent_context} if agent_context else None,
-        )
+        ):
+            yield event
 
 
 def get_agent() -> LangChainAssistant:

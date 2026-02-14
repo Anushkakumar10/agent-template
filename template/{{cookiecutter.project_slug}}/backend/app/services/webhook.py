@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import json
 import secrets
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 import httpx
@@ -89,7 +89,7 @@ class WebhookService:
 
         test_payload = {
             "event": "webhook.test",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "data": {"message": "This is a test webhook delivery"},
         }
 
@@ -106,7 +106,7 @@ class WebhookService:
 
         payload = {
             "event": event_type,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "data": data,
         }
 
@@ -159,7 +159,7 @@ class WebhookService:
             delivery.response_status = response.status_code
             delivery.response_body = response.text[:10000]  # Limit size
             delivery.success = 200 <= response.status_code < 300
-            delivery.delivered_at = datetime.utcnow()
+            delivery.delivered_at = datetime.now(UTC)
 
             logfire.info(
                 "Webhook delivered",
@@ -228,7 +228,7 @@ import hashlib
 import hmac
 import json
 import secrets
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 import logfire
@@ -306,7 +306,7 @@ class WebhookService:
 
         payload = {
             "event": event_type,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "data": data,
         }
 
@@ -356,7 +356,7 @@ class WebhookService:
             delivery.response_status = response.status_code
             delivery.response_body = response.text[:10000]
             delivery.success = 200 <= response.status_code < 300
-            delivery.delivered_at = datetime.utcnow()
+            delivery.delivered_at = datetime.now(UTC)
 
         except Exception as e:
             delivery.error_message = str(e)

@@ -283,6 +283,83 @@ class ProjectConfig(BaseModel):
             and not self.enable_redis
         ):
             raise ValueError("Rate limiting with Redis storage requires Redis to be enabled")
+
+        # WebSocket JWT auth requires main JWT auth
+        if self.websocket_auth == WebSocketAuthType.JWT and self.auth not in (
+            AuthType.JWT,
+            AuthType.BOTH,
+        ):
+            raise ValueError("WebSocket JWT authentication requires JWT auth to be enabled")
+
+        # WebSocket API key auth requires main API key auth
+        if self.websocket_auth == WebSocketAuthType.API_KEY and self.auth not in (
+            AuthType.API_KEY,
+            AuthType.BOTH,
+        ):
+            raise ValueError("WebSocket API key authentication requires API key auth to be enabled")
+
+        # Admin panel authentication requires JWT (for User model and security functions)
+        if (
+            self.enable_admin_panel
+            and self.admin_require_auth
+            and self.auth not in (AuthType.JWT, AuthType.BOTH)
+        ):
+            raise ValueError(
+                "Admin panel authentication requires JWT auth to be enabled. "
+                "Either enable JWT auth or set admin_require_auth=False"
+            )
+
+        # Conversation persistence requires AI agent
+        if self.enable_conversation_persistence and not self.enable_ai_agent:
+            raise ValueError("Conversation persistence requires AI agent to be enabled")
+
+        # Admin panel requires SQLAlchemy (SQLAdmin doesn't fully support SQLModel)
+        if self.enable_admin_panel and self.orm_type == OrmType.SQLMODEL:
+            raise ValueError(
+                "Admin panel (SQLAdmin) requires SQLAlchemy ORM. "
+                "SQLModel is not fully supported. Use orm_type=sqlalchemy or disable admin panel."
+            )
+
+        # Session management requires JWT auth
+        if self.enable_session_management and self.auth not in (AuthType.JWT, AuthType.BOTH):
+            raise ValueError("Session management requires JWT auth to be enabled")
+
+        # Webhooks require a database
+        if self.enable_webhooks and self.database == DatabaseType.NONE:
+            raise ValueError(
+                "Webhooks require a database to store subscriptions and delivery history"
+            )
+
+        # Background task queues require Redis
+        if (
+            self.background_tasks
+            in (
+                BackgroundTaskType.CELERY,
+                BackgroundTaskType.TASKIQ,
+                BackgroundTaskType.ARQ,
+            )
+            and not self.enable_redis
+        ):
+            raise ValueError(
+                f"{self.background_tasks.value.title()} requires Redis to be enabled. "
+                "All task queue systems use Redis as broker/backend."
+            )
+
+        # Logfire feature-specific validations (only when logfire is enabled)
+        if self.enable_logfire:
+            if self.logfire_features.database and self.database == DatabaseType.NONE:
+                raise ValueError(
+                    "Logfire database instrumentation requires a database to be enabled"
+                )
+
+            if self.logfire_features.redis and not self.enable_redis:
+                raise ValueError("Logfire Redis instrumentation requires Redis to be enabled")
+
+            if self.logfire_features.celery and self.background_tasks != BackgroundTaskType.CELERY:
+                raise ValueError(
+                    "Logfire Celery instrumentation requires Celery as background task system"
+                )
+
         return self
 
     def to_cookiecutter_context(self) -> dict[str, Any]:
