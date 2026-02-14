@@ -17,7 +17,9 @@ from fastapi_pagination import add_pagination
 from app.api.exception_handlers import register_exception_handlers
 from app.api.router import api_router
 from app.core.config import settings
+{%- if cookiecutter.enable_logfire %}
 from app.core.logfire_setup import instrument_app, setup_logfire
+{%- endif %}
 from app.core.middleware import RequestIDMiddleware
 
 {%- if cookiecutter.enable_redis %}
@@ -39,7 +41,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
     See: https://asgi.readthedocs.io/en/latest/specs/lifespan.html#lifespan-state
     """
     # === Startup ===
+{%- if cookiecutter.enable_logfire %}
     setup_logfire()
+{%- endif %}
 
 {%- if cookiecutter.use_postgresql and cookiecutter.enable_logfire and cookiecutter.logfire_database %}
     from app.core.logfire_setup import instrument_asyncpg
@@ -178,7 +182,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title=settings.PROJECT_NAME,
-        summary="FastAPI application with Logfire observability",
+        summary="FastAPI application{% if cookiecutter.enable_logfire %} with Logfire observability{% endif %}",
         description="""
 {{ cookiecutter.project_description }}
 
@@ -233,8 +237,10 @@ def create_app() -> FastAPI:
 {%- endif %}
     )
 
+{%- if cookiecutter.enable_logfire %}
     # Logfire instrumentation
     instrument_app(app)
+{%- endif %}
 
     # Request ID middleware (for request correlation/debugging)
     app.add_middleware(RequestIDMiddleware)
