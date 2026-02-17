@@ -330,6 +330,16 @@ class ProjectConfig(BaseModel):
                 "Webhooks require a database to store subscriptions and delivery history"
             )
 
+        # OAuth requires JWT authentication
+        if self.oauth_provider != OAuthProvider.NONE and self.auth not in (
+            AuthType.JWT,
+            AuthType.BOTH,
+        ):
+            raise ValueError(
+                "OAuth authentication requires JWT auth to be enabled. "
+                "OAuth uses JWT tokens for session management after social login."
+            )
+
         # Background task queues require Redis
         if (
             self.background_tasks
