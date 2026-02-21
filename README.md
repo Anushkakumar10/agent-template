@@ -1,29 +1,36 @@
-# Full-Stack FastAPI + Next.js Template for AI/LLM Applications
+<h1 align="center">Full-Stack AI Agent Template</h1>
 
 <p align="center">
-  <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/stargazers"><img src="https://img.shields.io/github/stars/ak-labs/full-stack-fastapi-nextjs-llm-template?style=flat&logo=github&color=yellow" alt="GitHub Stars"></a>
-  <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ak-labs/full-stack-fastapi-nextjs-llm-template?color=blue" alt="License"></a>
-  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue?logo=python&logoColor=white" alt="Python"></a>
-  <a href="https://pypi.org/project/ak-agent-template/"><img src="https://img.shields.io/pypi/v/ak-agent-template?color=green&logo=pypi&logoColor=white" alt="PyPI"></a>
-  <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Coverage">
-  <img src="https://img.shields.io/badge/integrations-20%2B-brightgreen" alt="20+ Integrations">
+  <b>Production-Ready AI/LLM Applications — In Minutes, Not Weeks</b>
 </p>
 
 <p align="center">
-  <b>Production-ready project generator for AI/LLM applications with 20+ enterprise integrations.</b><br>
-  <sub>Built with FastAPI, Next.js 15, PydanticAI/LangChain, and everything you need for professional business applications.</sub>
-</p>
-
-<p align="center">
-  <a href="#-why-this-template">Why This Template</a> •
+  <a href="#-quick-start">Quick Start</a> •
   <a href="#-features">Features</a> •
   <a href="#-demo">Demo</a> •
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-ai-agent">AI Agent</a> •
-  <a href="#-observability-with-logfire">Logfire</a> •
-  <a href="#-documentation">Documentation</a>
+  <a href="https://pypi.org/project/ak-agent-template/">PyPI</a> •
+  <a href="#-documentation">Docs</a>
 </p>
+
+<p align="center">
+  <a href="https://pypi.org/project/ak-agent-template/"><img src="https://img.shields.io/pypi/v/ak-agent-template?color=green&logo=pypi&logoColor=white" alt="PyPI"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11+-blue?logo=python&logoColor=white" alt="Python 3.11+"></a>
+  <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ak-labs/full-stack-fastapi-nextjs-llm-template?color=blue" alt="License"></a>
+  <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Coverage">
+  <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/stargazers"><img src="https://img.shields.io/github/stars/ak-labs/full-stack-fastapi-nextjs-llm-template?style=flat&logo=github&color=yellow" alt="GitHub Stars"></a>
+</p>
+
+<p align="center">
+  <b>🤖 PydanticAI</b>
+  &nbsp;•&nbsp;
+  <b>🦜 LangChain, LangGraph & DeepAgents</b>
+  &nbsp;•&nbsp;
+  <b>👥 CrewAI</b>
+  &nbsp;•&nbsp;
+  <b>🎯 Fully Type-Safe</b>
+</p>
+
+---
 
 ## Related Projects
 
@@ -57,6 +64,42 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
 ---
 
 ## ✨ Features
+
+<p align="center">
+  <a href="https://ai.pydantic.dev"><img src="https://img.shields.io/badge/PydanticAI-E92063?logo=pydantic&logoColor=white" alt="PydanticAI"></a>
+  <a href="https://python.langchain.com"><img src="https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white" alt="LangChain"></a>
+  <a href="https://langchain-ai.github.io/langgraph/"><img src="https://img.shields.io/badge/LangGraph-005A9C?logo=langchain&logoColor=white" alt="LangGraph"></a>
+  <a href="https://www.crewai.com"><img src="https://img.shields.io/badge/CrewAI-FF6B35?logoColor=white" alt="CrewAI"></a>
+  <a href="https://openai.com"><img src="https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white" alt="OpenAI"></a>
+  <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Anthropic-D4A373?logo=anthropic&logoColor=white" alt="Anthropic"></a>
+  <a href="https://openrouter.ai"><img src="https://img.shields.io/badge/OpenRouter-6366F1?logoColor=white" alt="OpenRouter"></a>
+</p>
+
+<p align="center">
+  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js_15-000000?logo=next.js&logoColor=white" alt="Next.js 15"></a>
+  <a href="https://react.dev"><img src="https://img.shields.io/badge/React_19-61DAFB?logo=react&logoColor=black" alt="React 19"></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript"></a>
+  <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_v4-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS"></a>
+  <a href="https://www.sqlalchemy.org"><img src="https://img.shields.io/badge/SQLAlchemy-D71F00?logo=sqlalchemy&logoColor=white" alt="SQLAlchemy"></a>
+</p>
+
+<p align="center">
+  <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
+  <a href="https://www.mongodb.com"><img src="https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white" alt="MongoDB"></a>
+  <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white" alt="Redis"></a>
+  <a href="https://docs.celeryq.dev"><img src="https://img.shields.io/badge/Celery-37814A?logo=celery&logoColor=white" alt="Celery"></a>
+  <a href="https://logfire.pydantic.dev"><img src="https://img.shields.io/badge/Logfire-E92063?logo=pydantic&logoColor=white" alt="Logfire"></a>
+  <a href="https://sentry.io"><img src="https://img.shields.io/badge/Sentry-362D59?logo=sentry&logoColor=white" alt="Sentry"></a>
+  <a href="https://prometheus.io"><img src="https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white" alt="Prometheus"></a>
+</p>
+
+<p align="center">
+  <a href="https://www.docker.com"><img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker"></a>
+  <a href="https://kubernetes.io"><img src="https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes"></a>
+  <a href="https://github.com/features/actions"><img src="https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white" alt="GitHub Actions"></a>
+  <a href="https://aws.amazon.com/s3/"><img src="https://img.shields.io/badge/S3-569A31?logo=amazons3&logoColor=white" alt="S3"></a>
+</p>
 
 ### 🤖 AI/LLM First
 
