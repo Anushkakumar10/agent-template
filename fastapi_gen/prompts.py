@@ -255,7 +255,9 @@ def prompt_logfire(background_tasks: BackgroundTaskType) -> tuple[bool, LogfireF
     ]
 
     if background_tasks == BackgroundTaskType.CELERY:
-        choices.insert(3, questionary.Choice("Celery instrumentation", value="celery", checked=False))
+        choices.insert(
+            3, questionary.Choice("Celery instrumentation", value="celery", checked=False)
+        )
 
     features = _check_cancelled(
         questionary.checkbox(
