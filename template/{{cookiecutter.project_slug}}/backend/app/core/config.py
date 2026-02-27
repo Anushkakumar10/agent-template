@@ -182,6 +182,48 @@ class Settings(BaseSettings):
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 {%- endif %}
 
+{%- if cookiecutter.use_milvus %}
+
+    # === Milvus (RAG Vector Database) ===
+    MILVUS_HOST: str = "localhost"
+    MILVUS_PORT: int = 19530
+    MILVUS_DATABASE: str = "default"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def MILVUS_URI(self) -> str:
+        """Build Milvus connection URI."""
+        return f"{self.MILVUS_HOST}:{self.MILVUS_PORT}"
+
+{%- if cookiecutter.use_openai_embeddings %}
+    # === OpenAI Embeddings ===
+    OPENAI_API_KEY: str = ""
+{%- endif %}
+
+{%- if cookiecutter.use_voyage_embeddings %}
+    # === Voyage AI Embeddings ===
+    VOYAGE_API_KEY: str = ""
+{%- endif %}
+
+{%- if cookiecutter.enable_reranker == "cohere" %}
+    # === Cohere Reranker ===
+    COHERE_API_KEY: str = ""
+{%- endif %}
+
+{%- if cookiecutter.document_parser == "llamaparse" %}
+    # === LlamaParse ===
+    LLAMAPARSE_API_KEY: str = ""
+{%- endif %}
+
+{%- if cookiecutter.enable_google_drive_ingestion %}
+    # === Google Drive ===
+    GOOGLE_DRIVE_CLIENT_ID: str | None = None
+    GOOGLE_DRIVE_CLIENT_SECRET: str | None = None
+    GOOGLE_DRIVE_REFRESH_TOKEN: str | None = None
+{%- endif %}
+
+{%- endif %}
+
 {%- if cookiecutter.enable_rate_limiting %}
 
     # === Rate Limiting ===
