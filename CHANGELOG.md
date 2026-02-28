@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Removed macOS `.DS_Store` artifacts** and added `.DS_Store` to `.gitignore` (contributed by [@vladdoster](https://github.com/vladdoster) in [#42](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/pull/42))
+- **Removed macOS `.DS_Store` artifacts** and added `.DS_Store` to `.gitignore` (contributed by [@vladdoster](https://github.com/vladdoster) in [#42](https://github.com/anushka-kumar/agent-template/pull/42))
 
 ## [0.1.17] - 2026-01-24
 

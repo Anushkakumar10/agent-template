@@ -6,8 +6,8 @@ Thank you for your interest in contributing to ak-agent-template!
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template.git
-   cd full-stack-fastapi-nextjs-llm-template
+   git clone https://github.com/anushka-kumar/agent-template.git
+   cd agent-template
    ```
 
 2. Install dependencies:

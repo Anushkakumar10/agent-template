@@ -27,9 +27,6 @@ keywords = [
     "langgraph",
     "logfire",
     "observability",
-    "milvus",
-    "rag",
-    "retrieval-augmented-generation",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -71,9 +68,9 @@ docs = [
 ak-agent-template = "fastapi_gen.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template"
-Documentation = "https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template#readme"
-Repository = "https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template"
+Homepage = "https://github.com/anushka-kumar/agent-template"
+Documentation = "https://github.com/anushka-kumar/agent-template#readme"
+Repository = "https://github.com/anushka-kumar/agent-template"
 
 [build-system]
 requires = ["hatchling"]

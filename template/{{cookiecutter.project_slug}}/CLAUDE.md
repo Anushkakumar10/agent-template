@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**{{ cookiecutter.project_name }}** - FastAPI application generated with [Full-Stack FastAPI + Next.js Template](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template).
+**{{ cookiecutter.project_name }}** - FastAPI application generated with [Full-Stack FastAPI + Next.js Template](https://github.com/anushka-kumar/agent-template).
 
 **Stack:** FastAPI + Pydantic v2
 {%- if cookiecutter.use_postgresql %}, PostgreSQL (async){%- endif %}
