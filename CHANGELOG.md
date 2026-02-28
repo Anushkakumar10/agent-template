@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-27
+
+### Changed
+
+- **Repository renamed** from `full-stack-fastapi-nextjs-llm-template` to `agent-template` — all internal links, badges, raw.githubusercontent URLs, mkdocs config, and template files updated. Old GitHub URLs redirect automatically.
+- **Repository marked as GitHub Template** — users can now click "Use this template" to create a new repo directly from GitHub
+- **README CTA section** — replaced "Made with" footer with AK Labs consultancy call-to-action
+
 ## [0.1.18] - 2026-02-01
 
 ### Fixed
