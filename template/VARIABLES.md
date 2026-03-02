@@ -14,7 +14,6 @@ This document describes all variables available in `cookiecutter.json` for the a
 - [Redis & Caching](#redis--caching)
 - [Rate Limiting](#rate-limiting)
 - [Features](#features)
-- [RAG (Retrieval-Augmented Generation)](#rag-retrieval-augmented-generation)
 - [AI Agent](#ai-agent)
 - [WebSocket](#websocket)
 - [Development Tools](#development-tools)
@@ -69,13 +68,11 @@ These variables are set automatically by the generator.
 | `use_sqlmodel` | bool | `false` | SQLModel is selected | Computed from `orm_type` |
 
 **Notes:**
-
 - SQLModel provides simplified syntax combining SQLAlchemy and Pydantic
 - SQLModel is only available for PostgreSQL and SQLite (not MongoDB)
 - SQLModel uses the same database session and migrations as SQLAlchemy
 
 **Notes:**
-
 - PostgreSQL uses `asyncpg` for async operations
 - MongoDB uses `motor` for async operations
 - SQLite is synchronous and not recommended for production
@@ -127,7 +124,6 @@ These variables are set automatically by the generator.
 | `use_arq` | bool | `false` | ARQ is selected | Computed from `background_tasks` |
 
 **Notes:**
-
 - Celery requires Redis as broker
 - Taskiq and ARQ also benefit from Redis
 
@@ -141,7 +137,6 @@ These variables are set automatically by the generator.
 | `enable_caching` | bool | `false` | Enable response caching | Requires Redis |
 
 **Notes:**
-
 - Redis is automatically enabled when using Celery, ARQ, or Redis-based rate limiting
 
 ---
@@ -158,7 +153,6 @@ These variables are set automatically by the generator.
 | `rate_limit_storage_redis` | bool | `false` | Redis storage is selected | Computed from `rate_limit_storage` |
 
 **Notes:**
-
 - Memory storage is not suitable for multi-process deployments
 - Redis storage requires Redis to be enabled
 
@@ -188,34 +182,6 @@ These variables are set automatically by the generator.
 
 ---
 
-## RAG (Retrieval-Augmented Generation)
-
-| Variable | Type | Default | Description | Dependencies |
-|----------|------|---------|-------------|--------------|
-| `enable_rag` | bool | `false` | Enable RAG functionality with vector database | - |
-| `use_milvus` | bool | `false` | Milvus vector database is selected | Computed from `embedding_provider` or `enable_rag` |
-| `embedding_provider` | enum | `"openai"` | Embedding model provider. Values: `openai`, `voyage`, `sentence_transformers` | Requires RAG |
-| `use_openai_embeddings` | bool | `false` | OpenAI embeddings are selected | Computed from `embedding_provider` |
-| `use_voyage_embeddings` | bool | `false` | Voyage AI embeddings are selected | Computed from `embedding_provider` |
-| `use_sentence_transformers` | bool | `true` | Local Sentence Transformers are selected | Computed from `embedding_provider` |
-| `enable_reranker` | enum | `"none"` | Reranker for search results. Values: `cohere`, `cross_encoder`, `none` | Requires RAG |
-| `use_cohere_reranker` | bool | `false` | Cohere reranker is selected | Computed from `enable_reranker` |
-| `use_cross_encoder_reranker` | bool | `false` | Cross-encoder reranker (sentence-transformers) is selected | Computed from `enable_reranker` |
-| `document_parser` | enum | `"python_native"` | Document parsing method. Values: `llamaparse`, `python_native` | Requires RAG |
-| `use_llamaparse` | bool | `false` | LlamaParse (LLM-based) parsing is selected | Computed from `document_parser` |
-| `use_python_parser` | bool | `true` | Python-based parsing is selected | Computed from `document_parser` |
-| `enable_google_drive_ingestion` | bool | `false` | Enable Google Drive as document source | Requires RAG |
-
-**Notes:**
-
-- RAG requires a vector database (Milvus) and embedding provider
-- Sentence Transformers are used locally when no API provider is configured
-- Cohere and Cross-Encoder rerankers improve search result relevance
-- LlamaParse requires an API key; Python parser is free and self-hosted
-- Google Drive ingestion enables direct document loading from Google Workspace
-
----
-
 ## AI Agent
 
 | Variable | Type | Default | Description | Dependencies |
@@ -234,7 +200,6 @@ These variables are set automatically by the generator.
 | `enable_conversation_persistence` | bool | `false` | Persist AI conversations to database | Requires `enable_ai_agent` and database |
 
 **Notes:**
-
 - PydanticAI uses `iter()` for full event streaming over WebSocket
 - LangGraph implements a ReAct (Reasoning + Acting) agent pattern with graph-based architecture
 - CrewAI enables multi-agent teams that collaborate on complex tasks
@@ -284,7 +249,6 @@ These variables are set automatically by the generator.
 | `use_nginx` | bool | `false` | Using Nginx (included or external) | Computed from `reverse_proxy` |
 
 **Reverse Proxy Options:**
-
 - `traefik_included`: Full Traefik setup included in docker-compose.prod.yml (default)
 - `traefik_external`: Services have Traefik labels but no Traefik container (for shared Traefik)
 - `nginx_included`: Full Nginx setup included in docker-compose.prod.yml with config template
@@ -320,7 +284,7 @@ The template uses consistent naming patterns:
 
 Many `use_*` and `enable_*` variables are computed from their parent enum variable:
 
-```bash
+```
 database = "postgresql"
   → use_postgresql = true
   → use_mongodb = false
