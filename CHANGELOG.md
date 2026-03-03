@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-02-28
+
+### Added
+
+#### Website — Landing Page & Web Configurator
+
+- **Landing page** at custom domain (Astro v5 + React 19 islands + Tailwind CSS v4):
+  - Fixed navbar with logo, GitHub/Docs links, language switcher, theme toggle
+  - Hero section with headline, 2 CTAs, terminal preview with typing animation
+  - Infinite scrolling logo carousel (18 framework/tool logos), colorful by default
+  - 6-card feature grid (AI Frameworks, Options, Presets, Full-Stack, Production Ready, Observable)
+  - 3 preset cards (Minimal, Production, AI Agent) linking to configurator
+  - 3-step QuickStart with click-to-copy commands
+  - AK Labs consultancy CTA banner
+  - Footer with GitHub, PyPI, Docs, LinkedIn links
+
+- **Web Configurator** — 9-step wizard to configure and download a project:
+  - Steps: Project Info, Database, Auth, AI Agent, Infrastructure, Integrations, DevOps, Frontend, Review
+  - 3 presets (Minimal, Production, AI Agent) pre-fill all fields
+  - Live preview sidebar with real-time config summary
+  - Auto-fix dependencies (e.g. auto-enables Redis when caching is on)
+  - Download Project ZIP (client-side generation with nunjucks + JSZip)
+  - Copy CLI Command / Download JSON as secondary actions
+  - Zod validation matching CLI's ProjectConfig model (52 fields, all enums)
+  - Build-time template bundling (246 template files → `templates.json`)
+
+- **i18n** — English (default), Polish, German, Spanish with language switcher
+
+- **Visual effects**:
+  - Subtle CSS grid background with radial mask fade
+  - 3-layer cursor glow following mouse (violet/indigo/blue), theme-aware
+  - Scroll reveal animations (Intersection Observer, staggered children)
+  - Glow border on feature/preset cards on hover
+  - Terminal typing animation with blinking cursor
+  - Dark/Light theme toggle with persisted preference
+
+- **SEO & production readiness**:
+  - Auto-generated `sitemap-index.xml` via `@astrojs/sitemap`
+  - Dynamic `robots.txt` endpoint with sitemap URL
+  - Canonical URLs on every page
+  - Hreflang alternate tags (en, pl, de, es) + x-default
+  - Open Graph (title, description, url, image, site_name, locale)
+  - Twitter Cards (summary_large_image)
+  - JSON-LD SoftwareApplication structured data
+  - Per-page meta descriptions (localized)
+  - OG image (1200×630), favicon (ICO 16/32/48 + PNG 192×192), Apple Touch Icon (180×180)
+  - Web manifest (`site.webmanifest`)
+  - Domain configurable via `SITE_URL` env variable
+
 ## [0.2.0] - 2026-02-27
 
 ### Changed
