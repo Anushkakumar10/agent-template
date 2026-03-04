@@ -1,4 +1,6 @@
 ---
+import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 import CursorGlow from '../components/CursorGlow.astro';
 
 interface Alternate {
@@ -97,6 +99,8 @@ const jsonLd = {
     <div class="relative z-10">
       <slot />
     </div>
+    <Analytics />
+    <SpeedInsights />
     <!-- Scroll reveal observer -->
     <script is:inline>
       (function() {

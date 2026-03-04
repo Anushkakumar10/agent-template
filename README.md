@@ -8,6 +8,8 @@
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-features">Features</a> •
   <a href="#-demo">Demo</a> •
+  <a href="https://template.ak-labs.io/">Website</a> •
+  <a href="https://template.ak-labs.io/configurator/">Configurator</a> •
   <a href="https://pypi.org/project/ak-agent-template/">PyPI</a> •
   <a href="#-documentation">Docs</a>
 </p>
