@@ -6,6 +6,7 @@ import FrameworkLogos from '../../components/landing/FrameworkLogos.astro';
 import Features from '../../components/landing/Features.astro';
 import Presets from '../../components/landing/Presets.astro';
 import QuickStart from '../../components/landing/QuickStart.astro';
+import FaqPreview from '../../components/landing/FaqPreview.astro';
 import Footer from '../../components/landing/Footer.astro';
 import { translations, languages, defaultLang, type Lang } from '../../i18n/translations';
 
@@ -38,5 +39,6 @@ const alternates = [
   <Features t={t} />
   <Presets t={t} />
   <QuickStart t={t} />
+  <FaqPreview t={t} lang={lang} />
   <Footer t={t} />
 </Layout>

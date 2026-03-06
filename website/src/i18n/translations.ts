@@ -81,6 +81,22 @@ export const translations = {
     "quickstart.step3": "Run",
     "quickstart.or": "Or use the web configurator",
 
+    // Blog
+    "nav.blog": "Blog",
+    "blog.title": "Blog",
+    "blog.subtitle": "Tutorials, comparisons, and guides for building AI apps",
+    "blog.readMore": "Read more",
+    "blog.publishedOn": "Published on",
+    "blog.updatedOn": "Updated on",
+    "blog.backToBlog": "Back to blog",
+    "blog.tableOfContents": "Table of Contents",
+    "blog.availableIn": "Available in",
+
+    // FAQ
+    "faq.title": "Frequently Asked Questions",
+    "faq.subtitle": "Everything you need to know about the template",
+    "faq.seeAll": "See all questions",
+
     // Footer
     "footer.built": "Built by",
   },
@@ -144,6 +160,23 @@ export const translations = {
     "quickstart.step2": "Utwórz",
     "quickstart.step3": "Uruchom",
     "quickstart.or": "Lub użyj konfiguratora webowego",
+
+    // Blog
+    "nav.blog": "Blog",
+    "blog.title": "Blog",
+    "blog.subtitle": "Poradniki, porównania i przewodniki do budowania aplikacji AI",
+    "blog.readMore": "Czytaj więcej",
+    "blog.publishedOn": "Opublikowano",
+    "blog.updatedOn": "Zaktualizowano",
+    "blog.backToBlog": "Wróć do bloga",
+    "blog.tableOfContents": "Spis treści",
+    "blog.availableIn": "Dostępne w",
+
+    // FAQ
+    "faq.title": "Często zadawane pytania",
+    "faq.subtitle": "Wszystko co musisz wiedzieć o szablonie",
+    "faq.seeAll": "Zobacz wszystkie pytania",
+
     "footer.built": "Stworzone przez",
   },
 
@@ -206,6 +239,23 @@ export const translations = {
     "quickstart.step2": "Erstellen",
     "quickstart.step3": "Starten",
     "quickstart.or": "Oder nutze den Web-Konfigurator",
+
+    // Blog
+    "nav.blog": "Blog",
+    "blog.title": "Blog",
+    "blog.subtitle": "Tutorials, Vergleiche und Anleitungen für KI-Apps",
+    "blog.readMore": "Weiterlesen",
+    "blog.publishedOn": "Veröffentlicht am",
+    "blog.updatedOn": "Aktualisiert am",
+    "blog.backToBlog": "Zurück zum Blog",
+    "blog.tableOfContents": "Inhaltsverzeichnis",
+    "blog.availableIn": "Verfügbar in",
+
+    // FAQ
+    "faq.title": "Häufig gestellte Fragen",
+    "faq.subtitle": "Alles was du über das Template wissen musst",
+    "faq.seeAll": "Alle Fragen anzeigen",
+
     "footer.built": "Erstellt von",
   },
 
@@ -268,6 +318,23 @@ export const translations = {
     "quickstart.step2": "Crear",
     "quickstart.step3": "Ejecutar",
     "quickstart.or": "O usa el configurador web",
+
+    // Blog
+    "nav.blog": "Blog",
+    "blog.title": "Blog",
+    "blog.subtitle": "Tutoriales, comparaciones y guías para crear apps de IA",
+    "blog.readMore": "Leer más",
+    "blog.publishedOn": "Publicado el",
+    "blog.updatedOn": "Actualizado el",
+    "blog.backToBlog": "Volver al blog",
+    "blog.tableOfContents": "Tabla de contenidos",
+    "blog.availableIn": "Disponible en",
+
+    // FAQ
+    "faq.title": "Preguntas frecuentes",
+    "faq.subtitle": "Todo lo que necesitas saber sobre la plantilla",
+    "faq.seeAll": "Ver todas las preguntas",
+
     "footer.built": "Creado por",
   },
 } as const;
