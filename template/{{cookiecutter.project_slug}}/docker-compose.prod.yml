@@ -146,10 +146,6 @@ services:
 {%- if cookiecutter.enable_redis %}
       - REDIS_HOST=redis
 {%- endif %}
-{%- if cookiecutter.use_milvus %}
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
-{%- endif %}
 {%- if cookiecutter.use_celery %}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -181,7 +177,7 @@ services:
     ports:
       - "{{ cookiecutter.backend_port }}:{{ cookiecutter.backend_port }}"
 {%- endif %}
-{%- if cookiecutter.use_postgresql or cookiecutter.enable_redis or cookiecutter.use_milvus %}
+{%- if cookiecutter.use_postgresql or cookiecutter.enable_redis %}
     depends_on:
 {%- if cookiecutter.use_postgresql %}
       db:
@@ -189,10 +185,6 @@ services:
 {%- endif %}
 {%- if cookiecutter.enable_redis %}
       redis:
-        condition: service_healthy
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      milvus:
         condition: service_healthy
 {%- endif %}
 {%- endif %}
@@ -257,80 +249,6 @@ services:
           memory: 256M
 {%- endif %}
 
-{%- if cookiecutter.use_milvus %}
-
-  etcd:
-    image: quay.io/coreos/etcd:v3.5.16
-    container_name: {{ cookiecutter.project_slug }}_etcd
-    volumes:
-      - etcd_data:/var/lib/etcd
-    networks:
-      - backend-internal
-    healthcheck:
-      test: ["CMD", "etcdctl", "endpoint", "health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 128M
-
-  minio:
-    image: minio/minio:RELEASE.2024-09-22T00-33-43Z
-    container_name: {{ cookiecutter.project_slug }}_minio
-    # NO external ports - only accessible within backend-internal network
-    volumes:
-      - minio_data:/data
-    environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
-    command: server /data --console-address ":9001"
-    networks:
-      - backend-internal
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-
-  milvus:
-    image: milvusdb/milvus:v2.4-latest
-    container_name: {{ cookiecutter.project_slug }}_milvus
-    # NO external ports - only accessible within backend-internal network
-    volumes:
-      - milvus_data:/var/lib/milvus
-    environment:
-      - ETCD_ENDPOINTS=etcd:2379
-      - MINIO_ADDRESS=minio:9000
-    depends_on:
-      etcd:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    networks:
-      - backend-internal
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-{%- endif %}
-
 {%- if cookiecutter.use_celery %}
 
   celery_worker:
@@ -344,13 +262,10 @@ services:
       - ./backend/.env
     environment:
       - DEBUG=false
-{%- if cookiecutter.enable_redis %}
+{%- if cookiecutter.use_postgresql %}
+      - POSTGRES_HOST=db
+{%- endif %}
       - REDIS_HOST=redis
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
-{%- endif %}
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
     networks:
@@ -360,10 +275,6 @@ services:
         condition: service_healthy
 {%- if cookiecutter.use_postgresql %}
       db:
-        condition: service_healthy
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      milvus:
         condition: service_healthy
 {%- endif %}
     restart: unless-stopped
@@ -388,13 +299,7 @@ services:
       - ./backend/.env
     environment:
       - DEBUG=false
-{%- if cookiecutter.enable_redis %}
       - REDIS_HOST=redis
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
-{%- endif %}
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
     networks:
@@ -472,13 +377,7 @@ services:
 {%- if cookiecutter.use_postgresql %}
       - POSTGRES_HOST=db
 {%- endif %}
-{%- if cookiecutter.enable_redis %}
       - REDIS_HOST=redis
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
-{%- endif %}
       - TASKIQ_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
       - TASKIQ_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/1
     networks:
@@ -488,10 +387,6 @@ services:
         condition: service_healthy
 {%- if cookiecutter.use_postgresql %}
       db:
-        condition: service_healthy
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      milvus:
         condition: service_healthy
 {%- endif %}
     restart: unless-stopped
@@ -516,13 +411,7 @@ services:
       - ./backend/.env
     environment:
       - DEBUG=false
-{%- if cookiecutter.enable_redis %}
       - REDIS_HOST=redis
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
-{%- endif %}
       - TASKIQ_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
       - TASKIQ_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/1
     networks:
@@ -555,14 +444,8 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 {%- endif %}
-{%- if cookiecutter.enable_redis %}
       - REDIS_HOST=redis
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
-{%- endif %}
       - ARQ_REDIS_HOST=redis
       - ARQ_REDIS_PORT=6379
       - ARQ_REDIS_DB=2
@@ -573,10 +456,6 @@ services:
         condition: service_healthy
 {%- if cookiecutter.use_postgresql %}
       db:
-        condition: service_healthy
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-      milvus:
         condition: service_healthy
 {%- endif %}
     restart: unless-stopped
@@ -645,18 +524,11 @@ volumes:
 {%- if cookiecutter.include_traefik_service %}
   traefik_letsencrypt:
 {%- endif %}
-{%- if cookiecutter.use_postgresql or cookiecutter.enable_redis or cookiecutter.use_milvus %}
 {%- if cookiecutter.use_postgresql %}
   postgres_data:
 {%- endif %}
 {%- if cookiecutter.enable_redis %}
   redis_data:
-{%- endif %}
-{%- if cookiecutter.use_milvus %}
-  etcd_data:
-  minio_data:
-  milvus_data:
-{%- endif %}
 {%- endif %}
 {%- else %}
 # Docker is disabled for this project
