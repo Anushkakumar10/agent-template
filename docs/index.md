@@ -3,8 +3,8 @@
   <em>Production-Ready AI/LLM Applications — In Minutes, Not Weeks</em>
 </p>
 <p align="center">
-  <a href="https://github.com/anushka-kumar/agent-template/actions/workflows/ci.yml"><img src="https://github.com/anushka-kumar/agent-template/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://codecov.io/gh/anushka-kumar/agent-template"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Coverage"></a>
+  <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/actions/workflows/ci.yml"><img src="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://codecov.io/gh/ak-labs/full-stack-fastapi-nextjs-llm-template"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Coverage"></a>
   <a href="https://pypi.org/project/ak-agent-template/"><img src="https://img.shields.io/pypi/v/ak-agent-template.svg" alt="PyPI"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue" alt="Python"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
