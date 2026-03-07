@@ -1,13 +1,47 @@
 ---
-import { languages, type Lang } from '../i18n/translations';
+import { languages, defaultLang, type Lang } from '../i18n/translations';
 
 interface Props {
   currentLang: Lang;
+  pathSuffix?: string;
 }
 
-const { currentLang } = Astro.props;
+const { currentLang, pathSuffix } = Astro.props;
 const rawBase = import.meta.env.BASE_URL;
 const base = rawBase.endsWith("/") ? rawBase : rawBase + "/";
+
+// Build language switch URLs:
+// If pathSuffix is explicitly provided, use it (landing pages with custom slugs).
+// Otherwise, derive the path automatically from the current URL.
+function getLangHref(targetLang: string): string {
+  if (pathSuffix !== undefined) {
+    const suffix = pathSuffix ? (pathSuffix.endsWith("/") ? pathSuffix : pathSuffix + "/") : "";
+    return targetLang === defaultLang ? `${base}${suffix}` : `${base}${targetLang}/${suffix}`;
+  }
+
+  // Auto-detect: strip the current lang prefix from the URL path
+  const currentPath = Astro.url.pathname;
+  let pathWithoutLang = currentPath;
+
+  // Remove base prefix
+  if (pathWithoutLang.startsWith(base)) {
+    pathWithoutLang = pathWithoutLang.slice(base.length);
+  }
+
+  // Remove current lang prefix if present (e.g. "de/blog/slug/" → "blog/slug/")
+  if (currentLang !== defaultLang && pathWithoutLang.startsWith(currentLang + "/")) {
+    pathWithoutLang = pathWithoutLang.slice(currentLang.length + 1);
+  }
+
+  // Ensure trailing slash
+  if (pathWithoutLang && !pathWithoutLang.endsWith("/")) {
+    pathWithoutLang += "/";
+  }
+
+  return targetLang === defaultLang
+    ? `${base}${pathWithoutLang}`
+    : `${base}${targetLang}/${pathWithoutLang}`;
+}
 ---
 
 <div class="relative" id="lang-switcher">
@@ -29,7 +63,7 @@ const base = rawBase.endsWith("/") ? rawBase : rawBase + "/";
   >
     {Object.entries(languages).map(([code, label]) => (
       <a
-        href={code === "en" ? base : `${base}${code}/`}
+        href={getLangHref(code)}
         class={`block px-3 py-2 text-xs transition-colors ${
           code === currentLang
             ? "bg-accent/10 text-accent font-medium"

@@ -1,6 +1,6 @@
 {
-  "name": "Fullstack AI Agent Template",
-  "short_name": "AI Agent Template",
+  "name": "AK Labs OSS",
+  "short_name": "AK Labs OSS",
   "icons": [
     { "src": "/favicon.png", "type": "image/png", "sizes": "192x192" },
     { "src": "/favicon.ico", "type": "image/x-icon", "sizes": "16x16 32x32 48x48" }

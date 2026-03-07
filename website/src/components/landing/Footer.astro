@@ -12,11 +12,10 @@ const { t } = Astro.props;
 <section class="reveal px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
   <div class="mx-auto max-w-2xl text-center">
     <h2 class="text-2xl font-bold tracking-[-0.02em] sm:text-3xl">
-      Need help implementing this in your company?
+      {t["footer.cta.title"]}
     </h2>
     <p class="mt-4 text-text-secondary leading-relaxed">
-      We're <a href="https://ak-labs.io" target="_blank" rel="noopener noreferrer" class="font-semibold text-text hover:text-accent transition-colors">AK Labs</a> &mdash; an Applied Agentic AI Engineering Consultancy
-      with 30+ production AI agent implementations.
+      We're <a href="https://ak-labs.io" target="_blank" rel="noopener noreferrer" class="font-semibold text-text hover:text-accent transition-colors">AK Labs</a> &mdash; {t["footer.cta.description"]}
     </p>
     <a
       href="https://ak-labs.io/contact-us/"
@@ -24,7 +23,7 @@ const { t } = Astro.props;
       rel="noopener noreferrer"
       class="mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
     >
-      Talk to us
+      {t["footer.cta.button"]}
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
       </svg>
@@ -36,7 +35,7 @@ const { t } = Astro.props;
 <footer class="border-t border-border px-4 py-8 sm:px-6 lg:px-8">
   <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
     <p class="text-sm text-text-tertiary">
-      Made with <span class="text-red-400">&hearts;</span> by <a href="https://ak-labs.io" target="_blank" rel="noopener noreferrer" class="font-medium text-text-secondary hover:text-text transition-colors">AK Labs</a>
+      {t["footer.built"]} <span class="text-red-400">&hearts;</span> <a href="https://ak-labs.io" target="_blank" rel="noopener noreferrer" class="font-medium text-text-secondary hover:text-text transition-colors">AK Labs</a>
     </p>
 
     <nav class="flex items-center gap-5 text-sm text-text-tertiary">
@@ -59,7 +58,7 @@ const { t } = Astro.props;
         PyPI
       </a>
       <a
-        href="https://ak-labs.github.io/agent-template/"
+        href="https://template.ak-labs.io/"
         target="_blank"
         rel="noopener noreferrer"
         class="flex items-center gap-1.5 transition-colors hover:text-text-secondary"

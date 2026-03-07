@@ -3,11 +3,10 @@ import type { translations } from '../../i18n/translations';
 
 interface Props {
   t: typeof translations.en;
+  basePath?: string;
 }
 
-const { t } = Astro.props;
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase.endsWith("/") ? rawBase : rawBase + "/";
+const { t, basePath = "/" } = Astro.props;
 
 const presets = [
   {
@@ -19,7 +18,7 @@ const presets = [
       t["presets.minimal.f3"],
       t["presets.minimal.f4"],
     ],
-    href: `${base}configurator/?preset=minimal`,
+    href: `${basePath}configurator/?preset=minimal`,
     highlighted: false,
     tag: null as string | null,
     cta: t["presets.minimal.cta"],
@@ -34,7 +33,7 @@ const presets = [
       t["presets.production.f4"],
       t["presets.production.f5"],
     ],
-    href: `${base}configurator/?preset=production`,
+    href: `${basePath}configurator/?preset=production`,
     highlighted: true,
     tag: t["presets.production.tag"],
     cta: t["presets.production.cta"],
@@ -49,7 +48,7 @@ const presets = [
       t["presets.agent.f4"],
       t["presets.agent.f5"],
     ],
-    href: `${base}configurator/?preset=ai-agent`,
+    href: `${basePath}configurator/?preset=ai-agent`,
     highlighted: false,
     tag: t["presets.agent.tag"],
     cta: t["presets.agent.cta"],

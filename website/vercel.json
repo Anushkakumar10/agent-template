@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/configurator/",
+      "destination": "/agent-template/configurator/",
+      "statusCode": 301
+    },
+    {
+      "source": "/configurator",
+      "destination": "/agent-template/configurator/",
+      "statusCode": 301
+    }
+  ]
+}

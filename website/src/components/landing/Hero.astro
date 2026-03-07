@@ -3,11 +3,10 @@ import type { translations } from '../../i18n/translations';
 
 interface Props {
   t: typeof translations.en;
+  basePath?: string;
 }
 
-const { t } = Astro.props;
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase.endsWith("/") ? rawBase : rawBase + "/";
+const { t, basePath = "/" } = Astro.props;
 
 const terminalLines = [
   { prefix: "$", text: "pip install ak-agent-template", color: "text-text" },
@@ -49,7 +48,7 @@ const terminalLines = [
     <!-- CTA Buttons -->
     <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
       <a
-        href={`${base}configurator/`}
+        href={`${basePath}configurator/`}
         class="inline-flex items-center rounded-full bg-accent px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
       >
         {t["hero.cta.configure"]}
@@ -73,7 +72,7 @@ const terminalLines = [
         <span class="h-2.5 w-2.5 rounded-full bg-red-500/60"></span>
         <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/60"></span>
         <span class="h-2.5 w-2.5 rounded-full bg-green-500/60"></span>
-        <span class="ml-2 text-xs text-text-tertiary">Terminal</span>
+        <span class="ml-2 text-xs text-text-tertiary">{t["ui.terminal"]}</span>
       </div>
       <div id="terminal" class="px-5 py-5 text-left font-mono text-sm leading-loose min-h-[210px]">
         {/* Lines rendered by JS typing animation */}

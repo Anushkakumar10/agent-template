@@ -1,0 +1,54 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import LogfireHero from '../../components/logfire/LogfireHero.astro';
+import LogfireFeatures from '../../components/logfire/LogfireFeatures.astro';
+import HowItWorks from '../../components/logfire/HowItWorks.astro';
+import LogfireUseCases from '../../components/logfire/LogfireUseCases.astro';
+import LogfireScreenshots from '../../components/logfire/LogfireScreenshots.astro';
+import LogfireTechStack from '../../components/logfire/LogfireTechStack.astro';
+import OssFooter from '../../components/oss/OssFooter.astro';
+import { translations, languages, defaultLang } from '../../i18n/translations';
+import { getProjectBySlug } from '../../data/projects';
+
+const lang = defaultLang;
+const t = translations[lang];
+const project = getProjectBySlug("logfire-assistant")!;
+
+const alternates = [
+  { lang: "en", href: "/logfire-assistant/" },
+  ...Object.keys(languages)
+    .filter((l) => l !== defaultLang)
+    .map((l) => ({ lang: l, href: `/${l}/logfire-assistant/` })),
+];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Logfire Assistant",
+  description: t["logfire.meta.description"],
+  url: "https://oss.ak-labs.io/logfire-assistant/",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Cross-platform",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  programmingLanguage: ["Python", "TypeScript"],
+  author: { "@type": "Organization", name: "AK Labs" },
+};
+---
+
+<Layout
+  title="Logfire Assistant — AI-Powered Debugging for Pydantic Logfire"
+  description={t["logfire.meta.description"]}
+  lang={lang}
+  alternates={alternates}
+  jsonLd={jsonLd}
+>
+  <Navbar currentLang={lang} project={project} pathSuffix="logfire-assistant/" />
+  <LogfireHero t={t} />
+  <LogfireTechStack t={t} />
+  <LogfireFeatures t={t} />
+  <HowItWorks t={t} />
+  <LogfireUseCases t={t} />
+  <LogfireScreenshots t={t} />
+  <OssFooter t={t} />
+</Layout>

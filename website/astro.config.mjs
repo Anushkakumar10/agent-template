@@ -6,7 +6,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  site: process.env.SITE_URL || "https://example.com",
+  site: process.env.SITE_URL || "https://oss.ak-labs.io",
   integrations: [
     react(),
     expressiveCode({

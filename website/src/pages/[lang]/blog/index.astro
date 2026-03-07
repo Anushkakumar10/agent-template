@@ -28,7 +28,7 @@ const alternates = [
 ---
 
 <Layout
-  title={`${t["blog.title"]} — Fullstack AI Agent Template`}
+  title={`${t["blog.title"]} — AK Labs OSS`}
   description={t["blog.subtitle"]}
   lang={lang}
   alternates={alternates}
@@ -42,7 +42,7 @@ const alternates = [
     </div>
 
     {posts.length === 0 ? (
-      <p class="text-center text-text-secondary">No posts yet. Check back soon.</p>
+      <p class="text-center text-text-secondary">{t["blog.noPosts"]}</p>
     ) : (
       <div class="space-y-4">
         {posts.map((post) => {

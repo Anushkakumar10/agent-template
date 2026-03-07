@@ -1,13 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
-import Hero from '../components/landing/Hero.astro';
-import FrameworkLogos from '../components/landing/FrameworkLogos.astro';
-import Features from '../components/landing/Features.astro';
-import Presets from '../components/landing/Presets.astro';
-import QuickStart from '../components/landing/QuickStart.astro';
-import FaqPreview from '../components/landing/FaqPreview.astro';
-import Footer from '../components/landing/Footer.astro';
+import OssHero from '../components/oss/OssHero.astro';
+import ProjectGrid from '../components/oss/ProjectGrid.astro';
+import OssFooter from '../components/oss/OssFooter.astro';
 import { translations, languages, defaultLang } from '../i18n/translations';
 
 const lang = defaultLang;
@@ -22,17 +18,13 @@ const alternates = [
 ---
 
 <Layout
-  title="Fullstack AI Agent Template — Ship Production AI Apps In Minutes"
-  description={t["meta.description"]}
+  title={t["oss.meta.title"]}
+  description={t["oss.meta.description"]}
   lang={lang}
   alternates={alternates}
 >
   <Navbar currentLang={lang} />
-  <Hero t={t} />
-  <FrameworkLogos t={t} />
-  <Features t={t} />
-  <Presets t={t} />
-  <QuickStart t={t} />
-  <FaqPreview t={t} lang={lang} />
-  <Footer t={t} />
+  <OssHero t={t} />
+  <ProjectGrid lang={lang} t={t} />
+  <OssFooter t={t} />
 </Layout>
