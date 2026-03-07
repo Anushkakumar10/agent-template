@@ -1,8 +1,8 @@
 site_name: FastAPI Fullstack
 site_description: Production-Ready AI/LLM Applications — In Minutes, Not Weeks
-site_url: https://ak-labs.github.io/agent-template/
-repo_url: https://github.com/anushka-kumar/agent-template
-repo_name: anushka-kumar/agent-template
+site_url: https://ak-labs.github.io/full-stack-fastapi-nextjs-llm-template/
+repo_url: https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template
+repo_name: ak-labs/full-stack-fastapi-nextjs-llm-template
 
 theme:
   name: material
@@ -125,7 +125,7 @@ extra:
     deprecated: Deprecated
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/anushka-kumar/agent-template
+      link: https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template
       name: GitHub
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/ak-agent-template/

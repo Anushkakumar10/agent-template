@@ -1,7 +1,7 @@
 {%- if cookiecutter.use_jwt %}
 """User schemas."""
 
-from enum import StrEnum
+from enum import Enum
 from uuid import UUID
 
 from pydantic import EmailStr, Field
@@ -9,7 +9,7 @@ from pydantic import EmailStr, Field
 from app.schemas.base import BaseSchema, TimestampSchema
 
 
-class UserRole(StrEnum):
+class UserRole(str, Enum):
     """User role enumeration for API schemas."""
 
     ADMIN = "admin"
