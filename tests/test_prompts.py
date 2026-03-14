@@ -17,10 +17,10 @@ from fastapi_gen.config import (
     LogfireFeatures,
     OAuthProvider,
     OrmType,
+    RAGFeatures,
     RateLimitStorageType,
     ReverseProxyType,
     WebSocketAuthType,
-    RAGFeatures,
 )
 from fastapi_gen.prompts import (
     _check_cancelled,
@@ -44,9 +44,9 @@ from fastapi_gen.prompts import (
     prompt_orm_type,
     prompt_ports,
     prompt_python_version,
+    prompt_rag_config,
     prompt_rate_limit_config,
     prompt_reverse_proxy,
-    prompt_rag_config,
     prompt_websocket_auth,
     run_interactive_prompts,
     show_header,

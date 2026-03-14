@@ -249,7 +249,7 @@ class TestRAGWithAIFrameworks:
         """Test that RAG works with all AI frameworks."""
         # Skip LangChain/LangGraph/CrewAI/DeepAgents with OpenRouter (not supported)
         llm_provider = LLMProviderType.OPENAI
-        if framework in (AIFrameworkType.LANGCHAIN, AIFrameworkType.LANGGRAPH, 
+        if framework in (AIFrameworkType.LANGCHAIN, AIFrameworkType.LANGGRAPH,
                         AIFrameworkType.CREWAI, AIFrameworkType.DEEPAGENTS):
             llm_provider = LLMProviderType.OPENAI
 
@@ -266,7 +266,7 @@ class TestRAGWithAIFrameworks:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         # Verify RAG files exist
         rag_dir = project / "backend" / "app" / "rag"
         assert rag_dir.exists(), f"RAG should be enabled with {framework.value}"
@@ -290,7 +290,7 @@ class TestRAGWithEmbeddingProviders:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         # Verify config has correct embedding settings
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
@@ -310,7 +310,7 @@ class TestRAGWithEmbeddingProviders:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         # Verify config has Voyage settings
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
@@ -330,7 +330,7 @@ class TestRAGWithEmbeddingProviders:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         # Verify config has SentenceTransformers settings
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
@@ -353,7 +353,7 @@ class TestRAGWithRerankers:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
         # Should not have reranker config
@@ -373,7 +373,7 @@ class TestRAGWithRerankers:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
         assert "cohere" in content.lower() or "reranker" in content.lower()
@@ -392,7 +392,7 @@ class TestRAGWithRerankers:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
         assert "cross" in content.lower() or "reranker" in content.lower()
@@ -415,7 +415,7 @@ class TestRAGWithPDFParsers:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
         assert "pdfplumber" in content.lower()
@@ -434,7 +434,7 @@ class TestRAGWithPDFParsers:
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
-        
+
         rag_config = project / "backend" / "app" / "rag" / "config.py"
         content = rag_config.read_text()
         assert "llamaparse" in content.lower()
@@ -525,7 +525,7 @@ class TestRAGCodePatterns:
     def test_rag_requires_ai_agent(self) -> None:
         """Test that RAG requires AI agent."""
         from pydantic import ValidationError
-        
+
         with pytest.raises(ValidationError, match="RAG requires AI agent"):
             ProjectConfig(
                 project_name="rag_no_agent",
@@ -541,7 +541,7 @@ class TestRAGCodePatterns:
     def test_rag_requires_background_tasks(self) -> None:
         """Test that RAG requires background tasks."""
         from pydantic import ValidationError
-        
+
         with pytest.raises(ValidationError, match="background task system"):
             ProjectConfig(
                 project_name="rag_no_bg",
@@ -557,7 +557,7 @@ class TestRAGCodePatterns:
     def test_rag_requires_docker(self) -> None:
         """Test that RAG requires Docker."""
         from pydantic import ValidationError
-        
+
         with pytest.raises(ValidationError, match="requires Docker"):
             ProjectConfig(
                 project_name="rag_no_docker",
