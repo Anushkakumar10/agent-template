@@ -32,10 +32,10 @@ console = Console()
 def show_header() -> None:
     """Display the generator header."""
     header = Text()
-    header.append("FastAPI Project Generator", style="bold cyan")
+    header.append("Full-Stack AI Agent Template", style="bold cyan")
     header.append("\n")
-    header.append("with Logfire Observability", style="dim")
-    console.print(Panel(header, title="[bold green]fastapi-gen[/]", border_style="green"))
+    header.append("FastAPI + Next.js with AI Agents & 20+ Integrations", style="dim")
+    console.print(Panel(header, title="[bold green]ak-agent-template[/]", border_style="green"))
     console.print()
 
 

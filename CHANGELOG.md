@@ -10,13 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **LangSmith observability integration** - New `enable_langsmith` option for LangChain, LangGraph, and DeepAgents frameworks. Adds `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT`, `LANGCHAIN_ENDPOINT` settings and `langsmith` dependency when enabled. Includes interactive prompt, `--langsmith` CLI flag, and auto-enable in `ai-agent` preset. Previously LangSmith env vars were hardcoded to appear with LangChain — now requires explicit opt-in and works with all 3 LangChain-ecosystem frameworks.
+- **CLI: `--conversation-persistence` flag** - Enable conversation persistence from the command line (previously only available interactively)
+- **CLI: `--websocket-auth` option** - Set WebSocket authentication method (`none`, `jwt`, `api_key`) from the command line
+
+### Changed
+
+- **CLI runs interactive wizard by default** - `ak-agent-template` now launches the configurator directly without requiring `new` subcommand
+- **CLI branding updated** - Banner, descriptions, and prog name updated from "fastapi-gen / FastAPI Project Generator with Logfire" to "Full-Stack AI Agent Template Generator"
+- **`templates` command expanded** - Now lists all 5 AI frameworks, LangSmith, ORM options, WebSocket auth, conversation persistence, and port options
 
 ### Fixed
+
+#### CLI Fixes
+
+- **`--ai-framework` missing 3 frameworks** - Added `langgraph`, `crewai`, `deepagents` to choices (previously only `pydantic_ai` and `langchain`)
 
 #### Backend Template Fixes
 
 - **Unconditional `import logfire` in `versioning.py`** - Replaced with `logging` module to prevent `ImportError` when Logfire is disabled
 - **Unconditional `import logfire` in `webhook.py`** - Replaced `logfire.error()`/`logfire.info()` with `logger.error()`/`logger.info()` in all 3 database sections (PostgreSQL, SQLite, MongoDB) to prevent `ImportError` when Logfire is disabled but webhooks are enabled
+- **`backend/.env` LangSmith conditional wrong** - Was gated by `use_langchain` instead of `enable_langsmith` (only `.env.example` was updated, `.env` was missed)
+- **`backend/.env` missing sections** - Added OAuth Google, ARQ, and Prometheus sections that were present in `.env.example` but absent from generated `.env`
 
 #### Frontend Template Fixes
 
