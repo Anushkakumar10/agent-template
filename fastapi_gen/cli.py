@@ -16,9 +16,7 @@ from .config import (
     LLMProviderType,
     OAuthProvider,
     OrmType,
-    PdfParserType,
     ProjectConfig,
-    RAGFeatures,
 )
 from .generator import generate_project, post_generation_tasks
 from .prompts import confirm_generation, run_interactive_prompts, show_summary
@@ -180,6 +178,7 @@ def new(output: Path | None, no_input: bool, name: str | None) -> None:
 @click.option("--prometheus", is_flag=True, help="Enable Prometheus metrics")
 @click.option("--file-storage", is_flag=True, help="Enable S3/MinIO file storage")
 @click.option("--webhooks", is_flag=True, help="Enable webhooks support")
+@click.option("--langsmith", is_flag=True, help="Enable LangSmith observability (LangChain/LangGraph/DeepAgents)")
 @click.option(
     "--python-version",
     type=click.Choice(["3.11", "3.12", "3.13"]),
@@ -192,30 +191,6 @@ def new(output: Path | None, no_input: bool, name: str | None) -> None:
     type=click.Choice(["production", "ai-agent"]),
     default=None,
     help="Apply configuration preset",
-)
-@click.option(
-    "--rag",
-    is_flag=True,
-    default=False,
-    help="Enable RAG feature.",
-)
-@click.option(
-    "--gdrive-rag",
-    is_flag=True,
-    default=False,
-    help="Use Google Drive for document ingestion",
-)
-@click.option(
-    "--reranker",
-    type=click.Choice(["none", "cohere", "cross_encoder"]),
-    default="none",
-    help="Choose reranking logic.",
-)
-@click.option(
-    "--pdf-parser",
-    type=click.Choice(["pdfplumber", "llamaparse"]),
-    default="pdfplumber",
-    help="Choose PDF parser (pdfplumber=local/free, llamaparse=cloud/AI)",
 )
 def create(
     name: str,
@@ -251,12 +226,9 @@ def create(
     prometheus: bool,
     file_storage: bool,
     webhooks: bool,
+    langsmith: bool,
     python_version: str,
     i18n: bool,
-    rag: bool,
-    gdrive_rag: bool,
-    reranker: str,
-    pdf_parser: str,
     preset: str | None,
 ) -> None:
     """Create a new FastAPI project with specified options.
@@ -298,6 +270,7 @@ def create(
                 llm_provider=LLMProviderType(llm_provider),
                 enable_websockets=True,
                 enable_conversation_persistence=True,
+                enable_langsmith=ai_framework in ("langchain", "langgraph", "deepagents"),
                 enable_docker=True,
                 ci_type=CIType.GITHUB,
                 generate_env=not no_env,
@@ -362,14 +335,9 @@ def create(
                 enable_prometheus=prometheus,
                 enable_file_storage=file_storage,
                 enable_webhooks=webhooks,
+                enable_langsmith=langsmith,
                 python_version=python_version,
                 enable_i18n=i18n,
-                rag_features=RAGFeatures(
-                    enable_rag=rag,
-                    enable_google_drive_ingestion=gdrive_rag,
-                    enable_reranker=(reranker != "none"),
-                    pdf_parser=PdfParserType(pdf_parser),
-                ),
             )
 
         console.print(f"[cyan]Creating project:[/] {name}")
@@ -446,13 +414,6 @@ def templates() -> None:
     console.print("  --llm-provider openai       OpenAI (gpt-4o-mini)")
     console.print("  --llm-provider anthropic    Anthropic (claude-sonnet-4-5)")
     console.print("  --llm-provider openrouter   OpenRouter (pydantic_ai only)")
-    console.print()
-
-    console.print("[bold]RAG (Retrieval Augmented Generation):[/]")
-    console.print("  --rag              Enable RAG")
-    console.print("  --gdrive-rag       Enable Google Drive ingestion for RAG")
-    console.print("  --reranker         Enable reranker logic")
-    console.print("  --document-parser  Choose document parser")
     console.print()
 
     console.print("[bold]Integrations:[/]")

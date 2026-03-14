@@ -136,60 +136,6 @@ class LogfireFeatures(BaseModel):
     httpx: bool = False
 
 
-class EmbeddingProviderType(str, Enum):
-    """Define the embedding provider for LLM models."""
-
-    OPENAI = "openai"  # test-embedding-3-small
-    VOYAGE = "voyage"  # voyage-3 (Anthropic users)
-    SENTENCE_TRANSFORMERS = "sentence_transformers"  # all-MiniLM-L6-v2 (local, for OpenRouter)
-
-
-class RerankerType(str, Enum):
-    """Define the reranker type and provider for reranking purposes."""
-
-    NONE = "none"
-    COHERE = "cohere"  # rerank-v3.5
-    CROSS_ENCODER = "cross_encoder"  # ms-marco-MiniLM (local)
-
-
-class DocumentParserType(str, Enum):
-    """Define the document parser used to process non-PDF documents.
-    Note: PDF parsing is now controlled separately via PdfParserType.
-    This setting applies to TXT, MD, and DOCX files only.
-    """
-
-    PYTHON_NATIVE = "python_native"  # python-docx for DOCX
-
-
-class PdfParserType(str, Enum):
-    """Define the PDF parser used to process PDF documents.
-    PDFPLUMBER: Fast, free, local PDF extraction using pdfplumber.
-               Only extracts text layer - fails on scanned images.
-    LLAMAPARSE: AI-powered cloud extraction. Handles complex layouts,
-                tables, and scanned documents. Requires API key.
-    """
-
-    PDFPLUMBER = "pdfplumber"  # Local PDF extraction
-    LLAMAPARSE = "llamaparse"  # LlamaParse cloud API
-
-
-class VectorStoreType(str, Enum):
-    """Define a Vector Store type."""
-
-    MILVUS = "milvus"
-
-
-class RAGFeatures(BaseModel):
-    """RAG features."""
-
-    enable_rag: bool = False
-    enable_google_drive_ingestion: bool = False
-    enable_reranker: bool = False
-    # pdf_parser is stored here since it's only used when RAG is enabled
-    pdf_parser: PdfParserType = PdfParserType.PDFPLUMBER
-    vector_store: VectorStoreType = VectorStoreType.MILVUS
-
-
 class ProjectConfig(BaseModel):
     """Full project configuration."""
 
@@ -206,9 +152,6 @@ class ProjectConfig(BaseModel):
     db_pool_size: int = 5
     db_max_overflow: int = 10
     db_pool_timeout: int = 30
-
-    # RAG
-    rag_features: RAGFeatures = Field(default_factory=RAGFeatures)
 
     # Authentication
     auth: AuthType = AuthType.JWT
@@ -243,6 +186,7 @@ class ProjectConfig(BaseModel):
     enable_conversation_persistence: bool = False
     enable_webhooks: bool = False
     websocket_auth: WebSocketAuthType = WebSocketAuthType.NONE
+    enable_langsmith: bool = False
     enable_cors: bool = True
     enable_orjson: bool = True
 
@@ -350,6 +294,16 @@ class ProjectConfig(BaseModel):
         ):
             raise ValueError("Rate limiting with Redis storage requires Redis to be enabled")
 
+        # LangSmith requires LangChain-ecosystem framework
+        if self.enable_langsmith and self.ai_framework not in (
+            AIFrameworkType.LANGCHAIN,
+            AIFrameworkType.LANGGRAPH,
+            AIFrameworkType.DEEPAGENTS,
+        ):
+            raise ValueError(
+                "LangSmith requires LangChain, LangGraph, or DeepAgents framework"
+            )
+
         # WebSocket JWT auth requires main JWT auth
         if self.websocket_auth == WebSocketAuthType.JWT and self.auth not in (
             AuthType.JWT,
@@ -436,24 +390,6 @@ class ProjectConfig(BaseModel):
                     "Logfire Celery instrumentation requires Celery as background task system"
                 )
 
-        # RAG-oriented checks
-        if self.rag_features.enable_rag and not self.enable_ai_agent:
-            raise ValueError("RAG requires AI agent to be enabled.")
-
-        if self.rag_features.enable_rag and self.background_tasks == BackgroundTaskType.NONE:
-            raise ValueError("RAG requires a background task system for scheduled ingestion.")
-
-        if self.rag_features.enable_rag and not self.enable_docker:
-            raise ValueError(
-                "RAG (w/ Milvus) requires Docker to be enabled for local orchestration."
-            )
-
-        if (
-            self.rag_features.enable_google_drive_ingestion
-            and self.oauth_provider != OAuthProvider.GOOGLE
-        ):
-            raise ValueError("Google Drive ingestion requires OAuth Provider to be set.")
-
         return self
 
     def to_cookiecutter_context(self) -> dict[str, Any]:
@@ -538,6 +474,7 @@ class ProjectConfig(BaseModel):
             "use_anthropic": self.llm_provider == LLMProviderType.ANTHROPIC,
             "use_openrouter": self.llm_provider == LLMProviderType.OPENROUTER,
             "enable_conversation_persistence": self.enable_conversation_persistence,
+            "enable_langsmith": self.enable_langsmith,
             "enable_webhooks": self.enable_webhooks,
             "websocket_auth": self.websocket_auth.value,
             "websocket_auth_jwt": self.websocket_auth == WebSocketAuthType.JWT,
@@ -580,41 +517,4 @@ class ProjectConfig(BaseModel):
             "frontend_port": self.frontend_port,
             # Backend
             "backend_port": self.backend_port,
-            # RAG
-            "enable_rag": self.rag_features.enable_rag,
-            "use_milvus": self.rag_features.enable_rag,
-            # Embedding provider is auto-derived from LLM provider
-            "embedding_provider": (
-                EmbeddingProviderType.VOYAGE.value
-                if self.llm_provider == LLMProviderType.ANTHROPIC
-                else EmbeddingProviderType.SENTENCE_TRANSFORMERS.value
-                if self.llm_provider == LLMProviderType.OPENROUTER
-                else EmbeddingProviderType.OPENAI.value
-            ),
-            "use_openai_embeddings": self.rag_features.enable_rag
-            and self.llm_provider != LLMProviderType.ANTHROPIC
-            and self.llm_provider != LLMProviderType.OPENROUTER,
-            "use_voyage_embeddings": self.rag_features.enable_rag
-            and self.llm_provider == LLMProviderType.ANTHROPIC,
-            "use_sentence_transformers": self.rag_features.enable_rag
-            and self.llm_provider == LLMProviderType.OPENROUTER,
-            "enable_reranker": self.rag_features.enable_reranker
-            if self.rag_features.enable_rag
-            else False,
-            "use_cohere_reranker": self.rag_features.enable_reranker
-            and self.llm_provider != LLMProviderType.OPENROUTER,
-            "use_cross_encoder_reranker": self.rag_features.enable_reranker
-            and self.llm_provider == LLMProviderType.OPENROUTER,
-            "document_parser": "python_native",  # Always use Python parser for non-PDF
-            "pdf_parser": self.rag_features.pdf_parser.value
-            if self.rag_features.enable_rag
-            else "pdfplumber",
-            "use_llamaparse": self.rag_features.enable_rag
-            and self.rag_features.pdf_parser == PdfParserType.LLAMAPARSE,
-            "use_pdfplumber": self.rag_features.enable_rag
-            and self.rag_features.pdf_parser == PdfParserType.PDFPLUMBER,
-            "use_python_parser": True,  # Always use Python parser for non-PDF
-            "enable_google_drive_ingestion": self.rag_features.enable_google_drive_ingestion
-            if self.rag_features.enable_rag
-            else False,
         }

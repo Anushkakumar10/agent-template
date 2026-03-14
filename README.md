@@ -8,6 +8,8 @@
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-features">Features</a> •
   <a href="#-demo">Demo</a> •
+  <a href="https://template.ak-labs.io/">Website</a> •
+  <a href="https://template.ak-labs.io/configurator/">Configurator</a> •
   <a href="https://pypi.org/project/ak-agent-template/">PyPI</a> •
   <a href="#-documentation">Docs</a>
 </p>
@@ -15,9 +17,9 @@
 <p align="center">
   <a href="https://pypi.org/project/ak-agent-template/"><img src="https://img.shields.io/pypi/v/ak-agent-template?color=green&logo=pypi&logoColor=white" alt="PyPI"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11+-blue?logo=python&logoColor=white" alt="Python 3.11+"></a>
-  <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ak-labs/full-stack-fastapi-nextjs-llm-template?color=blue" alt="License"></a>
+  <a href="https://github.com/anushka-kumar/agent-template/blob/main/LICENSE"><img src="https://img.shields.io/github/license/anushka-kumar/agent-template?color=blue" alt="License"></a>
   <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Coverage">
-  <a href="https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/stargazers"><img src="https://img.shields.io/github/stars/ak-labs/full-stack-fastapi-nextjs-llm-template?style=flat&logo=github&color=yellow" alt="GitHub Stars"></a>
+  <a href="https://github.com/anushka-kumar/agent-template/stargazers"><img src="https://img.shields.io/github/stars/anushka-kumar/agent-template?style=flat&logo=github&color=yellow" alt="GitHub Stars"></a>
 </p>
 
 <p align="center">
@@ -27,8 +29,6 @@
   &nbsp;•&nbsp;
   <b>👥 CrewAI</b>
   &nbsp;•&nbsp;
-  <b>📄 RAG & Milvus</b>
-  &nbsp;•&nbsp;
   <b>🎯 Fully Type-Safe</b>
 </p>
 
@@ -36,7 +36,7 @@
 
 ## Related Projects
 
-> **Building advanced AI agents?** Check out [pydantic-deep](https://github.com/ak-labs/pydantic-deepagents) - a deep agent framework built on pydantic-ai with planning, filesystem, and subagent capabilities.
+> **Building advanced AI agents?** Check out [pydantic-deepagents](https://github.com/ak-labs/pydantic-deepagents) — a deepagent framework built on pydantic-ai for building Claude Code-style AI agents with filesystem tools, subagent delegation, persistent memory, context management, cost tracking, and an interactive CLI.
 
 ---
 
@@ -72,7 +72,6 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
   <a href="https://python.langchain.com"><img src="https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white" alt="LangChain"></a>
   <a href="https://langchain-ai.github.io/langgraph/"><img src="https://img.shields.io/badge/LangGraph-005A9C?logo=langchain&logoColor=white" alt="LangGraph"></a>
   <a href="https://www.crewai.com"><img src="https://img.shields.io/badge/CrewAI-FF6B35?logoColor=white" alt="CrewAI"></a>
-  <a href="https://milvus.io"><img src="https://img.shields.io/badge/Milvus-FF6B35?logoColor=white" alt="Milvus"></a>
   <a href="https://openai.com"><img src="https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white" alt="OpenAI"></a>
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Anthropic-D4A373?logo=anthropic&logoColor=white" alt="Anthropic"></a>
   <a href="https://openrouter.ai"><img src="https://img.shields.io/badge/OpenRouter-6366F1?logoColor=white" alt="OpenRouter"></a>
@@ -91,7 +90,6 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
   <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
   <a href="https://www.mongodb.com"><img src="https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white" alt="MongoDB"></a>
   <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white" alt="Redis"></a>
-  <a href="https://milvus.io"><img src="https://img.shields.io/badge/Milvus-FF6B35?logoColor=white" alt="Milvus"></a>
   <a href="https://docs.celeryq.dev"><img src="https://img.shields.io/badge/Celery-37814A?logo=celery&logoColor=white" alt="Celery"></a>
   <a href="https://logfire.pydantic.dev"><img src="https://img.shields.io/badge/Logfire-E92063?logo=pydantic&logoColor=white" alt="Logfire"></a>
   <a href="https://sentry.io"><img src="https://img.shields.io/badge/Sentry-362D59?logo=sentry&logoColor=white" alt="Sentry"></a>
@@ -146,7 +144,7 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
 ## 🎬 Demo
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/app_start.gif" alt="FastAPI Fullstack Generator Demo">
+  <img src="https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/app_start.gif" alt="FastAPI Fullstack Generator Demo">
 </p>
 
 ---
@@ -154,32 +152,28 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
 ## 📸 Screenshots
 
 ### Chat Interface
-
 | Light Mode | Dark Mode |
 |:---:|:---:|
-| ![Chat Light](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/new_chat_light.png) | ![Chat Dark](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/new_chat_dark.png) |
+| ![Chat Light](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/new_chat_light.png) | ![Chat Dark](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/new_chat_dark.png) |
 
 ### Authentication
-
 | Register | Login |
 |:---:|:---:|
-| ![Register](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/new_register.png) | ![Login](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/new_login.png) |
+| ![Register](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/new_register.png) | ![Login](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/new_login.png) |
 
 ### Observability
-
 | Logfire (PydanticAI) | LangSmith (LangChain) |
 |:---:|:---:|
-| ![Logfire](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/logfire.png) | ![LangSmith](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/langsmith.png) |
+| ![Logfire](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/logfire.png) | ![LangSmith](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/langsmith.png) |
 
 ### Admin, Monitoring & API
-
 | Celery Flower | SQLAdmin Panel |
 |:---:|:---:|
-| ![Flower](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/flower.png) | ![Admin](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/admin.png) |
+| ![Flower](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/flower.png) | ![Admin](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/admin.png) |
 
 | API Documentation |
 |:---:|
-| ![API Docs](https://raw.githubusercontent.com/ak-labs/full-stack-fastapi-nextjs-llm-template/main/assets/docs_2.png) |
+| ![API Docs](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/docs_2.png) |
 
 ---
 
@@ -275,11 +269,10 @@ bun dev
 ```
 
 **Access:**
-
-- API: <http://localhost:8000>
-- Docs: <http://localhost:8000/docs>
-- Admin Panel: <http://localhost:8000/admin> (login with admin user)
-- Frontend: <http://localhost:3000>
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+- Admin Panel: http://localhost:8000/admin (login with admin user)
+- Frontend: http://localhost:3000
 
 ### Quick Start with Docker
 
@@ -368,7 +361,7 @@ graph LR
 | **Services** | Business logic, orchestration |
 | **Repositories** | Data access, queries |
 
-See [Architecture Documentation](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/architecture.md) for details.
+See [Architecture Documentation](https://github.com/anushka-kumar/agent-template/blob/main/docs/architecture.md) for details.
 
 ---
 
@@ -472,7 +465,7 @@ Each framework has its own observability solution:
 | **PydanticAI** | [Logfire](https://logfire.pydantic.dev) | Agent runs, tool calls, token usage |
 | **LangChain** | [LangSmith](https://smith.langchain.com) | Traces, feedback, datasets |
 
-See [AI Agent Documentation](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/ai-agent.md) for more.
+See [AI Agent Documentation](https://github.com/anushka-kumar/agent-template/blob/main/docs/ai-agent.md) for more.
 
 ---
 
@@ -718,13 +711,13 @@ ak-agent-template new
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/architecture.md) | Repository + Service pattern, layered design |
-| [Frontend](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/frontend.md) | Next.js setup, auth, state management |
-| [AI Agent](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/ai-agent.md) | PydanticAI, tools, WebSocket streaming |
-| [Observability](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/observability.md) | Logfire integration, tracing, metrics |
-| [Deployment](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/deployment.md) | Docker, Kubernetes, production setup |
-| [Development](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/development.md) | Local setup, testing, debugging |
-| [Changelog](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/docs/CHANGELOG.md) | Version history and release notes |
+| [Architecture](https://github.com/anushka-kumar/agent-template/blob/main/docs/architecture.md) | Repository + Service pattern, layered design |
+| [Frontend](https://github.com/anushka-kumar/agent-template/blob/main/docs/frontend.md) | Next.js setup, auth, state management |
+| [AI Agent](https://github.com/anushka-kumar/agent-template/blob/main/docs/ai-agent.md) | PydanticAI, tools, WebSocket streaming |
+| [Observability](https://github.com/anushka-kumar/agent-template/blob/main/docs/observability.md) | Logfire integration, tracing, metrics |
+| [Deployment](https://github.com/anushka-kumar/agent-template/blob/main/docs/deployment.md) | Docker, Kubernetes, production setup |
+| [Development](https://github.com/anushka-kumar/agent-template/blob/main/docs/development.md) | Local setup, testing, debugging |
+| [Changelog](https://github.com/anushka-kumar/agent-template/blob/main/docs/CHANGELOG.md) | Version history and release notes |
 
 ---
 
@@ -747,16 +740,28 @@ This project is inspired by:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/CONTRIBUTING.md) for details.
+Contributions are welcome! Please read our [Contributing Guide](https://github.com/anushka-kumar/agent-template/blob/main/CONTRIBUTING.md) for details.
 
 ---
 
 ## 📄 License
 
-MIT License - see [LICENSE](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/blob/main/LICENSE) for details.
+MIT License - see [LICENSE](https://github.com/anushka-kumar/agent-template/blob/main/LICENSE) for details.
 
 ---
 
-<p align="center">
-  Made with ❤️ by <a href="https://github.com/ak-labs">AK Labs</a>
-</p>
+<div align="center">
+
+### Need help implementing this in your company?
+
+<p>We're <a href="https://ak-labs.io"><b>AK Labs</b></a> — an Applied Agentic AI Engineering Consultancy<br>with 30+ production AI agent implementations.</p>
+
+<a href="https://ak-labs.io/contact-us/">
+  <img src="https://img.shields.io/badge/Talk%20to%20us%20%E2%86%92-0066FF?style=for-the-badge&logoColor=white" alt="Talk to us">
+</a>
+
+<br><br>
+
+Made with ❤️ by <a href="https://ak-labs.io"><b>AK Labs</b></a>
+
+</div>

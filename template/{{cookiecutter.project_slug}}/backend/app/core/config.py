@@ -5,7 +5,7 @@
 from pathlib import Path
 from typing import Literal
 
-{% if cookiecutter.use_database or cookiecutter.enable_redis or cookiecutter.enable_rag -%}
+{% if cookiecutter.use_database or cookiecutter.enable_redis -%}
 from pydantic import computed_field, field_validator{% if cookiecutter.use_jwt or cookiecutter.use_api_key or cookiecutter.enable_cors %}, ValidationInfo{% endif %}
 {% else -%}
 from pydantic import field_validator{% if cookiecutter.use_jwt or cookiecutter.use_api_key or cookiecutter.enable_cors %}, ValidationInfo{% endif %}
@@ -37,7 +37,6 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     DEBUG: bool = False
     ENVIRONMENT: Literal["development", "local", "staging", "production"] = "local"
-    MODELS_CACHE_DIR: Path = Path("./models_cache")
 
 {%- if cookiecutter.enable_logfire %}
 
@@ -183,49 +182,6 @@ class Settings(BaseSettings):
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 {%- endif %}
 
-{%- if cookiecutter.use_milvus %}
-
-    # === Milvus (RAG Vector Database) ===
-    MILVUS_HOST: str = "localhost"
-    MILVUS_PORT: int = 19530
-    MILVUS_DATABASE: str = "default"
-    MILVUS_TOKEN: str = "root:Milvus"
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def MILVUS_URI(self) -> str:
-        """Build Milvus connection URI."""
-        return f"http://{self.MILVUS_HOST}:{self.MILVUS_PORT}"
-
-{%- if cookiecutter.use_openai_embeddings %}
-    # === OpenAI Embeddings ===
-    OPENAI_API_KEY: str = ""
-{%- endif %}
-
-{%- if cookiecutter.use_voyage_embeddings %}
-    # === Voyage AI Embeddings ===
-    VOYAGE_API_KEY: str = ""
-{%- endif %}
-
-{%- if cookiecutter.enable_reranker == "cohere" %}
-    # === Cohere Reranker ===
-    COHERE_API_KEY: str = ""
-{%- endif %}
-
-{%- if cookiecutter.document_parser == "llamaparse" %}
-    # === LlamaParse ===
-    LLAMAPARSE_API_KEY: str = ""
-{%- endif %}
-
-{%- if cookiecutter.enable_google_drive_ingestion %}
-    # === Google Drive ===
-    GOOGLE_DRIVE_CLIENT_ID: str | None = None
-    GOOGLE_DRIVE_CLIENT_SECRET: str | None = None
-    GOOGLE_DRIVE_REFRESH_TOKEN: str | None = None
-{%- endif %}
-
-{%- endif %}
-
 {%- if cookiecutter.enable_rate_limiting %}
 
     # === Rate Limiting ===
@@ -297,9 +253,9 @@ class Settings(BaseSettings):
     AI_TEMPERATURE: float = 0.7
     AI_FRAMEWORK: str = "{{ cookiecutter.ai_framework }}"
     LLM_PROVIDER: str = "{{ cookiecutter.llm_provider }}"
-{%- if cookiecutter.use_langchain %}
+{%- if cookiecutter.enable_langsmith %}
 
-    # === LangSmith (LangChain observability) ===
+    # === LangSmith Observability ===
     LANGCHAIN_TRACING_V2: bool = True
     LANGCHAIN_API_KEY: str | None = None
     LANGCHAIN_PROJECT: str = "{{ cookiecutter.project_slug }}"
@@ -323,61 +279,6 @@ class Settings(BaseSettings):
 {%- endif %}
 {%- endif %}
 
-{%- if cookiecutter.enable_rag %}
-
-    # === RAG (Retrieval Augmented Generation) ===
-    # Vector Database (Milvus)
-    MILVUS_HOST: str = "localhost"
-    MILVUS_PORT: int = 19530
-    MILVUS_DATABASE: str = "default"
-    MILVUS_TOKEN: str = "root:Milvus"
-
-    # Embeddings
-    {%- if cookiecutter.use_openai_embeddings %}
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
-    OPENAI_API_KEY: str = ""
-    {%- elif cookiecutter.use_voyage_embeddings %}
-    EMBEDDING_MODEL: str = "voyage-3"
-    VOYAGE_API_KEY: str = ""
-    {%- elif cookiecutter.use_sentence_transformers %}
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
-    {%- else %}
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
-    {%- endif %}
-
-    # Chunking
-    RAG_CHUNK_SIZE: int = 512
-    RAG_CHUNK_OVERLAP: int = 50
-
-    # Retrieval
-    RAG_DEFAULT_COLLECTION: str = "documents"
-    RAG_TOP_K: int = 10
-
-    # Reranker
-    {%- if cookiecutter.enable_reranker == "cohere" or cookiecutter.use_cohere_reranker %}
-    COHERE_API_KEY: str = ""
-    {%- endif %}
-
-    # Document Parser
-    {%- if cookiecutter.document_parser == "llamaparse" or cookiecutter.use_llamaparse %}
-    LLAMAPARSE_API_KEY: str = ""
-    {%- endif %}
-
-    # Google Drive (optional, for document ingestion)
-    {%- if cookiecutter.enable_google_drive_ingestion %}
-    GOOGLE_DRIVE_CLIENT_ID: str | None = None
-    GOOGLE_DRIVE_CLIENT_SECRET: str | None = None
-    GOOGLE_DRIVE_REFRESH_TOKEN: str | None = None
-    {%- endif %}
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def MILVUS_URI(self) -> str:
-        """Build Milvus connection URI."""
-        return f"http://{self.MILVUS_HOST}:{self.MILVUS_PORT}"
-
-{%- endif %}
-
 {%- if cookiecutter.enable_cors %}
 
     # === CORS ===
@@ -397,24 +298,6 @@ class Settings(BaseSettings):
                 "Specify explicit allowed origins."
             )
         return v
-{%- endif %}
-
-{%- if cookiecutter.enable_rag %}
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def rag(self) -> "RAGSettings":
-        """Build RAG-specific settings."""
-        from app.rag.config import RAGSettings, DocumentParser
-        
-        parser_config = {}
-        {%- if cookiecutter.use_llamaparse %}
-        parser_config["api_key"] = self.LLAMAPARSE_API_KEY
-        {%- endif %}
-        
-        return RAGSettings(
-            document_parser=DocumentParser(**parser_config)
-        )
 {%- endif %}
 
 

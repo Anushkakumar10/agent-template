@@ -10,9 +10,9 @@
 
 ## GitHub
 
-- [Issues](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/issues) - Report bugs or request features
-- [Discussions](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/discussions) - Ask questions and share ideas
-- [Pull Requests](https://github.com/ak-labs/full-stack-fastapi-nextjs-llm-template/pulls) - Contribute to the project
+- [Issues](https://github.com/anushka-kumar/agent-template/issues) - Report bugs or request features
+- [Discussions](https://github.com/anushka-kumar/agent-template/discussions) - Ask questions and share ideas
+- [Pull Requests](https://github.com/anushka-kumar/agent-template/pulls) - Contribute to the project
 
 ## FAQ
 
