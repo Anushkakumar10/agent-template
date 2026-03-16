@@ -1,4 +1,4 @@
-"""Full-Stack AI Agent Template Generator."""
+"""FastAPI Project Generator with Logfire observability."""
 
 from importlib.metadata import PackageNotFoundError, version
 

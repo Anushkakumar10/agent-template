@@ -19,11 +19,9 @@ export const API_ROUTES = {
 
   // Users
   USERS: "/users",
-{%- if cookiecutter.enable_ai_agent %}
 
   // Chat (AI Agent)
   CHAT: "/chat",
-{%- endif %}
 } as const;
 
 // Navigation routes
@@ -32,14 +30,10 @@ export const ROUTES = {
   LOGIN: "/login",
   REGISTER: "/register",
   DASHBOARD: "/dashboard",
-{%- if cookiecutter.enable_ai_agent %}
   CHAT: "/chat",
-{%- endif %}
   PROFILE: "/profile",
   SETTINGS: "/settings",
 } as const;
-{%- if cookiecutter.enable_ai_agent %}
 
 // WebSocket URL (for chat - this needs to be direct to backend for WS)
 export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:{{ cookiecutter.backend_port }}";
-{%- endif %}

@@ -1,5 +1,5 @@
-notes/
 .idea/
+.vscode/
 .DS_Store
 test7/
 # Byte-compiled / optimized / DLL files
@@ -212,7 +212,4 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Website (Astro)
-website/node_modules/
-website/dist/
-website/.astro/
+.playground/

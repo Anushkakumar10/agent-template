@@ -1,1 +1,1 @@
-"""Test suite for ak-agent-template."""
+"""Test suite for fastapi-gen."""
