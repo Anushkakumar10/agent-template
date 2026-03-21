@@ -2,7 +2,28 @@
 
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
-import { locales, type Locale, getLocaleLabel } from "@/i18n";
+import { locales, defaultLocale, type Locale, getLocaleLabel } from "@/i18n";
+
+/**
+ * Strip the current locale prefix from a pathname and prepend the new locale.
+ * Handles "as-needed" locale prefix mode where the default locale has no prefix.
+ */
+function switchLocalePath(pathname: string, currentLocale: string, newLocale: Locale): string {
+  // Remove current locale prefix if present (e.g. /pl/chat → /chat)
+  let pathWithoutLocale = pathname;
+  if (currentLocale !== defaultLocale) {
+    const prefix = `/${currentLocale}`;
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      pathWithoutLocale = pathname.slice(prefix.length) || "/";
+    }
+  }
+
+  // Add new locale prefix (skip for default locale with "as-needed")
+  if (newLocale === defaultLocale) {
+    return pathWithoutLocale;
+  }
+  return `/${newLocale}${pathWithoutLocale === "/" ? "" : pathWithoutLocale}`;
+}
 
 /**
  * Language switcher dropdown component.
@@ -14,11 +35,7 @@ export function LanguageSwitcher() {
   const pathname = usePathname();
 
   const handleChange = (newLocale: Locale) => {
-    // Remove the current locale from pathname and add the new one
-    const segments = pathname.split("/");
-    segments[1] = newLocale;
-    const newPath = segments.join("/");
-    router.push(newPath);
+    router.push(switchLocalePath(pathname, locale, newLocale));
   };
 
   return (
@@ -58,10 +75,7 @@ export function LanguageSwitcherCompact() {
   };
 
   const handleChange = (newLocale: Locale) => {
-    const segments = pathname.split("/");
-    segments[1] = newLocale;
-    const newPath = segments.join("/");
-    router.push(newPath);
+    router.push(switchLocalePath(pathname, locale, newLocale));
   };
 
   return (

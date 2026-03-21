@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, Button } from "@/components/ui";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/hooks";
-import { ROUTES } from "@/lib/constants";
+import { ROUTES, BACKEND_URL } from "@/lib/constants";
 import type { HealthResponse } from "@/types";
 import {
   CheckCircle,
@@ -21,10 +21,19 @@ import {
 {%- endif %}
   Settings,
   Activity,
+  ExternalLink,
+  BookOpen,
 } from "lucide-react";
 {%- if cookiecutter.enable_rag %}
 import { listCollections, getCollectionInfo } from "@/lib/rag-api";
 {%- endif %}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -71,9 +80,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          {getGreeting()}{user?.name ? `, ${user.name}` : user?.email ? `, ${user.email.split("@")[0]}` : ""}
+        </h1>
         <p className="text-sm sm:text-base text-muted-foreground">
-          Welcome back{user?.name ? `, ${user.name}` : ""}!
+          Here&apos;s what&apos;s happening with your project.
         </p>
       </div>
 
@@ -189,6 +200,19 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
+
+          <a href={`${BACKEND_URL}/docs`} target="_blank" rel="noopener noreferrer">
+            <Card className="cursor-pointer transition-colors hover:bg-accent">
+              <CardContent className="flex items-center gap-3 p-4">
+                <BookOpen className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">API Documentation</p>
+                  <p className="text-xs text-muted-foreground">OpenAPI / Swagger docs</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </a>
         </div>
       </div>
     </div>

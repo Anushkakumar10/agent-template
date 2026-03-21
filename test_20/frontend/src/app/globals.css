@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
 @theme {
+  /* Brand accent — change this one value to retheme the entire app */
+  /* Presets: blue 250, green 155, red 25, violet 295, orange 55 */
+  --color-brand: oklch(55% 0.2 250);
+  --color-brand-hover: oklch(62% 0.22 250);
+  --color-brand-muted: oklch(55% 0.1 250);
+  --color-brand-foreground: oklch(98% 0 0);
+
   /* Light theme - neutral grays with better contrast */
   --color-background: oklch(97% 0 0);
   --color-foreground: oklch(15% 0 0);
@@ -320,4 +327,92 @@
     color: #ffdcd7;
     background-color: #67060c;
   }
+}
+
+/* ---- Landing page utilities ---- */
+
+/* Grid background pattern */
+.grid-bg {
+  background-size: 64px 64px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black 0%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black 0%, transparent 100%);
+}
+
+/* Light mode: lighter grid lines */
+:root:not(.dark) .grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  }
+}
+
+/* Glass card effect */
+.glass-card {
+  background: oklch(18% 0 0 / 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid oklch(100% 0 0 / 0.06);
+  border-radius: var(--radius);
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: oklch(100% 0 0 / 0.12);
+  transform: translateY(-4px);
+}
+
+/* Light mode glass cards */
+:root:not(.dark) .glass-card {
+  background: oklch(100% 0 0 / 0.8);
+  border-color: oklch(0% 0 0 / 0.08);
+  box-shadow: 0 1px 3px oklch(0% 0 0 / 0.05);
+}
+
+:root:not(.dark) .glass-card:hover {
+  background: oklch(100% 0 0 / 0.95);
+  border-color: var(--color-brand);
+  box-shadow: 0 4px 12px oklch(0% 0 0 / 0.08);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) .glass-card {
+    background: oklch(100% 0 0 / 0.8);
+    border-color: oklch(0% 0 0 / 0.08);
+    box-shadow: 0 1px 3px oklch(0% 0 0 / 0.05);
+  }
+  :root:not(.dark) .glass-card:hover {
+    background: oklch(100% 0 0 / 0.95);
+    border-color: var(--color-brand);
+    box-shadow: 0 4px 12px oklch(0% 0 0 / 0.08);
+  }
+}
+
+/* Scroll arrow float animation */
+@keyframes arrow-float {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+.scroll-arrow {
+  animation: arrow-float 2s ease-in-out infinite;
+}
+
+.scroll-arrow:hover {
+  animation-play-state: paused;
+}
+
+/* Text selection with brand color */
+::selection {
+  background-color: var(--color-brand-muted);
+  color: white;
 }

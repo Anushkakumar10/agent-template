@@ -38,3 +38,6 @@ export const ROUTES = {
 
 // WebSocket URL (for chat - this needs to be direct to backend for WS)
 export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+
+// Backend API URL (public, for direct links like API docs)
+export const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";

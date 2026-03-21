@@ -177,7 +177,7 @@ class ConversationList(BaseSchema):
 class MessageList(BaseSchema):
     """Schema for listing messages."""
 
-    items: list[MessageReadSimple]
+    items: list[MessageRead]
     total: int
 
 

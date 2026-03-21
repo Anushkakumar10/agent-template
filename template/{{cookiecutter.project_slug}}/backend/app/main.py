@@ -44,6 +44,8 @@ from app.rag.vectorstore import BaseVectorStore
 {%- endif %}
 {%- endif %}
 
+{%- if cookiecutter.enable_redis or cookiecutter.enable_rag %}
+
 
 class LifespanState(TypedDict, total=False):
     """Lifespan state - resources available via request.state."""

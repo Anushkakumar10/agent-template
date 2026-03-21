@@ -30,6 +30,8 @@ from app.db.session import get_db_context
 from app.schemas.conversation import (
     ConversationCreate,
     MessageCreate,
+    ToolCallCreate,
+    ToolCallComplete,
 )
 
 logger = logging.getLogger(__name__)
@@ -180,6 +182,9 @@ async def agent_websocket(
                 assistant = get_agent()
                 model_history = build_message_history(conversation_history)
 
+                # Collect tool calls during streaming for persistence
+                collected_tool_calls: list[dict] = []
+
                 # Use iter() on the underlying PydanticAI agent to stream all events
                 async with assistant.agent.iter(
                     user_message,
@@ -252,6 +257,11 @@ async def agent_websocket(
                             async with node.stream(agent_run.ctx) as handle_stream:
                                 async for tool_event in handle_stream:
                                     if isinstance(tool_event, FunctionToolCallEvent):
+                                        collected_tool_calls.append({
+                                            "tool_call_id": tool_event.part.tool_call_id,
+                                            "tool_name": tool_event.part.tool_name,
+                                            "args": tool_event.part.args,
+                                        })
                                         await manager.send_event(
                                             websocket,
                                             "tool_call",
@@ -263,6 +273,11 @@ async def agent_websocket(
                                         )
 
                                     elif isinstance(tool_event, FunctionToolResultEvent):
+                                        # Update collected tool call with result
+                                        for tc in collected_tool_calls:
+                                            if tc["tool_call_id"] == tool_event.tool_call_id:
+                                                tc["result"] = str(tool_event.result.content)
+                                                break
                                         await manager.send_event(
                                             websocket,
                                             "tool_result",
@@ -286,12 +301,12 @@ async def agent_websocket(
                         {"role": "assistant", "content": agent_run.result.output}
                     )
 
-                # Save assistant response to database
+                # Save assistant response and tool calls to database
                 if current_conversation_id and agent_run.result:
                     try:
                         async with get_db_context() as db:
                             conv_service = get_conversation_service(db)
-                            await conv_service.add_message(
+                            assistant_msg = await conv_service.add_message(
                                 UUID(current_conversation_id),
                                 MessageCreate(
                                     role="assistant",
@@ -301,6 +316,37 @@ async def agent_websocket(
                                     else None,
                                 ),
                             )
+
+                            # Save tool calls associated with this assistant message
+                            from datetime import datetime, UTC
+                            import json
+                            for tc in collected_tool_calls:
+                                try:
+                                    args_dict = tc.get("args", {})
+                                    if isinstance(args_dict, str):
+                                        args_dict = json.loads(args_dict) if args_dict.strip() else {}
+                                    if args_dict is None:
+                                        args_dict = {}
+                                    tool_call_obj = await conv_service.start_tool_call(
+                                        assistant_msg.id,
+                                        ToolCallCreate(
+                                            tool_call_id=tc["tool_call_id"],
+                                            tool_name=tc["tool_name"],
+                                            args=args_dict,
+                                            started_at=datetime.now(UTC),
+                                        ),
+                                    )
+                                    if tc.get("result"):
+                                        await conv_service.complete_tool_call(
+                                            tool_call_obj.id,
+                                            ToolCallComplete(
+                                                result=tc["result"],
+                                                completed_at=datetime.now(UTC),
+                                                success=True,
+                                            ),
+                                        )
+                                except Exception as e:
+                                    logger.warning(f"Failed to persist tool call: {e}")
                     except Exception as e:
                         logger.warning(f"Failed to persist assistant response: {e}")
 

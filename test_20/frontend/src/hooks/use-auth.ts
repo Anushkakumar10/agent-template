@@ -12,7 +12,7 @@ export function useAuth() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, setUser, setLoading, logout } = useAuthStore();
 
-  // Check auth status on mount
+  // Check auth status on mount — always fetch fresh user data
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -23,10 +23,8 @@ export function useAuth() {
       }
     };
 
-    if (isLoading) {
-      checkAuth();
-    }
-  }, [isLoading, setUser]);
+    checkAuth();
+  }, [setUser]);
 
   const login = useCallback(
     async (credentials: LoginRequest) => {

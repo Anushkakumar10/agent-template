@@ -309,11 +309,11 @@ export function ToolCallCard({ toolCall }: ToolCallCardProps) {
                     ? "Web Search"
                     : toolCall.name}
             </CardTitle>
-            {(isRAGSearch || isWebSearch) && toolCall.args?.query && (
+            {(isRAGSearch || isWebSearch) && toolCall.args?.query ? (
               <span className="text-muted-foreground max-w-[200px] truncate text-xs italic">
                 &ldquo;{String(toolCall.args.query)}&rdquo;
               </span>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-1">
             {hasSpecialRenderer && toolCall.status === "completed" && (

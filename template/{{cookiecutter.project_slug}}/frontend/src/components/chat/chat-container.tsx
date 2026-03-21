@@ -5,8 +5,7 @@ import { useChat, useLocalChat } from "@/hooks";
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
 import { ToolApprovalDialog } from "./tool-approval-dialog";
-import { Button } from "@/components/ui";
-import { Wifi, WifiOff, RotateCcw, Bot } from "lucide-react";
+import { RotateCcw, Bot } from "lucide-react";
 import type { PendingApproval, Decision } from "@/types";
 {%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
 import { useConversationStore, useChatStore, useAuthStore } from "@/stores";
@@ -228,32 +227,29 @@ function ChatUI({
 
       <div className="px-2 pb-2 sm:px-4 sm:pb-4">
         <div className="rounded-xl border bg-card shadow-sm p-3 sm:p-4">
+          {/* Status bar */}
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`inline-block h-1.5 w-1.5 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+              />
+              <span className="text-muted-foreground text-[11px]">
+                {isConnected ? "Connected" : "Disconnected"}
+              </span>
+            </div>
+            <button
+              onClick={clearMessages}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px] transition-colors"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset
+            </button>
+          </div>
           <ChatInput
             onSend={sendMessage}
             disabled={!isConnected || isProcessing || !!pendingApproval}
             isProcessing={isProcessing}
           />
-          <div className="flex items-center justify-between mt-3 pt-3 border-t">
-            <div className="flex items-center gap-2">
-              {isConnected ? (
-                <Wifi className="h-3.5 w-3.5 text-green-500" />
-              ) : (
-                <WifiOff className="h-3.5 w-3.5 text-red-500" />
-              )}
-              <span className="text-xs text-muted-foreground">
-                {isConnected ? "Connected" : "Disconnected"}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearMessages}
-              className="text-xs h-8 px-3"
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              Reset
-            </Button>
-          </div>
         </div>
       </div>
     </div>

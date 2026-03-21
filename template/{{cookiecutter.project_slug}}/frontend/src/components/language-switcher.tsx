@@ -1,13 +1,31 @@
 {%- if cookiecutter.enable_i18n %}
-'use client';
+"use client";
 
-import { useLocale } from 'next-intl';
-import { useRouter, usePathname } from 'next/navigation';
-import { locales, type Locale, getLocaleLabel } from '@/i18n';
+import { useLocale } from "next-intl";
+import { useRouter, usePathname } from "next/navigation";
+import { locales, defaultLocale, type Locale, getLocaleLabel } from "@/i18n";
+
+/**
+ * Strip the current locale prefix from a pathname and prepend the new locale.
+ * Handles "as-needed" locale prefix mode where the default locale has no prefix.
+ */
+function switchLocalePath(pathname: string, currentLocale: string, newLocale: Locale): string {
+  let pathWithoutLocale = pathname;
+  if (currentLocale !== defaultLocale) {
+    const prefix = `/${currentLocale}`;
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      pathWithoutLocale = pathname.slice(prefix.length) || "/";
+    }
+  }
+
+  if (newLocale === defaultLocale) {
+    return pathWithoutLocale;
+  }
+  return `/${newLocale}${pathWithoutLocale === "/" ? "" : pathWithoutLocale}`;
+}
 
 /**
  * Language switcher dropdown component.
- * Allows users to switch between available locales.
  */
 export function LanguageSwitcher() {
   const locale = useLocale();
@@ -15,11 +33,7 @@ export function LanguageSwitcher() {
   const pathname = usePathname();
 
   const handleChange = (newLocale: Locale) => {
-    // Remove the current locale from pathname and add the new one
-    const segments = pathname.split('/');
-    segments[1] = newLocale;
-    const newPath = segments.join('/');
-    router.push(newPath);
+    router.push(switchLocalePath(pathname, locale, newLocale));
   };
 
   return (
@@ -27,7 +41,7 @@ export function LanguageSwitcher() {
       <select
         value={locale}
         onChange={(e) => handleChange(e.target.value as Locale)}
-        className="appearance-none bg-transparent border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 pr-8 text-sm cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="cursor-pointer appearance-none rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-8 text-sm hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:hover:border-gray-500"
         aria-label="Select language"
       >
         {locales.map((loc) => (
@@ -54,15 +68,12 @@ export function LanguageSwitcherCompact() {
   const pathname = usePathname();
 
   const flags: Record<Locale, string> = {
-    en: '🇬🇧',
-    pl: '🇵🇱',
+    en: "🇬🇧",
+    pl: "🇵🇱",
   };
 
   const handleChange = (newLocale: Locale) => {
-    const segments = pathname.split('/');
-    segments[1] = newLocale;
-    const newPath = segments.join('/');
-    router.push(newPath);
+    router.push(switchLocalePath(pathname, locale, newLocale));
   };
 
   return (
@@ -71,10 +82,10 @@ export function LanguageSwitcherCompact() {
         <button
           key={loc}
           onClick={() => handleChange(loc)}
-          className={`px-2 py-1 rounded-md text-lg transition-opacity ${
+          className={`rounded-md px-2 py-1 text-lg transition-opacity ${
             locale === loc
-              ? 'opacity-100 bg-gray-100 dark:bg-gray-800'
-              : 'opacity-50 hover:opacity-75'
+              ? "bg-gray-100 opacity-100 dark:bg-gray-800"
+              : "opacity-50 hover:opacity-75"
           }`}
           aria-label={getLocaleLabel(loc)}
           aria-pressed={locale === loc}

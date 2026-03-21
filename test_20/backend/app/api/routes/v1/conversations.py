@@ -136,7 +136,7 @@ async def list_messages(
 
     Returns messages ordered by creation time (oldest first).
     """
-    items, total = await conversation_service.list_messages(conversation_id, skip=skip, limit=limit)
+    items, total = await conversation_service.list_messages(conversation_id, skip=skip, limit=limit, include_tool_calls=True)
     return MessageList(items=items, total=total)
 
 
