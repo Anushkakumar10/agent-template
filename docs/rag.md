@@ -40,7 +40,7 @@ ak-agent-template create my_project --enable-rag --pdf-parser llamaparse --reran
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Document Parsers                          │
-│    (PDF: pdfplumber/LlamaParse, DOCX, TXT, MD)               │
+│    (PDF: PyMuPDF/LlamaParse, DOCX, TXT, MD)                  │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -98,7 +98,7 @@ CROSS_ENCODER_MODEL=...    # Model name (default: cross-encoder/ms-marco-MiniLM-
 |--------|--------|-------------|
 | `enable_rag` | bool | Enable RAG functionality |
 | `embedding_provider` | auto-derived | Embedding model provider (auto-derived from LLM provider: OpenAI→openai, Anthropic→voyage, OpenRouter→sentence_transformers) |
-| `pdf_parser` | `pdfplumber`, `llamaparse` | PDF parsing method (set via `--pdf-parser` CLI flag) |
+| `pdf_parser` | `pymupdf`, `llamaparse` | PDF parsing method (set via `--pdf-parser` CLI flag) |
 | `enable_reranker` | bool | Enable reranking (set via `--reranker` CLI flag: none/cohere/cross_encoder) |
 
 ---
@@ -109,7 +109,7 @@ CROSS_ENCODER_MODEL=...    # Model name (default: cross-encoder/ms-marco-MiniLM-
 
 | Format | Extension | Parser |
 |--------|-----------|--------|
-| PDF | `.pdf` | pdfplumber (default) or LlamaParse |
+| PDF | `.pdf` | PyMuPDF (default) or LlamaParse |
 | Word | `.docx` | python-docx |
 | Markdown | `.md` | Python native |
 | Text | `.txt` | Python native |
