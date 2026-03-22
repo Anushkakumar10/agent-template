@@ -236,10 +236,17 @@ class QdrantVectorStore(BaseVectorStore):
 
     async def search(self, collection_name: str, query: str, limit: int = 4, filter: str = "") -> list[SearchResult]:
         query_vector = self.embedder.embed_query(query)
+        qdrant_filter = None
+        if filter and "parent_doc_id" in filter:
+            import re
+            m = re.search(r'parent_doc_id\s*==\s*"([^"]+)"', filter)
+            if m:
+                qdrant_filter = Filter(must=[FieldCondition(key="parent_doc_id", match=MatchValue(value=m.group(1)))])
         results = await self.client.search(
             collection_name=collection_name,
             query_vector=query_vector,
             limit=limit,
+            query_filter=qdrant_filter,
         )
         return [
             SearchResult(
@@ -295,7 +302,11 @@ from app.rag.embeddings import EmbeddingService
 
 
 class ChromaVectorStore(BaseVectorStore):
-    """ChromaDB vector store implementation (embedded mode)."""
+    """ChromaDB vector store implementation (embedded or HTTP client).
+
+    All ChromaDB calls are synchronous, so we use asyncio.to_thread()
+    to avoid blocking the FastAPI event loop.
+    """
 
     def __init__(self, settings: RAGSettings, embedding_service: EmbeddingService):
         self.settings = settings
@@ -314,56 +325,93 @@ class ChromaVectorStore(BaseVectorStore):
             metadata={"hnsw:space": "cosine"},
         )
 
+    async def _ensure_collection(self, name: str) -> None:
+        """Ensure collection exists (ChromaDB creates on access)."""
+        import asyncio
+        await asyncio.to_thread(self._get_collection, name)
+
     async def insert_document(self, collection_name: str, document: Document) -> None:
+        import asyncio
+
         if not document.chunked_pages:
             raise ValueError("Document has no chunked pages.")
-        collection = self._get_collection(collection_name)
+
         vectors = self.embedder.embed_document(document)
         ids = [chunk.chunk_id for chunk in document.chunked_pages]
         documents = [chunk.chunk_content for chunk in document.chunked_pages]
-        metadatas = [
-            {
-                "parent_doc_id": chunk.parent_doc_id or "",
-                "page_num": chunk.page_num,
-                "chunk_num": chunk.chunk_num,
-                "filename": document.metadata.filename,
-                "filesize": document.metadata.filesize,
-                "filetype": document.metadata.filetype,
-            }
-            for chunk in document.chunked_pages
-        ]
-        collection.upsert(ids=ids, embeddings=vectors, documents=documents, metadatas=metadatas)
+        metadatas = [self._build_chunk_metadata(chunk, document) for chunk in document.chunked_pages]
+
+        def _upsert():
+            collection = self._get_collection(collection_name)
+            collection.upsert(ids=ids, embeddings=vectors, documents=documents, metadatas=metadatas)
+
+        await asyncio.to_thread(_upsert)
 
     async def search(self, collection_name: str, query: str, limit: int = 4, filter: str = "") -> list[SearchResult]:
-        collection = self._get_collection(collection_name)
+        import asyncio
+
         query_vector = self.embedder.embed_query(query)
-        results = collection.query(query_embeddings=[query_vector], n_results=limit, include=["documents", "metadatas", "distances"])
+
+        def _query():
+            collection = self._get_collection(collection_name)
+            kwargs: dict = {
+                "query_embeddings": [query_vector],
+                "n_results": limit,
+                "include": ["documents", "metadatas", "distances"],
+            }
+            # Convert Milvus-style filter to ChromaDB where clause
+            if filter and "parent_doc_id" in filter:
+                import re
+                m = re.search(r'parent_doc_id\s*==\s*"([^"]+)"', filter)
+                if m:
+                    kwargs["where"] = {"parent_doc_id": m.group(1)}
+            return collection.query(**kwargs)
+
+        results = await asyncio.to_thread(_query)
         search_results = []
-        for i in range(len(results["ids"][0])):
-            metadata = results["metadatas"][0][i] if results["metadatas"] else {}
-            search_results.append(SearchResult(
-                content=results["documents"][0][i] if results["documents"] else "",
-                score=1.0 - (results["distances"][0][i] if results["distances"] else 0.0),
-                metadata=metadata,
-                parent_doc_id=metadata.get("parent_doc_id"),
-            ))
+        if results["ids"] and results["ids"][0]:
+            for i in range(len(results["ids"][0])):
+                metadata = results["metadatas"][0][i] if results["metadatas"] else {}
+                search_results.append(SearchResult(
+                    content=results["documents"][0][i] if results["documents"] else "",
+                    score=1.0 - (results["distances"][0][i] if results["distances"] else 0.0),
+                    metadata=metadata,
+                    parent_doc_id=metadata.get("parent_doc_id"),
+                ))
         return search_results
 
     async def get_collection_info(self, collection_name: str) -> CollectionInfo:
-        collection = self._get_collection(collection_name)
-        return CollectionInfo(name=collection_name, total_vectors=collection.count(), dim=self.settings.embeddings_config.dim)
+        import asyncio
+
+        def _info():
+            collection = self._get_collection(collection_name)
+            return collection.count()
+
+        count = await asyncio.to_thread(_info)
+        return CollectionInfo(name=collection_name, total_vectors=count, dim=self.settings.embeddings_config.dim)
 
     async def delete_collection(self, collection_name: str) -> None:
-        self.client.delete_collection(collection_name)
+        import asyncio
+        await asyncio.to_thread(self.client.delete_collection, collection_name)
 
     async def delete_document(self, collection_name: str, document_id: str) -> None:
-        collection = self._get_collection(collection_name)
+        import asyncio
         sanitized = self._sanitize_id(document_id)
-        collection.delete(where={"parent_doc_id": sanitized})
+
+        def _delete():
+            collection = self._get_collection(collection_name)
+            collection.delete(where={"parent_doc_id": sanitized})
+
+        await asyncio.to_thread(_delete)
 
     async def get_documents(self, collection_name: str) -> list[DocumentInfo]:
-        collection = self._get_collection(collection_name)
-        all_data = collection.get(include=["metadatas"])
+        import asyncio
+
+        def _get():
+            collection = self._get_collection(collection_name)
+            return collection.get(include=["metadatas"])
+
+        all_data = await asyncio.to_thread(_get)
         results = [
             {"parent_doc_id": m.get("parent_doc_id"), "metadata": m}
             for m in (all_data["metadatas"] or [])
@@ -371,7 +419,12 @@ class ChromaVectorStore(BaseVectorStore):
         return self._group_documents(results)
 
     async def list_collections(self) -> list[str]:
-        return [c.name for c in self.client.list_collections()]
+        import asyncio
+
+        def _list():
+            return [c.name for c in self.client.list_collections()]
+
+        return await asyncio.to_thread(_list)
 {%- endif %}
 
 

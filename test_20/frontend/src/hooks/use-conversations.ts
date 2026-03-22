@@ -42,6 +42,20 @@ export function useConversations() {
     try {
       const response = await apiClient.get<ConversationListResponse>("/conversations");
       setConversations(response.items);
+      // URL ?id= param always takes priority
+      const urlId = new URLSearchParams(window.location.search).get("id");
+      if (urlId && response.items.some(c => c.id === urlId)) {
+        if (useConversationStore.getState().currentConversationId !== urlId) {
+          setCurrentConversationId(urlId);
+          clearMessages();
+          setCurrentMessages([]);
+          // Load messages for this conversation
+          try {
+            const msgs = await apiClient.get<MessagesResponse>(`/conversations/${urlId}/messages`);
+            setCurrentMessages(msgs.items);
+          } catch {}
+        }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch conversations";
       setError(message);
@@ -82,6 +96,10 @@ export function useConversations() {
     async (id: string) => {
       setCurrentConversationId(id);
       clearMessages();
+      // Update URL with conversation ID
+      const url = new URL(window.location.href);
+      url.searchParams.set("id", id);
+      window.history.replaceState({}, "", url.toString());
       setLoading(true);
       setError(null);
       try {
@@ -152,6 +170,9 @@ export function useConversations() {
     const newConversation = await createConversation();
     if (newConversation) {
       setCurrentConversationId(newConversation.id);
+      const url = new URL(window.location.href);
+      url.searchParams.set("id", newConversation.id);
+      window.history.replaceState({}, "", url.toString());
     }
   }, [clearMessages, setCurrentMessages, createConversation, setCurrentConversationId]);
 

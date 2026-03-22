@@ -5,7 +5,6 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from sqlalchemy import select
 from pydantic_ai import (
     Agent,
     FinalResultEvent,
@@ -32,8 +31,8 @@ from app.schemas.conversation import (
     ConversationCreate,
     ConversationUpdate,
     MessageCreate,
-    ToolCallCreate,
     ToolCallComplete,
+    ToolCallCreate,
 )
 
 logger = logging.getLogger(__name__)
@@ -158,7 +157,9 @@ async def agent_websocket(
                         conv = await conv_service.get_conversation(UUID(requested_conv_id))
                         if not conv.title and user_message:
                             title = user_message[:50] if len(user_message) > 50 else user_message
-                            await conv_service.update_conversation(UUID(requested_conv_id), ConversationUpdate(title=title))
+                            await conv_service.update_conversation(
+                                UUID(requested_conv_id), ConversationUpdate(title=title)
+                            )
                     elif not current_conversation_id:
                         # Create new conversation
                         conv_data = ConversationCreate(
@@ -182,7 +183,9 @@ async def agent_websocket(
                     # Link uploaded files to this message (same transaction)
                     if file_ids:
                         from sqlalchemy import update as sa_update
+
                         from app.db.models.chat_file import ChatFile as ChatFileModel
+
                         try:
                             file_uuids = [UUID(fid) for fid in file_ids]
                             await db.execute(
@@ -213,6 +216,7 @@ async def agent_websocket(
                 # Load attached files and build multimodal input
                 from pydantic_ai.messages import BinaryContent
                 from sqlalchemy import select
+
                 from app.db.models.chat_file import ChatFile
                 from app.services.file_storage import get_file_storage
 
@@ -236,7 +240,9 @@ async def agent_websocket(
                                 if chat_file.file_type == "image":
                                     file_data = await storage.load(chat_file.storage_path)
                                     image_parts.append(
-                                        BinaryContent(data=file_data, media_type=chat_file.mime_type)
+                                        BinaryContent(
+                                            data=file_data, media_type=chat_file.mime_type
+                                        )
                                     )
                                 elif chat_file.parsed_content:
                                     file_context_parts.append(
@@ -261,7 +267,11 @@ async def agent_websocket(
                     async for node in agent_run:
                         if Agent.is_user_prompt_node(node):
                             # Send only text portion (BinaryContent is not JSON serializable)
-                            prompt_text = node.user_prompt if isinstance(node.user_prompt, str) else user_message
+                            prompt_text = (
+                                node.user_prompt
+                                if isinstance(node.user_prompt, str)
+                                else user_message
+                            )
                             await manager.send_event(
                                 websocket,
                                 "user_prompt_processed",
@@ -326,11 +336,13 @@ async def agent_websocket(
                             async with node.stream(agent_run.ctx) as handle_stream:
                                 async for tool_event in handle_stream:
                                     if isinstance(tool_event, FunctionToolCallEvent):
-                                        collected_tool_calls.append({
-                                            "tool_call_id": tool_event.part.tool_call_id,
-                                            "tool_name": tool_event.part.tool_name,
-                                            "args": tool_event.part.args,
-                                        })
+                                        collected_tool_calls.append(
+                                            {
+                                                "tool_call_id": tool_event.part.tool_call_id,
+                                                "tool_name": tool_event.part.tool_name,
+                                                "args": tool_event.part.args,
+                                            }
+                                        )
                                         await manager.send_event(
                                             websocket,
                                             "tool_call",
@@ -387,13 +399,16 @@ async def agent_websocket(
                             )
 
                             # Save tool calls associated with this assistant message
-                            from datetime import datetime, UTC
                             import json
+                            from datetime import UTC, datetime
+
                             for tc in collected_tool_calls:
                                 try:
                                     args_dict = tc.get("args", {})
                                     if isinstance(args_dict, str):
-                                        args_dict = json.loads(args_dict) if args_dict.strip() else {}
+                                        args_dict = (
+                                            json.loads(args_dict) if args_dict.strip() else {}
+                                        )
                                     if args_dict is None:
                                         args_dict = {}
                                     tool_call_obj = await conv_service.start_tool_call(

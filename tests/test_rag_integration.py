@@ -11,7 +11,6 @@ import pytest
 
 from fastapi_gen.config import (
     AIFrameworkType,
-    AuthType,
     BackgroundTaskType,
     DatabaseType,
     EmbeddingProviderType,
@@ -33,10 +32,8 @@ class TestRAGProjectGeneration:
         config = ProjectConfig(
             project_name="rag_celery",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
@@ -48,10 +45,8 @@ class TestRAGProjectGeneration:
         config = ProjectConfig(
             project_name="rag_taskiq",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.TASKIQ,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
@@ -63,10 +58,8 @@ class TestRAGProjectGeneration:
         config = ProjectConfig(
             project_name="rag_arq",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.ARQ,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
@@ -82,10 +75,8 @@ class TestRAGFilesExist:
         config = ProjectConfig(
             project_name="rag_files_test",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
@@ -150,10 +141,8 @@ class TestNonRAGProjectNoRAGFiles:
         config = ProjectConfig(
             project_name="no_rag_project",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=False),
             enable_docker=True,
         )
@@ -198,10 +187,8 @@ class TestRAGWithAIFrameworks:
         config = ProjectConfig(
             project_name=f"rag_{framework.value}",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             ai_framework=framework,
             llm_provider=llm_provider,
             rag_features=RAGFeatures(enable_rag=True),
@@ -222,10 +209,8 @@ class TestRAGWithEmbeddingProviders:
         config = ProjectConfig(
             project_name="rag_openai_emb",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.OPENAI,
             rag_features=RAGFeatures(enable_rag=True),
             embedding_provider=EmbeddingProviderType.OPENAI,
@@ -243,10 +228,8 @@ class TestRAGWithEmbeddingProviders:
         config = ProjectConfig(
             project_name="rag_voyage_emb",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.ANTHROPIC,  # Derives Voyage
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
@@ -263,10 +246,8 @@ class TestRAGWithEmbeddingProviders:
         config = ProjectConfig(
             project_name="rag_st_emb",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.OPENROUTER,  # Derives SentenceTransformers
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
@@ -287,11 +268,9 @@ class TestRAGWithRerankers:
         config = ProjectConfig(
             project_name="rag_no_rerank",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=False),
+            rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
@@ -315,12 +294,9 @@ class TestRAGWithRerankers:
         config = ProjectConfig(
             project_name="rag_cohere_rerank",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=True),
-            reranker=RerankerType.COHERE,
+            rag_features=RAGFeatures(enable_rag=True, reranker_type=RerankerType.COHERE),
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
@@ -361,12 +337,10 @@ class TestRAGWithRerankers:
         config = ProjectConfig(
             project_name="rag_ce_rerank",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
-            llm_provider=LLMProviderType.OPENROUTER,  # Derives CrossEncoder
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=True),
+            llm_provider=LLMProviderType.OPENROUTER,
+            rag_features=RAGFeatures(enable_rag=True, reranker_type=RerankerType.CROSS_ENCODER),
             enable_docker=True,
         )
         project = generate_project(config, tmp_path)
@@ -401,10 +375,8 @@ class TestRAGWithPDFParsers:
         config = ProjectConfig(
             project_name="rag_pymupdf",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             pdf_parser=PdfParserType.PYMUPDF,
             enable_docker=True,
@@ -420,10 +392,8 @@ class TestRAGWithPDFParsers:
         config = ProjectConfig(
             project_name="rag_llamaparse",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True, pdf_parser=PdfParserType.LLAMAPARSE),
             enable_docker=True,
         )
@@ -444,10 +414,8 @@ class TestRAGCodePatterns:
         config = ProjectConfig(
             project_name="test_rag_patterns",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
@@ -473,10 +441,8 @@ class TestRAGCodePatterns:
         config = ProjectConfig(
             project_name="test_rag_cache",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
@@ -500,10 +466,8 @@ class TestRAGCodePatterns:
         config = ProjectConfig(
             project_name="test_rag_vec",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             enable_docker=True,
         )
@@ -522,37 +486,18 @@ class TestRAGCodePatterns:
             "MilvusVectorStore should implement list_collections method"
         )
 
-    def test_rag_requires_ai_agent(self) -> None:
-        """Test that RAG requires AI agent."""
-        from pydantic import ValidationError
-
-        with pytest.raises(ValidationError, match="RAG requires AI agent"):
-            ProjectConfig(
-                project_name="rag_no_agent",
-                database=DatabaseType.POSTGRESQL,
-                auth=AuthType.JWT,
-                background_tasks=BackgroundTaskType.CELERY,
-                enable_redis=True,
-                enable_ai_agent=False,
-                rag_features=RAGFeatures(enable_rag=True),
-                enable_docker=True,
-            )
-
-    def test_rag_requires_background_tasks(self) -> None:
-        """Test that RAG requires background tasks."""
-        from pydantic import ValidationError
-
-        with pytest.raises(ValidationError, match="background task system"):
-            ProjectConfig(
-                project_name="rag_no_bg",
-                database=DatabaseType.POSTGRESQL,
-                auth=AuthType.JWT,
-                background_tasks=BackgroundTaskType.NONE,
-                enable_redis=True,
-                enable_ai_agent=True,
-                rag_features=RAGFeatures(enable_rag=True),
-                enable_docker=True,
-            )
+    def test_rag_works_without_background_tasks(self) -> None:
+        """Test that RAG works without background tasks (uses FastAPI BackgroundTasks)."""
+        config = ProjectConfig(
+            project_name="rag_no_bg",
+            database=DatabaseType.POSTGRESQL,
+            background_tasks=BackgroundTaskType.NONE,
+            enable_redis=False,
+            rag_features=RAGFeatures(enable_rag=True),
+            enable_docker=True,
+        )
+        assert config.rag_features.enable_rag is True
+        assert config.background_tasks == BackgroundTaskType.NONE
 
     def test_rag_requires_docker(self) -> None:
         """Test that RAG requires Docker."""
@@ -562,10 +507,8 @@ class TestRAGCodePatterns:
             ProjectConfig(
                 project_name="rag_no_docker",
                 database=DatabaseType.POSTGRESQL,
-                auth=AuthType.JWT,
                 background_tasks=BackgroundTaskType.CELERY,
                 enable_redis=True,
-                enable_ai_agent=True,
                 rag_features=RAGFeatures(enable_rag=True),
                 enable_docker=False,
             )

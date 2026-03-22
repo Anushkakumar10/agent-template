@@ -67,10 +67,7 @@ from app.services.session import SessionService
 {%- if cookiecutter.enable_webhooks and cookiecutter.use_database %}
 from app.services.webhook import WebhookService
 {%- endif %}
-{%- if cookiecutter.include_example_crud and cookiecutter.use_database %}
-from app.services.item import ItemService
-{%- endif %}
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
 from app.services.conversation import ConversationService
 {%- endif %}
 {%- if cookiecutter.use_jwt %}
@@ -130,26 +127,8 @@ def get_webhook_service() -> WebhookService:
 WebhookSvc = Annotated[WebhookService, Depends(get_webhook_service)]
 {%- endif %}
 
-{%- if cookiecutter.include_example_crud and cookiecutter.use_database %}
-{%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
 
-
-def get_item_service(db: DBSession) -> ItemService:
-    """Create ItemService instance with database session."""
-    return ItemService(db)
-{%- elif cookiecutter.use_mongodb %}
-
-
-def get_item_service() -> ItemService:
-    """Create ItemService instance."""
-    return ItemService()
-{%- endif %}
-
-
-ItemSvc = Annotated[ItemService, Depends(get_item_service)]
-{%- endif %}
-
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
 {%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
 
 
@@ -166,6 +145,44 @@ def get_conversation_service() -> ConversationService:
 
 
 ConversationSvc = Annotated[ConversationService, Depends(get_conversation_service)]
+{%- endif %}
+
+{%- if cookiecutter.enable_rag and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
+from app.services.rag_document import RAGDocumentService
+from app.services.rag_sync import RAGSyncService
+from app.services.sync_source import SyncSourceService
+
+
+def get_rag_document_service(db: DBSession) -> RAGDocumentService:
+    """Create RAGDocumentService instance with database session."""
+    return RAGDocumentService(db)
+
+
+def get_rag_sync_service(db: DBSession) -> RAGSyncService:
+    """Create RAGSyncService instance with database session."""
+    return RAGSyncService(db)
+
+
+def get_sync_source_service(db: DBSession) -> SyncSourceService:
+    """Create SyncSourceService instance with database session."""
+    return SyncSourceService(db)
+
+
+RAGDocumentSvc = Annotated[RAGDocumentService, Depends(get_rag_document_service)]
+RAGSyncSvc = Annotated[RAGSyncService, Depends(get_rag_sync_service)]
+SyncSourceSvc = Annotated[SyncSourceService, Depends(get_sync_source_service)]
+{%- endif %}
+
+{%- if cookiecutter.use_jwt and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
+from app.services.file_upload import FileUploadService
+
+
+def get_file_upload_service(db: DBSession) -> FileUploadService:
+    """Create FileUploadService instance with database session."""
+    return FileUploadService(db)
+
+
+FileUploadSvc = Annotated[FileUploadService, Depends(get_file_upload_service)]
 {%- endif %}
 
 {%- if cookiecutter.use_jwt %}
@@ -260,8 +277,8 @@ async def get_current_active_superuser(
     Raises:
         AuthorizationError: If user is not a superuser.
     """
-    if not current_user.is_superuser:
-        raise AuthorizationError(message="Superuser privileges required")
+    if not current_user.has_role(UserRole.ADMIN):
+        raise AuthorizationError(message="Admin privileges required")
     return current_user
 {%- elif cookiecutter.use_sqlite %}
 
@@ -344,8 +361,8 @@ def get_current_active_superuser(
     Raises:
         AuthorizationError: If user is not a superuser.
     """
-    if not current_user.is_superuser:
-        raise AuthorizationError(message="Superuser privileges required")
+    if not current_user.has_role(UserRole.ADMIN):
+        raise AuthorizationError(message="Admin privileges required")
     return current_user
 {%- elif cookiecutter.use_mongodb %}
 
@@ -428,8 +445,8 @@ async def get_current_active_superuser(
     Raises:
         AuthorizationError: If user is not a superuser.
     """
-    if not current_user.is_superuser:
-        raise AuthorizationError(message="Superuser privileges required")
+    if not current_user.has_role(UserRole.ADMIN):
+        raise AuthorizationError(message="Admin privileges required")
     return current_user
 {%- endif %}
 
@@ -493,10 +510,12 @@ async def get_current_user_ws(
 
     db = await get_db_session()
     user_service = UserService(db)
-    user = await user_service.get_by_id(UUID(user_id))
+    user = await user_service.get_by_id(user_id)
 {%- elif cookiecutter.use_sqlite %}
 
-    with get_db_session() as db:
+    from contextlib import contextmanager
+
+    with contextmanager(get_db_session)() as db:
         user_service = UserService(db)
         user = user_service.get_by_id(user_id)
 {%- endif %}

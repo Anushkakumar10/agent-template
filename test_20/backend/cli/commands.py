@@ -221,7 +221,7 @@ def user_create(email: str, password: str, role: str, superuser: bool):
                 user = await user_service.register(user_in)
 
                 if superuser:
-                    user.is_superuser = True
+                    user.role = UserRole.ADMIN.value
                     session.add(user)
 
                 await session.commit()
@@ -260,10 +260,6 @@ def user_create_admin(email: str, password: str):
             try:
                 user_in = UserCreate(email=email, password=password, role=UserRole.ADMIN)
                 user = await user_service.register(user_in)
-
-                # Admin users are also superusers
-                user.is_superuser = True
-                session.add(user)
 
                 await session.commit()
                 return user
@@ -326,8 +322,8 @@ def user_list():
         click.echo("No users found.")
         return
 
-    table = [[u.id, u.email, u.role, u.is_active, u.is_superuser] for u in users]
-    click.echo(tabulate(table, headers=["ID", "Email", "Role", "Active", "Superuser"]))
+    table = [[u.id, u.email, u.role, u.is_active] for u in users]
+    click.echo(tabulate(table, headers=["ID", "Email", "Role", "Active"]))
 
 
 # === Custom Commands ===

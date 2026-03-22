@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Column, ForeignKey, String, Text, Integer
+from sqlalchemy import Column, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import Field, SQLModel
 

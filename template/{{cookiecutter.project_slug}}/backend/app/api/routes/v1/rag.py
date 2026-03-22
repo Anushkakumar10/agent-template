@@ -3,27 +3,36 @@
 
 import logging
 import tempfile
-from datetime import UTC, datetime
 from pathlib import Path
-{%- if cookiecutter.use_postgresql %}
-from uuid import UUID
+{%- if (cookiecutter.use_postgresql or cookiecutter.use_sqlite) or ((cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq) and cookiecutter.enable_redis) %}
+import json
+{%- endif %}
+{%- if (cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq) and cookiecutter.enable_redis %}
+from collections.abc import AsyncIterable
 {%- endif %}
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, status
-{%- if cookiecutter.use_celery %}
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, UploadFile, File, status
 from fastapi.responses import JSONResponse
-{%- endif %}
-{%- if cookiecutter.enable_conversation_persistence and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
-from sqlalchemy import select
+{%- if (cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq) and cookiecutter.enable_redis %}
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 {%- endif %}
 
 from app.api.deps import IngestionSvc, RetrievalSvc, VectorStoreSvc
 {%- if cookiecutter.use_jwt %}
-from app.api.deps import CurrentUser
+from app.api.deps import CurrentAdmin, CurrentUser
 {%- endif %}
-{%- if cookiecutter.enable_conversation_persistence and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
-from app.api.deps import DBSession
-from app.db.models.rag_document import RAGDocument
+{%- if (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
+from app.api.deps import RAGDocumentSvc, RAGSyncSvc, SyncSourceSvc
+from app.core.exceptions import NotFoundError
+from app.schemas.sync_source import (
+    ConnectorConfigField,
+    ConnectorInfo,
+    ConnectorList,
+    SyncSourceCreate,
+    SyncSourceList,
+    SyncSourceRead,
+    SyncSourceUpdate,
+)
 {%- endif %}
 from app.schemas.rag import (
     RAGCollectionInfo,
@@ -35,10 +44,9 @@ from app.schemas.rag import (
     RAGSearchResponse,
     RAGSearchResult,
 )
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_postgresql %}
+{%- if (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
 from app.schemas.rag import RAGIngestResponse, RAGRetryResponse, RAGTrackedDocumentItem, RAGTrackedDocumentList
 from app.schemas.rag import RAGSyncLogItem, RAGSyncLogList, RAGSyncRequest, RAGSyncResponse
-from app.db.models.sync_log import SyncLog
 {%- endif %}
 
 logger = logging.getLogger(__name__)
@@ -46,11 +54,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/supported-formats")
+async def get_supported_formats_endpoint():
+    """Return file formats supported by the current PDF parser configuration."""
+    from app.rag.config import get_supported_formats
+
+{%- if cookiecutter.use_all_pdf_parsers %}
+    from app.core.config import settings as app_settings
+    parser_name = getattr(app_settings, "PDF_PARSER", "pymupdf")
+{%- elif cookiecutter.use_llamaparse %}
+    parser_name = "llamaparse"
+{%- elif cookiecutter.use_liteparse %}
+    parser_name = "liteparse"
+{%- else %}
+    parser_name = "pymupdf"
+{%- endif %}
+    return {"parser": parser_name, "formats": sorted(get_supported_formats(parser_name))}
+
+
 @router.get("/collections", response_model=RAGCollectionList)
 async def list_collections(
     vector_store: VectorStoreSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """List all available collections in the vector store."""
@@ -63,10 +89,15 @@ async def create_collection(
     name: str,
     vector_store: VectorStoreSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """Create and initialize a new collection."""
+    import re
+    if not re.match(r'^[a-zA-Z][a-zA-Z0-9_]{0,63}$', name):
+        raise HTTPException(status_code=400, detail="Collection name must start with a letter and contain only letters, numbers, and underscores (max 64 chars)")
+    if name.lower() == "all":
+        raise HTTPException(status_code=400, detail="'all' is a reserved collection name")
     await vector_store._ensure_collection(name)
     return RAGMessageResponse(message=f"Collection '{name}' created successfully.")
 
@@ -76,7 +107,7 @@ async def drop_collection(
     name: str,
     vector_store: VectorStoreSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """Drop an entire collection and all its vectors."""
@@ -88,7 +119,7 @@ async def get_collection_info(
     name: str,
     vector_store: VectorStoreSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """Retrieve stats for a specific collection."""
@@ -100,7 +131,7 @@ async def list_documents(
     name: str,
     vector_store: VectorStoreSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """List all documents in a specific collection."""
@@ -162,7 +193,7 @@ async def delete_document(
     document_id: str,
     ingestion_service: IngestionSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """Delete a specific document by its ID from a collection."""
@@ -171,29 +202,43 @@ async def delete_document(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
 
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_postgresql %}
+{%- if (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
 
 @router.post("/collections/{name}/ingest", response_model=RAGIngestResponse, response_model_exclude_none=True)
 async def ingest_file(
     name: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    db: DBSession = None,
+    rag_doc_svc: RAGDocumentSvc = None,
     ingestion_service: IngestionSvc = None,
     vector_store: VectorStoreSvc = None,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 {%- endif %}
     replace: bool = Query(False),
 ):
     """Upload and ingest a file into a collection. Tracks status in DB."""
     from app.core.config import settings as app_settings
-    ALLOWED = {".pdf", ".docx", ".txt", ".md"}
+    from app.rag.config import get_supported_formats
+
+{%- if cookiecutter.use_all_pdf_parsers %}
+    ALLOWED = get_supported_formats(getattr(app_settings, "PDF_PARSER", "pymupdf"))
+{%- elif cookiecutter.use_llamaparse %}
+    ALLOWED = get_supported_formats("llamaparse")
+{%- elif cookiecutter.use_liteparse %}
+    ALLOWED = get_supported_formats("liteparse")
+{%- else %}
+    ALLOWED = get_supported_formats("pymupdf")
+{%- endif %}
     max_size = app_settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
     filename = file.filename or "unknown"
     ext = Path(filename).suffix.lower()
     if ext not in ALLOWED:
-        raise HTTPException(status_code=400, detail=f"File type '{ext}' not supported.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type '{ext}' not supported. Allowed: {', '.join(sorted(ALLOWED))}",
+        )
 
     data = await file.read()
     if len(data) > max_size:
@@ -203,24 +248,23 @@ async def ingest_file(
     storage = get_file_storage()
     storage_path = await storage.save(f"rag/{name}", filename, data)
 
-    rag_doc = RAGDocument(
-        collection_name=name,
-        filename=filename,
-        filesize=len(data),
-        filetype=ext.lstrip("."),
-        storage_path=storage_path,
-        status="processing",
+{%- if cookiecutter.use_postgresql %}
+    rag_doc = await rag_doc_svc.create_document(
+        collection_name=name, filename=filename, filesize=len(data),
+        filetype=ext.lstrip("."), storage_path=storage_path,
     )
-    db.add(rag_doc)
-    await db.flush()
-    await db.commit()
-    await db.refresh(rag_doc)
+{%- else %}
+    rag_doc = rag_doc_svc.create_document(
+        collection_name=name, filename=filename, filesize=len(data),
+        filetype=ext.lstrip("."), storage_path=storage_path,
+    )
+{%- endif %}
     doc_id = rag_doc.id
 
     await vector_store._ensure_collection(name)
-{%- if cookiecutter.use_celery %}
+{%- if cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq %}
 
-    # Save to temp file for Celery worker
+    # Save to temp file for background worker
     import os
     tmp_dir = os.path.join(tempfile.gettempdir(), "rag_ingest")
     os.makedirs(tmp_dir, exist_ok=True)
@@ -228,15 +272,25 @@ async def ingest_file(
     with open(tmp_path, "wb") as f:
         f.write(data)
 
-    # Dispatch async Celery task
+    # Dispatch async task
     from app.worker.tasks.rag_tasks import ingest_document_task
+{%- if cookiecutter.use_celery %}
     ingest_document_task.delay(
-        rag_document_id=str(doc_id),
-        collection_name=name,
-        filepath=tmp_path,
-        source_path=filename,
-        replace=replace,
+        rag_document_id=str(doc_id), collection_name=name,
+        filepath=tmp_path, source_path=filename, replace=replace,
     )
+{%- elif cookiecutter.use_taskiq %}
+    await ingest_document_task.kiq(
+        rag_document_id=str(doc_id), collection_name=name,
+        filepath=tmp_path, source_path=filename, replace=replace,
+    )
+{%- elif cookiecutter.use_arq %}
+    from app.worker.arq_app import get_arq_pool
+    pool = await get_arq_pool()
+    await pool.enqueue_job("ingest_document_task",
+        str(doc_id), name, tmp_path, filename, replace,
+    )
+{%- endif %}
 
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
@@ -250,54 +304,66 @@ async def ingest_file(
     )
 {%- else %}
 
-    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-        tmp.write(data)
-        tmp_path = Path(tmp.name)
+    import os
+    tmp_dir = os.path.join(tempfile.gettempdir(), "rag_ingest")
+    os.makedirs(tmp_dir, exist_ok=True)
+    tmp_path = os.path.join(tmp_dir, f"{str(doc_id)}{ext}")
+    with open(tmp_path, "wb") as f:
+        f.write(data)
 
-    try:
-        result = await ingestion_service.ingest_file(
-            filepath=tmp_path, collection_name=name, replace=replace, source_path=filename,
-        )
-        rag_doc_upd = await db.get(RAGDocument, doc_id)
-        if rag_doc_upd:
-            rag_doc_upd.status = "done"
-            rag_doc_upd.vector_document_id = result.document_id
-            rag_doc_upd.completed_at = datetime.now(UTC)
-            await db.commit()
+    async def _ingest_in_background(doc_id_str: str, collection: str, fpath: str, source: str, do_replace: bool) -> None:
+        """Run ingestion via FastAPI BackgroundTasks."""
+        from app.db.session import get_db_context
+        from app.rag.ingestion import IngestionService
+        from app.services.rag_document import RAGDocumentService
 
-        return {
-            "id": str(doc_id), "status": "done", "document_id": result.document_id,
-            "filename": filename, "collection": name, "message": result.message or "Ingested successfully",
-        }
-    except Exception as e:
-        logger.error(f"Ingestion failed: {e}")
-        rag_doc_upd = await db.get(RAGDocument, doc_id)
-        if rag_doc_upd:
-            rag_doc_upd.status = "error"
-            rag_doc_upd.error_message = str(e)
-            rag_doc_upd.completed_at = datetime.now(UTC)
-            await db.commit()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        tmp_path.unlink(missing_ok=True)
+        try:
+            svc = IngestionService()
+            result = await svc.ingest_file(filepath=Path(fpath), collection_name=collection, replace=do_replace, source_path=source)
+            async with get_db_context() as bg_db:
+                bg_doc_svc = RAGDocumentService(bg_db)
+                await bg_doc_svc.complete_ingestion(doc_id_str, vector_document_id=result.document_id)
+        except Exception as exc:
+            logger.error(f"Background ingestion failed: {exc}")
+            async with get_db_context() as bg_db:
+                bg_doc_svc = RAGDocumentService(bg_db)
+                await bg_doc_svc.fail_ingestion(doc_id_str, error_message=str(exc))
+        finally:
+            Path(fpath).unlink(missing_ok=True)
+
+    background_tasks.add_task(_ingest_in_background, str(doc_id), name, tmp_path, filename, replace)
+
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content={
+            "id": str(doc_id),
+            "status": "processing",
+            "filename": filename,
+            "collection": name,
+            "message": "File accepted. Processing in background.",
+        },
+    )
 {%- endif %}
 
 
 @router.get("/documents", response_model=RAGTrackedDocumentList)
+{%- if cookiecutter.use_postgresql %}
 async def list_rag_documents(
-    db: DBSession = None,
+{%- else %}
+def list_rag_documents(
+{%- endif %}
+    rag_doc_svc: RAGDocumentSvc = None,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 {%- endif %}
     collection_name: str | None = Query(None),
 ):
     """List tracked RAG documents."""
-    query = select(RAGDocument)
-    if collection_name:
-        query = query.where(RAGDocument.collection_name == collection_name)
-    query = query.order_by(RAGDocument.created_at.desc())
-    result = await db.execute(query)
-    docs = result.scalars().all()
+{%- if cookiecutter.use_postgresql %}
+    docs = await rag_doc_svc.list_documents(collection_name)
+{%- else %}
+    docs = rag_doc_svc.list_documents(collection_name)
+{%- endif %}
     return RAGTrackedDocumentList(
         items=[
             RAGTrackedDocumentItem(
@@ -315,107 +381,101 @@ async def list_rag_documents(
 
 
 @router.get("/documents/{doc_id}/download")
+{%- if cookiecutter.use_postgresql %}
 async def download_rag_document(
+{%- else %}
+def download_rag_document(
+{%- endif %}
     doc_id: str,
-    db: DBSession = None,
+    rag_doc_svc: RAGDocumentSvc = None,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 {%- endif %}
 ):
     """Download the original file."""
     from fastapi.responses import FileResponse
-    from app.services.file_storage import get_file_storage
 
-    rag_doc = await db.get(RAGDocument, UUID(doc_id))
-    if not rag_doc:
-        raise HTTPException(status_code=404, detail="Document not found")
-    if not rag_doc.storage_path:
-        raise HTTPException(status_code=404, detail="Original file not available")
-
-    storage = get_file_storage()
-    file_path = storage.get_full_path(rag_doc.storage_path)
-    if not file_path:
-        raise HTTPException(status_code=404, detail="File not found on disk")
-
-    mime_map = {"pdf": "application/pdf", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "txt": "text/plain", "md": "text/markdown"}
-    return FileResponse(path=file_path, filename=rag_doc.filename, media_type=mime_map.get(rag_doc.filetype, "application/octet-stream"))
+    try:
+{%- if cookiecutter.use_postgresql %}
+        file_path, filename, mime_type = await rag_doc_svc.get_download_info(doc_id)
+{%- else %}
+        file_path, filename, mime_type = rag_doc_svc.get_download_info(doc_id)
+{%- endif %}
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.message)
+    return FileResponse(path=file_path, filename=filename, media_type=mime_type)
 
 
 @router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+{%- if cookiecutter.use_postgresql %}
 async def delete_rag_document(
+{%- else %}
+def delete_rag_document(
+{%- endif %}
     doc_id: str,
-    db: DBSession = None,
+    rag_doc_svc: RAGDocumentSvc = None,
     ingestion_service: IngestionSvc = None,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 {%- endif %}
 ):
     """Delete a document from SQL, vector store, and file storage."""
-    from app.services.file_storage import get_file_storage
+    try:
+{%- if cookiecutter.use_postgresql %}
+        await rag_doc_svc.delete_document(doc_id, ingestion_service)
+{%- else %}
+        rag_doc_svc.delete_document(doc_id, ingestion_service)
+{%- endif %}
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.message)
 
-    rag_doc = await db.get(RAGDocument, UUID(doc_id))
-    if not rag_doc:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    if rag_doc.vector_document_id:
-        try:
-            await ingestion_service.remove_document(rag_doc.collection_name, rag_doc.vector_document_id)
-        except Exception as e:
-            logger.warning(f"Failed to delete from vector store: {e}")
-
-    if rag_doc.storage_path:
-        try:
-            storage = get_file_storage()
-            await storage.delete(rag_doc.storage_path)
-        except Exception as e:
-            logger.warning(f"Failed to delete file: {e}")
-
-    await db.delete(rag_doc)
-    await db.commit()
-
-{%- if cookiecutter.use_celery %}
 
 
 @router.post("/documents/{doc_id}/retry", response_model=RAGRetryResponse)
+{%- if cookiecutter.use_postgresql %}
 async def retry_ingestion(
+{%- else %}
+def retry_ingestion(
+{%- endif %}
     doc_id: str,
-    db: DBSession = None,
+    rag_doc_svc: RAGDocumentSvc = None,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 {%- endif %}
 ):
     """Retry a failed document ingestion."""
-    rag_doc = await db.get(RAGDocument, UUID(doc_id))
-    if not rag_doc:
-        raise HTTPException(status_code=404, detail="Document not found")
-    if rag_doc.status != "error":
-        raise HTTPException(status_code=400, detail="Only failed documents can be retried")
-
-    # Reset status
-    rag_doc.status = "processing"
-    rag_doc.error_message = None
-    rag_doc.completed_at = None
-    await db.commit()
-
-    return RAGRetryResponse(id=str(rag_doc.id), status="processing", message="Retry queued")
+    try:
+{%- if cookiecutter.use_postgresql %}
+        doc = await rag_doc_svc.retry_ingestion(doc_id)
+{%- else %}
+        doc = rag_doc_svc.retry_ingestion(doc_id)
+{%- endif %}
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.message)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return RAGRetryResponse(id=str(doc.id), status="processing", message="Retry queued")
 
 
 @router.get("/sync/logs", response_model=RAGSyncLogList)
+{%- if cookiecutter.use_postgresql %}
 async def list_sync_logs(
-    db: DBSession = None,
+{%- else %}
+def list_sync_logs(
+{%- endif %}
+    rag_sync_svc: RAGSyncSvc = None,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 {%- endif %}
     collection_name: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
 ):
     """List sync operation logs."""
-    query = select(SyncLog)
-    if collection_name:
-        query = query.where(SyncLog.collection_name == collection_name)
-    query = query.order_by(SyncLog.created_at.desc()).limit(limit)
-    result = await db.execute(query)
-    logs = result.scalars().all()
+{%- if cookiecutter.use_postgresql %}
+    logs = await rag_sync_svc.list_sync_logs(collection_name=collection_name, limit=limit)
+{%- else %}
+    logs = rag_sync_svc.list_sync_logs(collection_name=collection_name, limit=limit)
+{%- endif %}
     return RAGSyncLogList(
         items=[
             RAGSyncLogItem(
@@ -431,44 +491,297 @@ async def list_sync_logs(
         total=len(logs),
     )
 
-{%- if cookiecutter.use_celery %}
-
 
 @router.post("/sync/local", response_model=RAGSyncResponse)
 async def trigger_local_sync(
     request: RAGSyncRequest,
-    db: DBSession = None,
+    background_tasks: BackgroundTasks,
+    rag_sync_svc: RAGSyncSvc = None,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 {%- endif %}
 ):
-    """Trigger a local directory sync via Celery task."""
+    """Trigger a local directory sync via background task."""
+{%- if cookiecutter.use_postgresql %}
+    sync_log = await rag_sync_svc.create_sync_log(
+        source="local", collection_name=request.collection_name, mode=request.mode,
+    )
+{%- else %}
+    sync_log = rag_sync_svc.create_sync_log(
+        source="local", collection_name=request.collection_name, mode=request.mode,
+    )
+{%- endif %}
+
+{%- if cookiecutter.use_celery %}
     from app.worker.tasks.rag_tasks import sync_collection_task
-
-    sync_log = SyncLog(source="local", collection_name=request.collection_name, status="running", mode=request.mode)
-    db.add(sync_log)
-    await db.commit()
-    await db.refresh(sync_log)
-
     sync_collection_task.delay(
         sync_log_id=str(sync_log.id), source="local",
         collection_name=request.collection_name, mode=request.mode, path=request.path,
     )
+{%- elif cookiecutter.use_taskiq %}
+    from app.worker.tasks.rag_tasks import sync_collection_task
+    await sync_collection_task.kiq(
+        sync_log_id=str(sync_log.id), source="local",
+        collection_name=request.collection_name, mode=request.mode, path=request.path,
+    )
+{%- elif cookiecutter.use_arq %}
+    from app.worker.arq_app import get_arq_pool
+    pool = await get_arq_pool()
+    await pool.enqueue_job("sync_collection_task",
+        str(sync_log.id), "local", request.collection_name, request.mode, request.path,
+    )
+{%- else %}
+    from app.db.session import get_db_context
+
+    async def _sync_in_background(log_id: str, collection: str, mode: str, path: str) -> None:
+        """Run sync via FastAPI BackgroundTasks."""
+        from app.rag.ingestion import IngestionService
+        from app.services.rag_sync import RAGSyncService
+
+        svc = IngestionService()
+        ingested = skipped = failed = total = 0
+
+        try:
+            target = Path(path)
+            files = list(target.rglob("*")) if target.is_dir() else [target]
+            files = [f for f in files if f.is_file()]
+            total = len(files)
+
+            for filepath in files:
+                try:
+                    await svc.ingest_file(filepath=filepath, collection_name=collection, replace=(mode == "full"), source_path=str(filepath))
+                    ingested += 1
+                except Exception as e:
+                    logger.warning(f"Failed to ingest {filepath}: {e}")
+                    failed += 1
+        except Exception as e:
+            logger.error(f"Sync failed: {e}")
+
+        async with get_db_context() as bg_db:
+            bg_sync_svc = RAGSyncService(bg_db)
+            try:
+                await bg_sync_svc.complete_sync(
+                    log_id,
+                    status="done" if not failed else "error",
+                    total_files=total,
+                    ingested=ingested,
+                    skipped=skipped,
+                    failed=failed,
+                )
+            except NotFoundError:
+                logger.error(f"Sync log {log_id} not found during background update")
+
+    background_tasks.add_task(_sync_in_background, str(sync_log.id), request.collection_name, request.mode, request.path)
+{%- endif %}
 
     return RAGSyncResponse(id=str(sync_log.id), status="running", message=f"Sync started for '{request.collection_name}' (mode={request.mode})")
+
+
+@router.delete("/sync/{sync_id}", response_model=RAGMessageResponse)
+{%- if cookiecutter.use_postgresql %}
+async def cancel_sync(
+{%- else %}
+def cancel_sync(
 {%- endif %}
+    sync_id: str,
+    rag_sync_svc: RAGSyncSvc = None,
+{%- if cookiecutter.use_jwt %}
+    current_user: CurrentAdmin = None,
+{%- endif %}
+):
+    """Cancel a running sync operation."""
+    try:
+{%- if cookiecutter.use_postgresql %}
+        await rag_sync_svc.cancel_sync(sync_id)
+{%- else %}
+        rag_sync_svc.cancel_sync(sync_id)
+{%- endif %}
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.message)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return RAGMessageResponse(message="Sync cancelled")
+
+
+# --- Sync Source CRUD ---
+
+
+@router.get("/sync/sources", response_model=SyncSourceList)
+{%- if cookiecutter.use_postgresql %}
+async def list_sync_sources(
+{%- else %}
+def list_sync_sources(
+{%- endif %}
+    sync_source_svc: SyncSourceSvc = None,
+{%- if cookiecutter.use_jwt %}
+    current_user: CurrentAdmin = None,
+{%- endif %}
+):
+    """List all configured sync sources."""
+{%- if cookiecutter.use_postgresql %}
+    sources = await sync_source_svc.list_sources()
+{%- else %}
+    sources = sync_source_svc.list_sources()
+{%- endif %}
+    return SyncSourceList(
+        items=[SyncSourceRead(
+            id=str(s.id), name=s.name, connector_type=s.connector_type,
+            collection_name=s.collection_name,
+            config=s.config if isinstance(s.config, dict) else json.loads(s.config) if s.config else {},
+            sync_mode=s.sync_mode, schedule_minutes=s.schedule_minutes,
+            is_active=s.is_active,
+            last_sync_at=s.last_sync_at.isoformat() if s.last_sync_at else None,
+            last_sync_status=s.last_sync_status, last_error=s.last_error,
+            created_at=s.created_at.isoformat() if s.created_at else None,
+        ) for s in sources],
+        total=len(sources),
+    )
+
+
+@router.post("/sync/sources", response_model=SyncSourceRead, status_code=status.HTTP_201_CREATED)
+{%- if cookiecutter.use_postgresql %}
+async def create_sync_source(
+{%- else %}
+def create_sync_source(
+{%- endif %}
+    data: SyncSourceCreate,
+    sync_source_svc: SyncSourceSvc = None,
+{%- if cookiecutter.use_jwt %}
+    current_user: CurrentAdmin = None,
+{%- endif %}
+):
+    """Create a new sync source configuration."""
+    try:
+{%- if cookiecutter.use_postgresql %}
+        source = await sync_source_svc.create_source(data)
+{%- else %}
+        source = sync_source_svc.create_source(data)
+{%- endif %}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return SyncSourceRead(
+        id=str(source.id), name=source.name, connector_type=source.connector_type,
+        collection_name=source.collection_name,
+        config=source.config if isinstance(source.config, dict) else json.loads(source.config) if source.config else {},
+        sync_mode=source.sync_mode, schedule_minutes=source.schedule_minutes,
+        is_active=source.is_active,
+        last_sync_at=None, last_sync_status=None, last_error=None,
+        created_at=source.created_at.isoformat() if source.created_at else None,
+    )
+
+
+@router.patch("/sync/sources/{source_id}", response_model=SyncSourceRead)
+{%- if cookiecutter.use_postgresql %}
+async def update_sync_source(
+{%- else %}
+def update_sync_source(
+{%- endif %}
+    source_id: str,
+    data: SyncSourceUpdate,
+    sync_source_svc: SyncSourceSvc = None,
+{%- if cookiecutter.use_jwt %}
+    current_user: CurrentAdmin = None,
+{%- endif %}
+):
+    """Update an existing sync source configuration."""
+    try:
+{%- if cookiecutter.use_postgresql %}
+        source = await sync_source_svc.update_source(source_id, data)
+{%- else %}
+        source = sync_source_svc.update_source(source_id, data)
+{%- endif %}
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.message)
+    return SyncSourceRead(
+        id=str(source.id), name=source.name, connector_type=source.connector_type,
+        collection_name=source.collection_name,
+        config=source.config if isinstance(source.config, dict) else json.loads(source.config) if source.config else {},
+        sync_mode=source.sync_mode, schedule_minutes=source.schedule_minutes,
+        is_active=source.is_active,
+        last_sync_at=source.last_sync_at.isoformat() if source.last_sync_at else None,
+        last_sync_status=source.last_sync_status, last_error=source.last_error,
+        created_at=source.created_at.isoformat() if source.created_at else None,
+    )
+
+
+@router.delete("/sync/sources/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
+{%- if cookiecutter.use_postgresql %}
+async def delete_sync_source(
+{%- else %}
+def delete_sync_source(
+{%- endif %}
+    source_id: str,
+    sync_source_svc: SyncSourceSvc = None,
+{%- if cookiecutter.use_jwt %}
+    current_user: CurrentAdmin = None,
+{%- endif %}
+):
+    """Delete a sync source configuration."""
+    try:
+{%- if cookiecutter.use_postgresql %}
+        await sync_source_svc.delete_source(source_id)
+{%- else %}
+        sync_source_svc.delete_source(source_id)
+{%- endif %}
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.message)
+
+
+@router.post("/sync/sources/{source_id}/trigger", response_model=RAGSyncResponse)
+{%- if cookiecutter.use_postgresql %}
+async def trigger_sync_source(
+{%- else %}
+def trigger_sync_source(
+{%- endif %}
+    source_id: str,
+    sync_source_svc: SyncSourceSvc = None,
+{%- if cookiecutter.use_jwt %}
+    current_user: CurrentAdmin = None,
+{%- endif %}
+):
+    """Trigger a manual sync for a configured source."""
+    try:
+{%- if cookiecutter.use_postgresql %}
+        sync_log = await sync_source_svc.trigger_sync(source_id)
+{%- else %}
+        sync_log = sync_source_svc.trigger_sync(source_id)
+{%- endif %}
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.message)
+    return RAGSyncResponse(
+        id=str(sync_log.id),
+        status="running",
+        message=f"Sync triggered for source '{source_id}'",
+    )
+
+
+@router.get("/sync/connectors", response_model=ConnectorList)
+async def list_connectors(
+{%- if cookiecutter.use_jwt %}
+    current_user: CurrentAdmin = None,
+{%- endif %}
+):
+    """List available sync connector types with their config schemas."""
+    from app.rag.connectors import CONNECTOR_REGISTRY
+
+    items = []
+    for connector_type, connector_cls in CONNECTOR_REGISTRY.items():
+        schema_fields = {}
+        for field_name, field_spec in connector_cls.CONFIG_SCHEMA.items():
+            schema_fields[field_name] = ConnectorConfigField(**field_spec)
+        items.append(ConnectorInfo(
+            type=connector_cls.CONNECTOR_TYPE,
+            name=connector_cls.DISPLAY_NAME,
+            config_schema=schema_fields,
+            enabled=True,
+        ))
+    return ConnectorList(items=items)
 {%- endif %}
 
-{%- if cookiecutter.use_celery and cookiecutter.enable_redis %}
+{%- if (cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq) and cookiecutter.enable_redis %}
 
 
 # SSE for RAG status updates (auto-reconnect via EventSource API)
-import json
-from collections.abc import AsyncIterable
-
-from fastapi.sse import EventSourceResponse, ServerSentEvent
-
-
 @router.get("/status/stream", response_class=EventSourceResponse)
 async def rag_status_stream() -> AsyncIterable[ServerSentEvent]:
     """SSE endpoint for real-time RAG ingestion status updates.
@@ -502,7 +815,6 @@ async def rag_status_stream() -> AsyncIterable[ServerSentEvent]:
             await r.aclose()
         except Exception:
             pass
-{%- endif %}
 {%- endif %}
 
 {%- else %}

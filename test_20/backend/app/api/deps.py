@@ -153,22 +153,8 @@ class RoleChecker:
         return user
 
 
-async def get_current_active_superuser(
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    """Get current user and verify they are a superuser.
-
-    Raises:
-        AuthorizationError: If user is not a superuser.
-    """
-    if not current_user.is_superuser:
-        raise AuthorizationError(message="Superuser privileges required")
-    return current_user
-
-
 # Type aliases for dependency injection
 CurrentUser = Annotated[User, Depends(get_current_user)]
-CurrentSuperuser = Annotated[User, Depends(get_current_active_superuser)]
 CurrentAdmin = Annotated[User, Depends(RoleChecker(UserRole.ADMIN))]
 
 

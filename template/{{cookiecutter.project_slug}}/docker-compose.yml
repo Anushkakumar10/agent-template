@@ -7,12 +7,20 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: {{ cookiecutter.project_slug }}_backend:dev
     container_name: {{ cookiecutter.project_slug }}_backend
     ports:
       - "{{ cookiecutter.backend_port }}:{{ cookiecutter.backend_port }}"
     volumes:
       - ./backend/app:/app/app:ro
       - ./backend/cli:/app/cli:ro
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     env_file:
       - ./backend/.env
     environment:
@@ -156,7 +164,7 @@ services:
     restart: unless-stopped
 
   milvus:
-    image: milvusdb/milvus:latest
+    image: milvusdb/milvus:v2.5.10
     container_name: {{ cookiecutter.project_slug }}_milvus
     command: ["milvus", "run", "standalone"]
     ports:
@@ -205,12 +213,17 @@ services:
 {%- if cookiecutter.use_celery %}
 
   celery_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: {{ cookiecutter.project_slug }}_backend:dev
     container_name: {{ cookiecutter.project_slug }}_celery_worker
     volumes:
       - ./backend/app:/app/app:ro
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     command: celery -A app.worker.celery_app worker --loglevel=debug
     env_file:
       - ./backend/.env
@@ -244,9 +257,7 @@ services:
     restart: unless-stopped
 
   celery_beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: {{ cookiecutter.project_slug }}_backend:dev
     container_name: {{ cookiecutter.project_slug }}_celery_beat
     volumes:
       - ./backend/app:/app/app:ro
@@ -266,9 +277,7 @@ services:
     restart: unless-stopped
 
   flower:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: {{ cookiecutter.project_slug }}_backend:dev
     container_name: {{ cookiecutter.project_slug }}_flower
     command: celery -A app.worker.celery_app flower --port=5555
     ports:
@@ -291,12 +300,17 @@ services:
 {%- if cookiecutter.use_taskiq %}
 
   taskiq_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: {{ cookiecutter.project_slug }}_backend:dev
     container_name: {{ cookiecutter.project_slug }}_taskiq_worker
     volumes:
       - ./backend/app:/app/app:ro
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     command: taskiq worker app.worker.taskiq_app:broker --workers 1 --reload
     env_file:
       - ./backend/.env
@@ -330,9 +344,7 @@ services:
     restart: unless-stopped
 
   taskiq_scheduler:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: {{ cookiecutter.project_slug }}_backend:dev
     container_name: {{ cookiecutter.project_slug }}_taskiq_scheduler
     volumes:
       - ./backend/app:/app/app:ro
@@ -361,12 +373,17 @@ services:
 {%- if cookiecutter.use_arq %}
 
   arq_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: {{ cookiecutter.project_slug }}_backend:dev
     container_name: {{ cookiecutter.project_slug }}_arq_worker
     volumes:
       - ./backend/app:/app/app:ro
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     command: arq app.worker.arq_app.WorkerSettings
     env_file:
       - ./backend/.env
@@ -401,9 +418,14 @@ networks:
   backend:
     driver: bridge
 
-{%- if cookiecutter.use_postgresql or cookiecutter.enable_redis or cookiecutter.use_milvus or cookiecutter.use_qdrant %}
-
 volumes:
+  media_data:
+{%- if cookiecutter.use_sqlite %}
+  sqlite_data:
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+  chroma_data:
+{%- endif %}
 {%- if cookiecutter.use_postgresql %}
   postgres_data:
 {%- endif %}
@@ -417,7 +439,6 @@ volumes:
 {%- endif %}
 {%- if cookiecutter.use_qdrant %}
   qdrant_data:
-{%- endif %}
 {%- endif %}
 {%- else %}
 # Docker is disabled for this project

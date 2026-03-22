@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores";
 import { apiClient } from "@/lib/api-client";
 import { ROUTES } from "@/lib/constants";
 import type { User } from "@/types";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -34,7 +34,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (checking && !isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
-        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        <Spinner className="text-muted-foreground h-6 w-6" />
         <span className="sr-only">Checking authentication...</span>
       </div>
     );

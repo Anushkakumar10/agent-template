@@ -12,11 +12,11 @@ import { LogOut, Menu, LayoutDashboard, MessageSquare, Database, UserCircle } fr
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
 import { useSidebarStore } from "@/stores";
 
-const navItems = [
-  { name: "Dashboard", href: ROUTES.DASHBOARD, icon: LayoutDashboard },
-  { name: "Chat", href: ROUTES.CHAT, icon: MessageSquare },
-  { name: "Knowledge Base", href: ROUTES.RAG, icon: Database },
-  { name: "Profile", href: ROUTES.PROFILE, icon: UserCircle },
+const adminNavItems = [
+  { name: "Dashboard", href: ROUTES.DASHBOARD, icon: LayoutDashboard, adminOnly: true },
+  { name: "Chat", href: ROUTES.CHAT, icon: MessageSquare, adminOnly: false },
+  { name: "Knowledge Base", href: ROUTES.RAG, icon: Database, adminOnly: true },
+  { name: "Profile", href: ROUTES.PROFILE, icon: UserCircle, adminOnly: false },
 ];
 
 export function Header() {
@@ -40,7 +40,7 @@ export function Header() {
 
           {/* Desktop nav links */}
           <nav className="hidden items-center gap-0.5 md:flex">
-            {navItems.map((item) => {
+            {adminNavItems.filter(item => !item.adminOnly || user?.role === "admin").map((item) => {
               const isActive = pathname?.includes(item.href);
               return (
                 <Link

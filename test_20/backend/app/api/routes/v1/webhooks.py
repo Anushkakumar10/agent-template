@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import CurrentUser, WebhookSvc
+from app.api.deps import CurrentAdmin, WebhookSvc
 from app.schemas.webhook import (
     WebhookCreate,
     WebhookDeliveryListResponse,
@@ -22,7 +22,7 @@ router = APIRouter()
 async def create_webhook(
     data: WebhookCreate,
     webhook_service: WebhookSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 ):
     """Create a new webhook subscription."""
     webhook = await webhook_service.create_webhook(
@@ -44,7 +44,7 @@ async def create_webhook(
 @router.get("", response_model=WebhookListResponse)
 async def list_webhooks(
     webhook_service: WebhookSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):
@@ -76,6 +76,7 @@ async def list_webhooks(
 async def get_webhook(
     webhook_id: UUID,
     webhook_service: WebhookSvc,
+    current_user: CurrentAdmin = None,
 ):
     """Get a webhook by ID."""
     webhook = await webhook_service.get_webhook(webhook_id)
@@ -96,6 +97,7 @@ async def update_webhook(
     webhook_id: UUID,
     data: WebhookUpdate,
     webhook_service: WebhookSvc,
+    current_user: CurrentAdmin = None,
 ):
     """Update a webhook."""
     webhook = await webhook_service.update_webhook(webhook_id, data)
@@ -115,6 +117,7 @@ async def update_webhook(
 async def delete_webhook(
     webhook_id: UUID,
     webhook_service: WebhookSvc,
+    current_user: CurrentAdmin = None,
 ):
     """Delete a webhook."""
     await webhook_service.delete_webhook(webhook_id)
@@ -124,6 +127,7 @@ async def delete_webhook(
 async def test_webhook(
     webhook_id: UUID,
     webhook_service: WebhookSvc,
+    current_user: CurrentAdmin = None,
 ):
     """Send a test event to the webhook."""
     result = await webhook_service.test_webhook(webhook_id)
@@ -134,6 +138,7 @@ async def test_webhook(
 async def regenerate_webhook_secret(
     webhook_id: UUID,
     webhook_service: WebhookSvc,
+    current_user: CurrentAdmin = None,
 ):
     """Regenerate the webhook secret."""
     new_secret = await webhook_service.regenerate_secret(webhook_id)
@@ -144,6 +149,7 @@ async def regenerate_webhook_secret(
 async def list_webhook_deliveries(
     webhook_id: UUID,
     webhook_service: WebhookSvc,
+    current_user: CurrentAdmin = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):

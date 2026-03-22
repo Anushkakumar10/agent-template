@@ -35,9 +35,7 @@
     "@vercel/otel": "^1.10.0",
     "@opentelemetry/api": "^1.9.0",
 {%- endif %}
-{%- if cookiecutter.enable_i18n %}
     "next-intl": "^3.25.3",
-{%- endif %}
     "class-variance-authority": "^0.7.1",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.0",
@@ -67,8 +65,8 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
-    "tailwindcss": "^4.0.0-beta.8",
-    "@tailwindcss/postcss": "^4.0.0-beta.8",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
     "postcss": "^8.4.49",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.0",

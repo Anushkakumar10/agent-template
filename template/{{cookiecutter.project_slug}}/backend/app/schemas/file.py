@@ -1,4 +1,3 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.enable_conversation_persistence %}
 """Schemas for file upload operations."""
 
 from datetime import datetime
@@ -31,5 +30,4 @@ class FileInfo(FileUploadResponse):
     user_id: UUID
 {%- else %}
     user_id: str
-{%- endif %}
 {%- endif %}

@@ -59,34 +59,26 @@ async def update_current_user(
     return user
 
 
-{%- if cookiecutter.enable_ai_agent and cookiecutter.enable_conversation_persistence %}
+{%- if cookiecutter.use_jwt %}
 
 
 @router.post("/me/avatar", response_model=UserRead)
 async def upload_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: DBSession = None,
+    user_service: UserSvc = None,  # type: ignore[assignment]
 ):
     """Upload or replace avatar image for the current user."""
     from fastapi import HTTPException
-    ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-    if file.content_type not in ALLOWED_AVATAR_TYPES:
-        raise HTTPException(status_code=400, detail="Only JPEG, PNG, WebP, and GIF images are allowed")
+
     data = await file.read()
-    if len(data) > 2 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Avatar image too large. Maximum 2MB.")
-    from app.services.file_storage import get_file_storage
-    storage = get_file_storage()
-    import contextlib
-    if current_user.avatar_url:
-        with contextlib.suppress(Exception):
-            await storage.delete(current_user.avatar_url)
-    storage_path = await storage.save(f"avatars/{current_user.id}", file.filename or "avatar.jpg", data)
-    current_user.avatar_url = storage_path
-    await db.commit()
-    await db.refresh(current_user)
-    return current_user
+    try:
+        user = await user_service.update_avatar(
+            current_user.id, data, file.filename or "avatar.jpg", file.content_type or ""
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+    return user
 
 
 @router.get("/avatar/{user_id}")

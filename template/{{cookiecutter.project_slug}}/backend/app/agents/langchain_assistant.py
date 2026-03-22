@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_langchain %}
+{%- if cookiecutter.use_langchain %}
 """Assistant agent with LangChain.
 
 The main conversational agent that can be extended with custom tools.

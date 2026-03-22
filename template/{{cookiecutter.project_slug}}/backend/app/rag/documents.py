@@ -4,7 +4,10 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-{%- if cookiecutter.use_llamaparse %}
+{%- if cookiecutter.use_all_pdf_parsers %}
+import pymupdf
+from docx import Document as DOCXDocument
+{%- elif cookiecutter.use_llamaparse %}
 from llama_cloud import AsyncLlamaCloud
 {%- elif cookiecutter.use_liteparse %}
 from liteparse import LiteParse
@@ -122,7 +125,353 @@ class TextDocumentParser(BaseDocumentParser):
             raise ValueError(f"Unsupported file extension. Allowed extensions: {self.allowed}")
 
 
-{%- if not cookiecutter.use_llamaparse %}
+{%- if cookiecutter.use_all_pdf_parsers %}
+
+class DocxDocumentParser(BaseDocumentParser):
+    """Parser for DOCX documents using python-docx.
+
+    Extracts text content from Microsoft Word documents by reading
+    all paragraphs and joining them with newline characters.
+    """
+
+    def _parse_docx_file(self, filepath: Path) -> Document:
+        """Extract raw text from the DOCX file.
+
+        Args:
+            filepath: Path to the DOCX file.
+
+        Returns:
+            Document object with the file content.
+        """
+        file = DOCXDocument(filepath)
+        page = DocumentPage(
+            page_num=1,
+            content="\n".join([p.text for p in file.paragraphs])
+        )
+        return Document(
+            pages=[page],
+            metadata=self.get_document_metadata(filepath)
+        )
+
+    async def parse(self, filepath: Path) -> Document:
+        """Parse a DOCX file.
+
+        Args:
+            filepath: Path to the DOCX file.
+
+        Returns:
+            Document object with parsed content.
+
+        Raises:
+            ValueError: If the file is not a DOCX file.
+        """
+        if not self.is_extension_allowed(filepath):
+            raise ValueError(f"Extension {filepath.suffix} not supported by DocxDocumentParser")
+
+        if filepath.suffix == ".docx":
+            return self._parse_docx_file(filepath)
+        else:
+            raise ValueError(f"Unsupported file extension. Allowed extensions: {self.allowed}")
+
+
+class PyMuPDFParser(BaseDocumentParser):
+    """Smart PDF parser using PyMuPDF.
+
+    Features:
+    - Text extraction with layout preservation (blocks)
+    - Table detection -> markdown tables
+    - Header/footer detection and removal
+    - OCR fallback for scanned pages (optional, requires tesseract)
+    - Image extraction for LLM-based description
+    - Document metadata (author, title, TOC)
+    """
+
+    MIN_TEXT_LENGTH = 50  # below this -> likely a scan, try OCR
+
+    def __init__(self, enable_ocr: bool = False, image_describer=None):
+        self.enable_ocr = enable_ocr
+        self._image_describer = image_describer
+
+    def _detect_repeated_content(self, doc) -> set[str]:
+        """Detect headers/footers -- text appearing on >70% of pages."""
+        if len(doc) < 3:
+            return set()
+        text_counts: dict[str, int] = {}
+        for page in doc:
+            for b in page.get_text("blocks"):
+                if b[6] != 0:  # skip image blocks
+                    continue
+                y_ratio = b[1] / page.rect.height if page.rect.height else 0
+                if y_ratio < 0.15 or y_ratio > 0.85:
+                    text = b[4].strip()
+                    if text and len(text) < 200:
+                        text_counts[text] = text_counts.get(text, 0) + 1
+        threshold = len(doc) * 0.7
+        return {t for t, c in text_counts.items() if c >= threshold}
+
+    def _extract_text(self, page, repeated: set[str]) -> str:
+        """Extract text blocks, filtering headers/footers."""
+        texts = []
+        for b in page.get_text("blocks"):
+            if b[6] != 0:  # skip image blocks
+                continue
+            text = b[4].strip()
+            if text and text not in repeated:
+                texts.append(text)
+        return "\n\n".join(texts)
+
+    def _extract_tables(self, page) -> str:
+        """Extract tables as markdown."""
+        try:
+            tables = page.find_tables()
+            if not tables or not tables.tables:
+                return ""
+            parts = []
+            for table in tables.tables:
+                df = table.to_pandas()
+                if not df.empty:
+                    parts.append(df.to_markdown(index=False))
+            return "\n\n".join(parts)
+        except Exception:
+            return ""
+
+    def _ocr_page(self, page, image_describer=None) -> str:
+        """OCR a scanned page by rendering it as image and sending to LLM vision."""
+        if not image_describer:
+            return ""
+        try:
+            import asyncio
+            pix = page.get_pixmap(dpi=200)
+            image_bytes = pix.tobytes("png")
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(
+                    image_describer.describe(image_bytes, "image/png")
+                )
+            finally:
+                loop.close()
+        except Exception as e:
+            logger.warning(f"LLM OCR failed for page {page.number + 1}: {e}")
+            return ""
+
+{%- if cookiecutter.enable_rag_image_description %}
+    def _extract_images(self, doc, page) -> list:
+        """Extract images from page for LLM description."""
+        images = []
+        for img_info in page.get_images(full=True):
+            xref = img_info[0]
+            try:
+                base = doc.extract_image(xref)
+                if base and base["image"] and len(base["image"]) > 1000:
+                    ext = base.get("ext", "png")
+                    mime_map = {"png": "image/png", "jpeg": "image/jpeg", "jpg": "image/jpeg"}
+                    images.append(DocumentImage(
+                        page_num=page.number + 1,
+                        image_bytes=base["image"],
+                        mime_type=mime_map.get(ext, f"image/{ext}"),
+                    ))
+            except Exception:
+                pass
+        return images
+{%- endif %}
+
+    def _parse_pdf_file(self, filepath: Path) -> Document:
+        """Parse PDF with smart extraction pipeline."""
+        doc = pymupdf.open(filepath)
+
+        # Doc-level metadata
+        meta = doc.metadata or {}
+        toc = doc.get_toc()
+
+        # Detect repeated headers/footers
+        repeated = self._detect_repeated_content(doc)
+
+        pages = []
+        for page in doc:
+            # 1. Text with layout (skip image blocks, filter headers/footers)
+            text = self._extract_text(page, repeated)
+
+            # 2. Tables -> markdown
+            tables_md = self._extract_tables(page)
+            if tables_md:
+                text = text + "\n\n" + tables_md if text.strip() else tables_md
+
+            # 3. OCR fallback for scans/empty pages
+            if self.enable_ocr and len(text.strip()) < self.MIN_TEXT_LENGTH:
+                ocr_text = self._ocr_page(page, self._image_describer)
+                if len(ocr_text.strip()) > len(text.strip()):
+                    text = ocr_text
+                    logger.info(f"OCR fallback used for page {page.number + 1}")
+
+{%- if cookiecutter.enable_rag_image_description %}
+            # 4. Images
+            images = self._extract_images(doc, page)
+{%- endif %}
+
+            pages.append(DocumentPage(
+                page_num=page.number + 1,
+                content=text,
+{%- if cookiecutter.enable_rag_image_description %}
+                images=images,
+{%- endif %}
+            ))
+
+        doc.close()
+
+        # Enrich metadata
+        additional: dict = {}
+        if meta.get("title"):
+            additional["pdf_title"] = meta["title"]
+        if meta.get("author"):
+            additional["pdf_author"] = meta["author"]
+        if toc:
+            additional["toc"] = [{"level": t[0], "title": t[1], "page": t[2]} for t in toc[:20]]
+
+        doc_meta = self.get_document_metadata(filepath)
+        if additional:
+            doc_meta.additional_info = {**(doc_meta.additional_info or {}), **additional}
+
+        return Document(pages=pages, metadata=doc_meta)
+
+    async def parse(self, filepath: Path) -> Document:
+        if not self.is_extension_allowed(filepath):
+            raise ValueError(f"Extension {filepath.suffix} not supported by PyMuPDFParser")
+        if filepath.suffix == ".pdf":
+            return self._parse_pdf_file(filepath)
+        raise ValueError(f"Unsupported: {filepath.suffix}")
+
+
+class LlamaParseParser(BaseDocumentParser):
+    """Advanced document parser using LlamaParse cloud API.
+
+    Provides AI-powered document parsing with support for 130+ formats
+    including PDF, DOCX, PPTX, XLSX, images (OCR), and more.
+    Returns markdown-formatted content.
+    """
+
+    # LlamaParse supports these beyond our default allowed list
+    EXTRA_SUPPORTED = {".pptx", ".xlsx", ".xls", ".csv", ".rtf", ".epub",
+                       ".jpg", ".jpeg", ".png", ".html", ".htm"}
+
+    def __init__(self, api_key: str, tier: str = "agentic"):
+        """Initialize the LlamaParse parser.
+
+        Args:
+            api_key: LlamaCloud API key for authentication.
+            tier: Parsing tier (fast, cost_effective, agentic, agentic_plus).
+        """
+        from llama_cloud import AsyncLlamaCloud
+        self.parser = AsyncLlamaCloud(api_key=api_key)
+        self.tier = tier
+        # Extend allowed extensions with LlamaParse-supported formats
+        self.allowed = [ext.value for ext in DocumentExtensions] + list(self.EXTRA_SUPPORTED)
+
+    async def parse(self, filepath: Path) -> Document:
+        """Parse a document using LlamaParse.
+
+        Supports PDF, DOCX, PPTX, XLSX, images, and many more formats.
+        See https://developers.llamaindex.ai/python/cloud/llamaparse/supported_document_types/
+
+        Args:
+            filepath: Path to the file to parse.
+
+        Returns:
+            Document object with parsed markdown content.
+
+        Raises:
+            ValueError: If the file extension is not supported.
+        """
+        if not self.is_extension_allowed(filepath):
+            raise ValueError(f"Extension {filepath.suffix} not supported by LlamaParse")
+
+        file_obj = await self.parser.files.create(file=filepath, purpose="parse")
+        result = await self.parser.parsing.parse(
+            file_id=file_obj.id,
+            tier=self.tier,
+            version="latest",
+            expand=["text", "markdown"],
+        )
+        pages = []
+        for page in result.markdown.pages:
+            pages.append(DocumentPage(
+                page_num=page.page_number,
+                content=page.markdown
+            ))
+
+        return Document(
+            pages=pages,
+            metadata=self.get_document_metadata(filepath)
+        )
+
+
+class LiteParseParser(BaseDocumentParser):
+    """Document parser using LiteParse -- fast, local, AI-native parsing.
+
+    Uses LiteParse (from LlamaIndex) for layout-aware text extraction.
+    Preserves spatial relationships (tables as ASCII grids) instead of
+    converting to markdown. Built-in OCR via Tesseract.js for scanned pages.
+
+    Requires: pip install liteparse && npm i -g @llamaindex/liteparse
+    """
+
+    def __init__(self) -> None:
+        from liteparse import LiteParse
+        self.parser = LiteParse()
+
+    async def parse(self, filepath: Path) -> Document:
+        """Parse a document using LiteParse.
+
+        LiteParse returns layout-aware text. If the result has per-page data
+        it's used directly; otherwise full text is split on form-feed chars.
+        """
+        import asyncio
+
+        # LiteParse Python wrapper is synchronous -- run in thread
+        result = await asyncio.to_thread(self.parser.parse, str(filepath))
+
+        pages: list[DocumentPage] = []
+
+        # Try per-page output first
+        if hasattr(result, "pages") and result.pages:
+            for i, page in enumerate(result.pages):
+                text = page.text if hasattr(page, "text") else str(page)
+                if text.strip():
+                    pages.append(DocumentPage(page_num=i + 1, content=text))
+        else:
+            # Fallback: split full text on form-feed (\f) as page separator
+            full_text = result.text if hasattr(result, "text") else str(result)
+            page_texts = full_text.split("\f") if "\f" in full_text else [full_text]
+            for i, text in enumerate(page_texts):
+                if text.strip():
+                    pages.append(DocumentPage(page_num=i + 1, content=text.strip()))
+
+        return Document(
+            pages=pages,
+            metadata=self.get_document_metadata(filepath),
+        )
+
+
+class PdfParserFactory:
+    """Factory for runtime PDF parser selection via PDF_PARSER env var."""
+
+    @staticmethod
+    def create(parser_name: str, settings=None, image_describer=None):
+        if parser_name == "llamaparse":
+            if not settings or not settings.pdf_parser.api_key:
+                raise ValueError("LlamaParse requires LLAMAPARSE_API_KEY to be set")
+            return LlamaParseParser(
+                api_key=settings.pdf_parser.api_key,
+                tier=settings.pdf_parser.tier,
+            )
+        elif parser_name == "liteparse":
+            return LiteParseParser()
+        else:
+            return PyMuPDFParser(
+                enable_ocr=settings.enable_ocr if settings else False,
+                image_describer=image_describer,
+            )
+
+{%- elif not cookiecutter.use_llamaparse %}
 
 class DocxDocumentParser(BaseDocumentParser):
     """Parser for DOCX documents using python-docx.
@@ -458,7 +807,12 @@ class DocumentProcessor:
     2. Parse document content
     3. Chunk document pages using RecursiveCharacterTextSplitter
 
-{%- if cookiecutter.use_llamaparse %}
+{%- if cookiecutter.use_all_pdf_parsers %}
+    Supported file types:
+    - TXT, MD: TextDocumentParser (Python native)
+    - DOCX: DocxDocumentParser (Python native)
+    - PDF: PdfParserFactory selects PyMuPDF, LlamaParse, or LiteParse at runtime
+{%- elif cookiecutter.use_llamaparse %}
     Supported file types:
     - TXT, MD: TextDocumentParser (Python native)
     - PDF, DOCX, PPTX, XLSX, images, and 130+ more: LlamaParseParser (cloud API)
@@ -481,7 +835,19 @@ class DocumentProcessor:
 
         # Always use Python native parser for plain text
         self.text_parser = TextDocumentParser()
-        {%- if cookiecutter.use_llamaparse %}
+        {%- if cookiecutter.use_all_pdf_parsers %}
+        self.docx_parser = DocxDocumentParser()
+        {%- if cookiecutter.enable_rag_image_description %}
+        self.image_describer = self._init_image_describer(settings)
+        {%- else %}
+        self.image_describer = None
+        {%- endif %}
+        self.pdf_parser = PdfParserFactory.create(
+            parser_name=settings.pdf_parser.method,
+            settings=settings,
+            image_describer=self.image_describer,
+        )
+        {%- elif cookiecutter.use_llamaparse %}
         # LlamaParse handles PDF, DOCX, PPTX, XLSX, images, and more
         self.llamaparse_parser = LlamaParseParser(api_key=settings.pdf_parser.api_key, tier=settings.pdf_parser.tier)
         {%- elif cookiecutter.use_liteparse %}
@@ -541,42 +907,23 @@ class DocumentProcessor:
 {%- if cookiecutter.enable_rag_image_description %}
     @staticmethod
     def _init_image_describer(settings: RAGSettings):
-        """Initialize the appropriate image describer based on LLM provider."""
+        """Initialize the image describer using the configured AI framework."""
         from app.core.config import settings as app_settings
-        from app.rag.image_describer import (
-{%- if cookiecutter.use_openai %}
-            OpenAIImageDescriber,
-{%- endif %}
-{%- if cookiecutter.use_anthropic %}
-            AnthropicImageDescriber,
-{%- endif %}
-{%- if cookiecutter.use_google %}
-            GeminiImageDescriber,
-{%- endif %}
-{%- if cookiecutter.use_openrouter %}
-            OpenRouterImageDescriber,
-{%- endif %}
-        )
-{%- if cookiecutter.use_openai %}
-        return OpenAIImageDescriber(
-            api_key=app_settings.OPENAI_API_KEY,
-            model=settings.image_description_model or app_settings.AI_MODEL,
-        )
-{%- elif cookiecutter.use_anthropic %}
-        return AnthropicImageDescriber(
-            api_key=app_settings.ANTHROPIC_API_KEY,
-            model=settings.image_description_model or app_settings.AI_MODEL,
-        )
-{%- elif cookiecutter.use_google %}
-        return GeminiImageDescriber(
-            api_key=app_settings.GOOGLE_API_KEY,
-            model=settings.image_description_model or app_settings.AI_MODEL,
-        )
-{%- elif cookiecutter.use_openrouter %}
-        return OpenRouterImageDescriber(
-            api_key=app_settings.OPENROUTER_API_KEY,
-            model=settings.image_description_model or app_settings.AI_MODEL,
-        )
+
+        model_name = getattr(app_settings, "RAG_IMAGE_DESCRIPTION_MODEL", None) or app_settings.AI_MODEL
+
+{%- if cookiecutter.use_pydantic_ai %}
+        from app.rag.image_describer import PydanticAIImageDescriber
+        return PydanticAIImageDescriber(model_name=model_name)
+{%- elif cookiecutter.use_langchain or cookiecutter.use_langgraph %}
+        from app.rag.image_describer import LangChainImageDescriber
+        return LangChainImageDescriber(model_name=model_name)
+{%- elif cookiecutter.use_crewai %}
+        from app.rag.image_describer import CrewAIImageDescriber
+        return CrewAIImageDescriber(model_name=model_name)
+{%- elif cookiecutter.use_deepagents %}
+        from app.rag.image_describer import DeepAgentsImageDescriber
+        return DeepAgentsImageDescriber(model_name=model_name)
 {%- endif %}
 
     async def _describe_images(self, document: Document) -> None:
@@ -611,7 +958,12 @@ class DocumentProcessor:
         # Route to appropriate parser based on file extension
         if filepath.suffix in (".txt", ".md"):
             document = await self.text_parser.parse(filepath)
-        {%- if cookiecutter.use_llamaparse %}
+        {%- if cookiecutter.use_all_pdf_parsers %}
+        elif filepath.suffix == ".docx":
+            document = await self.docx_parser.parse(filepath)
+        elif filepath.suffix == ".pdf":
+            document = await self.pdf_parser.parse(filepath)
+        {%- elif cookiecutter.use_llamaparse %}
         elif self.llamaparse_parser.is_extension_allowed(filepath):
             document = await self.llamaparse_parser.parse(filepath)
         {%- elif cookiecutter.use_liteparse %}

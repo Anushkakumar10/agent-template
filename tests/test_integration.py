@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from fastapi_gen.config import (
-    AuthType,
     BackgroundTaskType,
     CIType,
     DatabaseType,
@@ -23,12 +22,12 @@ class TestMinimalProjectGeneration:
         """Generate a minimal project."""
         config = ProjectConfig(
             project_name="minimal_project",
-            database=DatabaseType.NONE,
-            auth=AuthType.NONE,
+            database=DatabaseType.SQLITE,
             enable_logfire=False,
             enable_docker=False,
             enable_precommit=False,
             ci_type=CIType.NONE,
+            background_tasks=BackgroundTaskType.NONE,
         )
         return generate_project(config, tmp_path)
 
@@ -70,10 +69,10 @@ class TestPostgresqlProjectGeneration:
         config = ProjectConfig(
             project_name="pg_project",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             enable_logfire=True,
             enable_docker=True,
             ci_type=CIType.GITHUB,
+            background_tasks=BackgroundTaskType.NONE,
         )
         return generate_project(config, tmp_path)
 
@@ -111,7 +110,7 @@ class TestMongoDBProjectGeneration:
         config = ProjectConfig(
             project_name="mongo_project",
             database=DatabaseType.MONGODB,
-            auth=AuthType.API_KEY,
+            background_tasks=BackgroundTaskType.NONE,
         )
         return generate_project(config, tmp_path)
 
@@ -138,7 +137,6 @@ class TestFullFeaturedProjectGeneration:
         config = ProjectConfig(
             project_name="full_project",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.BOTH,
             enable_logfire=True,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
@@ -148,7 +146,6 @@ class TestFullFeaturedProjectGeneration:
             enable_admin_panel=True,
             enable_websockets=True,
             enable_file_storage=True,
-            enable_ai_agent=True,
             enable_cors=True,
             enable_docker=True,
             ci_type=CIType.GITHUB,
@@ -190,6 +187,7 @@ class TestGitLabCIProjectGeneration:
         config = ProjectConfig(
             project_name="gitlab_project",
             ci_type=CIType.GITLAB,
+            background_tasks=BackgroundTaskType.NONE,
         )
         return generate_project(config, tmp_path)
 
@@ -218,8 +216,8 @@ class TestProjectContents:
             author_name="Test Author",
             author_email="test@example.com",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             enable_logfire=True,
+            background_tasks=BackgroundTaskType.NONE,
         )
         return generate_project(config, tmp_path)
 
@@ -265,12 +263,12 @@ class TestGeneratedAppSmokeTest:
         """Generate a minimal project for import testing."""
         config = ProjectConfig(
             project_name="smoke_test_project",
-            database=DatabaseType.NONE,
-            auth=AuthType.NONE,
+            database=DatabaseType.SQLITE,
             enable_logfire=False,
             enable_docker=False,
             enable_precommit=False,
             ci_type=CIType.NONE,
+            background_tasks=BackgroundTaskType.NONE,
         )
         return generate_project(config, tmp_path)
 
@@ -362,11 +360,11 @@ class TestGeneratedAppSmokeTest:
         config = ProjectConfig(
             project_name="pg_smoke_test",
             database=DatabaseType.POSTGRESQL,
-            auth=AuthType.JWT,
             enable_logfire=False,
             enable_docker=False,
             enable_precommit=False,
             ci_type=CIType.NONE,
+            background_tasks=BackgroundTaskType.NONE,
         )
         project_path = generate_project(config, tmp_path)
         main_file = project_path / "backend" / "app" / "main.py"

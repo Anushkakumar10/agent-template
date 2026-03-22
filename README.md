@@ -119,7 +119,8 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
 - **Conversation Persistence** - Save chat history to database
 - **Image Description** - Extract images from documents, describe via LLM vision
 - **Multimodal Embeddings** - Google Gemini embedding model (text + images)
-- **Document Sources** - Local files, Google Drive, S3/MinIO
+- **Document Sources** - Local files, API upload, Google Drive, S3/MinIO
+- **Sync Sources** - Configurable connectors (Google Drive, S3) with scheduled sync
 - **Observability** - Logfire for PydanticAI, LangSmith for LangChain/LangGraph/DeepAgents
 
 ### ⚡ Backend (FastAPI)
@@ -135,7 +136,7 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
 - **React 19** + **TypeScript** + **Tailwind CSS v4**
 - **AI Chat Interface** - WebSocket streaming, tool call visualization
 - **Authentication** - HTTP-only cookies, auto-refresh
-- **Dark Mode** + **i18n** (optional)
+- **Dark Mode** + **i18n**
 
 ### 🔌 20+ Enterprise Integrations
 
@@ -144,7 +145,7 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
 | **AI Frameworks** | PydanticAI, LangChain, LangGraph, CrewAI, DeepAgents |
 | **LLM Providers** | OpenAI, Anthropic, Google Gemini, OpenRouter |
 | **RAG / Vector Stores** | Milvus, Qdrant, ChromaDB, pgvector |
-| **RAG Sources** | Local files, Google Drive, S3/MinIO |
+| **RAG Sources** | Local files, API upload, Google Drive, S3/MinIO, Sync Sources (configurable, scheduled) |
 | **Embeddings** | OpenAI, Voyage, Gemini (multimodal), SentenceTransformers |
 | **Caching & State** | Redis, fastapi-cache2 |
 | **Security** | Rate limiting, CORS, CSRF protection |
@@ -179,9 +180,10 @@ Generated projects include **CLAUDE.md** and **AGENTS.md** files optimized for A
 │  │  Sources        Parse           Chunk          Embed             │     │
 │  │  ─────────      ──────────      ──────────     ──────────────    │     │
 │  │  Local files    PyMuPDF         recursive      OpenAI            │     │
-│  │  Google Drive   LlamaParse      markdown       Voyage            │     │
-│  │  S3/MinIO       python-docx     fixed          Gemini (multi)    │     │
-│  │                                                SentenceTransf.   │     │
+│  │  API upload     LiteParse       markdown       Voyage            │     │
+│  │  Google Drive   LlamaParse      fixed          Gemini (multi)    │     │
+│  │  S3/MinIO       python-docx                    SentenceTransf.   │     │
+│  │  Sync Sources                                                    │     │
 │  │                                                                  │     │
 │  │  Store              Search              Rank                     │     │
 │  │  ──────────────     ──────────────      ──────────────           │     │
@@ -272,7 +274,6 @@ ak-agent-template
 # Quick mode with options
 ak-agent-template create my_ai_app \
   --database postgresql \
-  --auth jwt \
   --frontend nextjs
 
 # Use presets for common setups
@@ -443,19 +444,19 @@ Choose from **5 AI frameworks** and **4 LLM providers** when generating your pro
 
 ```bash
 # PydanticAI with OpenAI (default)
-ak-agent-template create my_app --ai-agent --ai-framework pydantic_ai
+ak-agent-template create my_app --ai-framework pydantic_ai
 
 # LangGraph with Anthropic
-ak-agent-template create my_app --ai-agent --ai-framework langgraph --llm-provider anthropic
+ak-agent-template create my_app --ai-framework langgraph --llm-provider anthropic
 
 # CrewAI with Google Gemini
-ak-agent-template create my_app --ai-agent --ai-framework crewai --llm-provider google
+ak-agent-template create my_app --ai-framework crewai --llm-provider google
 
 # DeepAgents with OpenAI
-ak-agent-template create my_app --ai-agent --ai-framework deepagents
+ak-agent-template create my_app --ai-framework deepagents
 
 # With RAG enabled
-ak-agent-template create my_app --ai-agent --rag --database postgresql --task-queue celery
+ak-agent-template create my_app --rag --database postgresql --task-queue celery
 ```
 
 ### Supported Combinations

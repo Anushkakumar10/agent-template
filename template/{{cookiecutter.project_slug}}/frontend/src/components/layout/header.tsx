@@ -5,25 +5,21 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks";
 import { Button } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme";
-{%- if cookiecutter.enable_i18n %}
 import { LanguageSwitcherCompact } from "@/components/language-switcher";
-{%- endif %}
 import { APP_NAME, ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { LogOut, Menu, LayoutDashboard{%- if cookiecutter.enable_ai_agent %}, MessageSquare{%- endif %}{%- if cookiecutter.enable_rag %}, Database{%- endif %}{%- if cookiecutter.use_jwt %}, UserCircle{%- endif %} } from "lucide-react";
+import { LogOut, Menu, LayoutDashboard, MessageSquare{%- if cookiecutter.enable_rag %}, Database{%- endif %}{%- if cookiecutter.use_jwt %}, UserCircle{%- endif %} } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
 import { useSidebarStore } from "@/stores";
 
-const navItems = [
-  { name: "Dashboard", href: ROUTES.DASHBOARD, icon: LayoutDashboard },
-{%- if cookiecutter.enable_ai_agent %}
-  { name: "Chat", href: ROUTES.CHAT, icon: MessageSquare },
-{%- endif %}
+const adminNavItems = [
+  { name: "Dashboard", href: ROUTES.DASHBOARD, icon: LayoutDashboard, adminOnly: true },
+  { name: "Chat", href: ROUTES.CHAT, icon: MessageSquare, adminOnly: false },
 {%- if cookiecutter.enable_rag %}
-  { name: "Knowledge Base", href: ROUTES.RAG, icon: Database },
+  { name: "Knowledge Base", href: ROUTES.RAG, icon: Database, adminOnly: true },
 {%- endif %}
 {%- if cookiecutter.use_jwt %}
-  { name: "Profile", href: ROUTES.PROFILE, icon: UserCircle },
+  { name: "Profile", href: ROUTES.PROFILE, icon: UserCircle, adminOnly: false },
 {%- endif %}
 ];
 
@@ -48,7 +44,7 @@ export function Header() {
 
           {/* Desktop nav links */}
           <nav className="hidden items-center gap-0.5 md:flex">
-            {navItems.map((item) => {
+            {adminNavItems.filter(item => !item.adminOnly || user?.role === "admin").map((item) => {
               const isActive = pathname?.includes(item.href);
               return (
                 <Link
@@ -72,9 +68,7 @@ export function Header() {
 
         {/* Right: language, theme, user */}
         <div className="flex items-center gap-2 sm:gap-3">
-{%- if cookiecutter.enable_i18n %}
           <LanguageSwitcherCompact />
-{%- endif %}
           <ThemeToggle />
           {isAuthenticated ? (
             <>

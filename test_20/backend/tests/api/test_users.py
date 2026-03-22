@@ -24,14 +24,14 @@ class MockUser:
         email="test@example.com",
         full_name="Test User",
         is_active=True,
-        is_superuser=False,
+        role="user",
         role="admin",
     ):
         self.id = id or uuid4()
         self.email = email
         self.full_name = full_name
         self.is_active = is_active
-        self.is_superuser = is_superuser
+        self.role = role
         self.role = role
         self.hashed_password = "hashed"
         self.created_at = datetime.now(UTC)
@@ -53,7 +53,7 @@ def mock_user() -> MockUser:
 @pytest.fixture
 def mock_superuser() -> MockUser:
     """Create a mock superuser."""
-    return MockUser(is_superuser=True, email="admin@example.com")
+    return MockUser(role="admin", email="admin@example.com")
 
 
 @pytest.fixture

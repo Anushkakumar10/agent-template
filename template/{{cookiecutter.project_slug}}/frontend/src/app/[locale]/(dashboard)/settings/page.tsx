@@ -43,7 +43,6 @@ export default function SettingsPage() {
               <span className="text-muted-foreground">Project</span>
               <span className="font-medium">{{ cookiecutter.project_name }}</span>
             </div>
-{%- if cookiecutter.enable_ai_agent %}
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">AI Framework</span>
               <Badge variant="secondary">{{ cookiecutter.ai_framework }}</Badge>
@@ -52,7 +51,6 @@ export default function SettingsPage() {
               <span className="text-muted-foreground">LLM Provider</span>
               <Badge variant="secondary">{{ cookiecutter.llm_provider }}</Badge>
             </div>
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Vector Store</span>

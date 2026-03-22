@@ -54,7 +54,6 @@ async def create(
     hashed_password: str | None,
     full_name: str | None = None,
     is_active: bool = True,
-    is_superuser: bool = False,
     role: str = "user",
 {%- if cookiecutter.enable_oauth %}
     oauth_provider: str | None = None,
@@ -70,7 +69,6 @@ async def create(
         hashed_password=hashed_password,
         full_name=full_name,
         is_active=is_active,
-        is_superuser=is_superuser,
         role=role,
 {%- if cookiecutter.enable_oauth %}
         oauth_provider=oauth_provider,
@@ -100,6 +98,15 @@ async def update(
     await db.flush()
     await db.refresh(db_user)
     return db_user
+
+
+async def update_avatar(db: AsyncSession, user_id: UUID, avatar_url: str) -> User:
+    """Update a user's avatar URL."""
+    user = await db.get(User, user_id)
+    user.avatar_url = avatar_url
+    await db.flush()
+    await db.refresh(user)
+    return user
 
 
 async def delete(db: AsyncSession, user_id: UUID) -> User | None:
@@ -165,7 +172,6 @@ def create(
     hashed_password: str | None,
     full_name: str | None = None,
     is_active: bool = True,
-    is_superuser: bool = False,
     role: str = "user",
 {%- if cookiecutter.enable_oauth %}
     oauth_provider: str | None = None,
@@ -181,7 +187,6 @@ def create(
         hashed_password=hashed_password,
         full_name=full_name,
         is_active=is_active,
-        is_superuser=is_superuser,
         role=role,
 {%- if cookiecutter.enable_oauth %}
         oauth_provider=oauth_provider,
@@ -266,7 +271,6 @@ async def create(
     hashed_password: str | None,
     full_name: str | None = None,
     is_active: bool = True,
-    is_superuser: bool = False,
     role: str = "user",
 {%- if cookiecutter.enable_oauth %}
     oauth_provider: str | None = None,
@@ -282,7 +286,6 @@ async def create(
         hashed_password=hashed_password,
         full_name=full_name,
         is_active=is_active,
-        is_superuser=is_superuser,
         role=role,
 {%- if cookiecutter.enable_oauth %}
         oauth_provider=oauth_provider,

@@ -66,7 +66,7 @@ def get_retrieval_service() -> "BaseRetrievalService":
 
 async def search_knowledge_base(
     query: str,
-    collection: str = "documents",
+    collection: str | None = None,
     collections: list[str] | None = None,
     top_k: int = 5,
 ) -> str:
@@ -74,14 +74,19 @@ async def search_knowledge_base(
 
     Args:
         query: The search query string.
-        collection: Name of a single collection to search (default: "documents").
+        collection: Name of a single collection. If None, uses RAG_DEFAULT_COLLECTION env var.
         collections: List of collection names for cross-collection search (overrides collection).
         top_k: Number of top results to retrieve (default: 5).
 
     Returns:
         Formatted string with search results including citations.
     """
+    import os
+
     service = get_retrieval_service()
+
+    default_collection = os.environ.get("RAG_DEFAULT_COLLECTION", "all")
+    target_collection = collection or default_collection
 
     if collections and len(collections) > 1:
         results = await service.retrieve_multi(
@@ -89,11 +94,22 @@ async def search_knowledge_base(
             collection_names=collections,
             limit=top_k,
         )
+    elif target_collection == "all":
+        try:
+            all_collections = await service.store.list_collections()
+            if not all_collections:
+                return "No collections found in the knowledge base."
+            if len(all_collections) == 1:
+                results = await service.retrieve(query=query, collection_name=all_collections[0], limit=top_k)
+            else:
+                results = await service.retrieve_multi(query=query, collection_names=all_collections, limit=top_k)
+        except Exception as e:
+            logger.error(f"Failed to list collections: {e}")
+            return f"Error accessing knowledge base: {e}"
     else:
-        target = collections[0] if collections else collection
         results = await service.retrieve(
             query=query,
-            collection_name=target,
+            collection_name=target_collection,
             limit=top_k,
         )
 
@@ -124,7 +140,7 @@ async def search_knowledge_base(
 
 def _run_async_search(query: str, collection: str, top_k: int) -> str:
     """Run async search in a dedicated event loop within a thread.
-    
+
     This creates a fresh event loop for each call, avoiding event loop
     conflicts with the main thread or other async contexts.
     """
@@ -191,7 +207,7 @@ class SearchDocumentsInput(BaseModel):
     top_k: int = Field(default=5, description="Number of top results to return")
 
 class SearchKnowledgeBase(BaseTool):
-    """Search the knowledge base and return formatted results.    
+    """Search the knowledge base and return formatted results.
     """
     name: str = "search_documents"
     description: str = (
@@ -207,7 +223,7 @@ class SearchKnowledgeBase(BaseTool):
     async def _arun(self, query: str, collection: str = "documents", top_k: int = 5) -> str:
         # Async version
         return await search_knowledge_base(query, collection, top_k)
-    
+
 {%- else %}
 __all__ = ["search_knowledge_base", "search_knowledge_base_sync"]
 {%- endif %}

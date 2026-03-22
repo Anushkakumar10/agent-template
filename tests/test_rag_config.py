@@ -11,6 +11,7 @@ from fastapi_gen.config import (
     PdfParserType,
     ProjectConfig,
     RAGFeatures,
+    RerankerType,
     VectorStoreType,
 )
 
@@ -18,35 +19,21 @@ from fastapi_gen.config import (
 class TestRAGValidation:
     """Tests for RAG-related validation rules."""
 
-    def test_rag_requires_ai_agent(self) -> None:
-        """Test that RAG requires AI agent to be enabled."""
-        with pytest.raises(ValidationError, match="RAG requires AI agent"):
-            ProjectConfig(
-                project_name="test_rag",
-                enable_ai_agent=False,
-                rag_features=RAGFeatures(enable_rag=True),
-                background_tasks=BackgroundTaskType.CELERY,
-                enable_redis=True,
-                enable_docker=True,
-            )
-
-    def test_rag_requires_background_tasks(self) -> None:
-        """Test that RAG requires a background task system."""
-        with pytest.raises(ValidationError, match="RAG requires a background task system"):
-            ProjectConfig(
-                project_name="test_rag",
-                enable_ai_agent=True,
-                rag_features=RAGFeatures(enable_rag=True),
-                background_tasks=BackgroundTaskType.NONE,
-                enable_docker=True,
-            )
+    def test_rag_works_without_background_tasks(self) -> None:
+        """Test that RAG works with BackgroundTasks (no Celery required)."""
+        config = ProjectConfig(
+            project_name="test_rag",
+            rag_features=RAGFeatures(enable_rag=True),
+            background_tasks=BackgroundTaskType.NONE,
+            enable_docker=True,
+        )
+        assert config.rag_features.enable_rag is True
 
     def test_rag_requires_docker(self) -> None:
         """Test that RAG with Milvus requires Docker."""
         with pytest.raises(ValidationError, match="RAG.*requires Docker"):
             ProjectConfig(
                 project_name="test_rag",
-                enable_ai_agent=True,
                 rag_features=RAGFeatures(enable_rag=True),
                 background_tasks=BackgroundTaskType.CELERY,
                 enable_redis=True,
@@ -62,7 +49,6 @@ class TestRAGValidation:
                 enable_google_drive_ingestion=True,
             ),
             oauth_provider=OAuthProvider.NONE,
-            enable_ai_agent=True,
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
             enable_docker=True,
@@ -73,7 +59,6 @@ class TestRAGValidation:
         """Test that RAG is valid when all requirements are met."""
         config = ProjectConfig(
             project_name="test_rag",
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
@@ -89,7 +74,6 @@ class TestEmbeddingProviderAutoDerivation:
         """Test that Anthropic LLM provider derives Voyage embeddings."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.ANTHROPIC,
             rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
@@ -105,7 +89,6 @@ class TestEmbeddingProviderAutoDerivation:
         """Test that OpenRouter LLM provider derives Sentence Transformers embeddings."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.OPENROUTER,
             rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
@@ -121,7 +104,6 @@ class TestEmbeddingProviderAutoDerivation:
         """Test that OpenAI LLM provider derives OpenAI embeddings."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.OPENAI,
             rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
@@ -140,9 +122,8 @@ class TestRerankerAutoDerivation:
         """Test that OpenRouter LLM provider derives Cross Encoder reranker."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.OPENROUTER,
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=True),
+            rag_features=RAGFeatures(enable_rag=True, reranker_type=RerankerType.CROSS_ENCODER),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
             enable_docker=True,
@@ -153,9 +134,8 @@ class TestRerankerAutoDerivation:
         """Test that OpenAI LLM provider derives Cohere reranker."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.OPENAI,
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=True),
+            rag_features=RAGFeatures(enable_rag=True, reranker_type=RerankerType.COHERE),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
             enable_docker=True,
@@ -166,9 +146,8 @@ class TestRerankerAutoDerivation:
         """Test that Anthropic LLM provider derives Cohere reranker."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.ANTHROPIC,
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=True),
+            rag_features=RAGFeatures(enable_rag=True, reranker_type=RerankerType.COHERE),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
             enable_docker=True,
@@ -183,7 +162,6 @@ class TestRAGCookiecutterContext:
         """Test RAG enabled sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
@@ -203,6 +181,7 @@ class TestRAGCookiecutterContext:
         config = ProjectConfig(
             project_name="test",
             rag_features=RAGFeatures(enable_rag=False),
+            background_tasks=BackgroundTaskType.NONE,
         )
         context = config.to_cookiecutter_context()
 
@@ -217,7 +196,6 @@ class TestRAGCookiecutterContext:
         """Test Voyage embeddings sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.ANTHROPIC,  # Derives Voyage embeddings
             rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
@@ -234,7 +212,6 @@ class TestRAGCookiecutterContext:
         """Test Sentence Transformers embeddings sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             llm_provider=LLMProviderType.OPENROUTER,  # Derives Sentence Transformers
             rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
@@ -251,8 +228,7 @@ class TestRAGCookiecutterContext:
         """Test reranker enabled sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=True),
+            rag_features=RAGFeatures(enable_rag=True, reranker_type=RerankerType.COHERE),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
             enable_docker=True,
@@ -267,8 +243,7 @@ class TestRAGCookiecutterContext:
         """Test reranker disabled sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=False),
+            rag_features=RAGFeatures(enable_rag=True),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
             enable_docker=True,
@@ -283,9 +258,8 @@ class TestRAGCookiecutterContext:
         """Test Cross Encoder reranker sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
-            llm_provider=LLMProviderType.OPENROUTER,  # Derives Cross Encoder
-            rag_features=RAGFeatures(enable_rag=True, enable_reranker=True),
+            llm_provider=LLMProviderType.OPENROUTER,
+            rag_features=RAGFeatures(enable_rag=True, reranker_type=RerankerType.CROSS_ENCODER),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
             enable_docker=True,
@@ -299,7 +273,6 @@ class TestRAGCookiecutterContext:
         """Test LlamaParse document parser sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True, pdf_parser=PdfParserType.LLAMAPARSE),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
@@ -315,7 +288,6 @@ class TestRAGCookiecutterContext:
         """Test PyMuPDF document parser sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True),
             pdf_parser=PdfParserType.PYMUPDF,
             background_tasks=BackgroundTaskType.CELERY,
@@ -332,7 +304,6 @@ class TestRAGCookiecutterContext:
         """Test Google Drive ingestion sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True, enable_google_drive_ingestion=True),
             oauth_provider=OAuthProvider.GOOGLE,
             background_tasks=BackgroundTaskType.CELERY,
@@ -347,7 +318,6 @@ class TestRAGCookiecutterContext:
         """Test Google Drive ingestion disabled sets correct context flags."""
         config = ProjectConfig(
             project_name="test",
-            enable_ai_agent=True,
             rag_features=RAGFeatures(enable_rag=True, enable_google_drive_ingestion=False),
             background_tasks=BackgroundTaskType.CELERY,
             enable_redis=True,
@@ -366,7 +336,7 @@ class TestRAGFeaturesModel:
         features = RAGFeatures()
         assert features.enable_rag is False
         assert features.enable_google_drive_ingestion is False
-        assert features.enable_reranker is False
+        assert features.reranker_type == RerankerType.NONE
         assert features.vector_store == VectorStoreType.MILVUS
 
     def test_rag_features_custom_values(self) -> None:
@@ -374,10 +344,10 @@ class TestRAGFeaturesModel:
         features = RAGFeatures(
             enable_rag=True,
             enable_google_drive_ingestion=True,
-            enable_reranker=True,
+            reranker_type=RerankerType.COHERE,
             vector_store=VectorStoreType.MILVUS,
         )
         assert features.enable_rag is True
         assert features.enable_google_drive_ingestion is True
-        assert features.enable_reranker is True
+        assert features.reranker_type == RerankerType.COHERE
         assert features.vector_store == VectorStoreType.MILVUS

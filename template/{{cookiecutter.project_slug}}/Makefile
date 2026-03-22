@@ -4,13 +4,16 @@
 {%- if cookiecutter.enable_docker %}
 quickstart: install docker-up
 {%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
-	@echo "Waiting for services to be ready..."
-	@sleep 3
-	uv run --directory backend {{ cookiecutter.project_slug }} db upgrade || true
+	@echo "Waiting for database to be ready..."
+	@sleep 8
+	@echo "Creating initial migration..."
+	cd backend && uv run {{ cookiecutter.project_slug }} db migrate -m "initial" || true
+	@echo "Applying migrations..."
+	cd backend && uv run {{ cookiecutter.project_slug }} db upgrade
 {%- endif %}
 {%- if cookiecutter.use_jwt %}
 	@echo "Creating admin user (admin@example.com / admin123)..."
-	uv run --directory backend {{ cookiecutter.project_slug }} user create --email admin@example.com --password admin123 --superuser 2>/dev/null || true
+	cd backend && uv run {{ cookiecutter.project_slug }} user create --email admin@example.com --password admin123 --superuser 2>/dev/null || true
 {%- endif %}
 	@echo ""
 	@echo "🚀 Ready! All services running:"
@@ -76,13 +79,15 @@ test-cov:
 {%- if cookiecutter.use_postgresql and cookiecutter.enable_docker %}
 db-init: docker-db
 	@echo "Waiting for PostgreSQL to be ready..."
-	@sleep 3
-	uv run --directory backend {{ cookiecutter.project_slug }} db upgrade
+	@sleep 8
+	cd backend && uv run {{ cookiecutter.project_slug }} db migrate -m "initial" || true
+	cd backend && uv run {{ cookiecutter.project_slug }} db upgrade
 	@echo ""
 	@echo "✅ Database initialized!"
 {%- else %}
 db-init:
-	uv run --directory backend {{ cookiecutter.project_slug }} db upgrade
+	cd backend && uv run {{ cookiecutter.project_slug }} db migrate -m "initial" || true
+	cd backend && uv run {{ cookiecutter.project_slug }} db upgrade
 	@echo ""
 	@echo "✅ Database initialized!"
 {%- endif %}
@@ -318,6 +323,16 @@ help:
 	@echo "  make create-admin  Create admin user (for SQLAdmin access)"
 	@echo "  make user-create   Create new user (interactive)"
 	@echo "  make user-list     List all users"
+	@echo ""
+{%- endif %}
+{%- if cookiecutter.enable_rag %}
+	@echo "RAG:"
+	@echo "  uv run {{ cookiecutter.project_slug }} rag-ingest <path> -c <collection>  Ingest files"
+	@echo "  uv run {{ cookiecutter.project_slug }} rag-search <query> -c <collection>  Search"
+	@echo "  uv run {{ cookiecutter.project_slug }} rag-collections                     List collections"
+	@echo "  uv run {{ cookiecutter.project_slug }} rag-sources                         List sync sources"
+	@echo "  uv run {{ cookiecutter.project_slug }} rag-source-add                      Add sync source"
+	@echo "  uv run {{ cookiecutter.project_slug }} rag-source-sync <id>                Trigger sync"
 	@echo ""
 {%- endif %}
 {%- if cookiecutter.use_celery %}

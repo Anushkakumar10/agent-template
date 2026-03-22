@@ -86,10 +86,10 @@ These variables are set automatically by the generator.
 
 | Variable | Type | Default | Description | Dependencies |
 |----------|------|---------|-------------|--------------|
-| `auth` | enum | `"jwt"` | Authentication type. Values: `jwt`, `api_key`, `none` | - |
-| `use_jwt` | bool | `true` | JWT authentication is selected | Computed from `auth` |
-| `use_api_key` | bool | `false` | API Key authentication is selected | Computed from `auth` |
-| `use_auth` | bool | `true` | Any authentication is enabled | Computed from `auth` |
+| `auth` | string | `"both"` | Authentication mode (always "both" = JWT + API Key) | Always "both" |
+| `use_jwt` | bool | `true` | JWT authentication is enabled | Always true |
+| `use_api_key` | bool | `true` | API Key authentication is enabled | Always true |
+| `use_auth` | bool | `true` | Authentication is enabled | Always true |
 
 ---
 
@@ -182,9 +182,10 @@ These variables are set automatically by the generator.
 | `enable_file_storage` | bool | `false` | Enable file upload/storage | - |
 | `enable_cors` | bool | `true` | Enable CORS middleware | - |
 | `enable_orjson` | bool | `true` | Use orjson for faster JSON serialization | - |
-| `enable_i18n` | bool | `false` | Enable internationalization | - |
-| `include_example_crud` | bool | `true` | Include example CRUD endpoints | Requires database |
 | `enable_webhooks` | bool | `false` | Enable webhook support | - |
+| `enable_conversation_persistence` | bool | `true` | Enable conversation persistence (always enabled) | Always true |
+| `include_example_crud` | bool | `false` | Include example CRUD endpoints (always disabled) | Always false |
+| `enable_i18n` | bool | `true` | Enable internationalization in frontend (always enabled) | Always true |
 
 ---
 
@@ -206,13 +207,15 @@ These variables are set automatically by the generator.
 | `enable_reranker` | bool | `false` | Enable reranker for search results (set via `--reranker` CLI flag) | Computed from `--reranker` CLI flag |
 | `use_cohere_reranker` | bool | `false` | Cohere reranker is selected | Computed from `--reranker` CLI flag |
 | `use_cross_encoder_reranker` | bool | `false` | Cross-encoder reranker (sentence-transformers) is selected | Computed from `--reranker` CLI flag |
-| `pdf_parser` | enum | `"pymupdf"` | PDF parsing method. Values: `pymupdf`, `liteparse`, `llamaparse` | Requires RAG |
+| `pdf_parser` | enum | `"pymupdf"` | PDF parsing method. Values: `pymupdf`, `liteparse`, `llamaparse`, `all` | Requires RAG |
+| `use_pymupdf` | bool | `false` | PyMuPDF (local) is selected for PDF parsing | Computed from `pdf_parser` |
 | `use_llamaparse` | bool | `false` | LlamaParse (cloud AI) is selected for PDF parsing | Computed from `pdf_parser` |
 | `use_liteparse` | bool | `false` | LiteParse (local AI-native) is selected for PDF parsing | Computed from `pdf_parser` |
+| `use_all_pdf_parsers` | bool | `false` | All PDF parsers installed, runtime selection via PDF_PARSER env var | Computed from `pdf_parser` |
 | `use_python_parser` | bool | `true` | Python-based parsing is selected (always true for non-PDF) | Always true |
 | `enable_google_drive_ingestion` | bool | `false` | Enable Google Drive as document source | Requires RAG |
 | `enable_s3_ingestion` | bool | `false` | Enable S3/MinIO as document source | Requires RAG |
-| `enable_rag_image_description` | bool | `false` | Extract images from documents and describe via LLM vision API | Requires RAG + AI agent |
+| `enable_rag_image_description` | bool | `false` | Extract images from documents and describe via LLM vision API | Requires RAG |
 
 **Notes:**
 
@@ -229,21 +232,19 @@ These variables are set automatically by the generator.
 
 | Variable | Type | Default | Description | Dependencies |
 |----------|------|---------|-------------|--------------|
-| `enable_ai_agent` | bool | `false` | Enable AI agent functionality | - |
-| `ai_framework` | enum | `"pydantic_ai"` | AI framework. Values: `pydantic_ai`, `langchain`, `langgraph`, `crewai`, `deepagents` | Requires `enable_ai_agent` |
+| `ai_framework` | enum | `"pydantic_ai"` | AI framework. Values: `pydantic_ai`, `langchain`, `langgraph`, `crewai`, `deepagents` | - |
 | `use_pydantic_ai` | bool | `true` | PydanticAI is selected | Computed from `ai_framework` |
 | `use_langchain` | bool | `false` | LangChain is selected | Computed from `ai_framework` |
 | `use_langgraph` | bool | `false` | LangGraph (ReAct agent) is selected | Computed from `ai_framework` |
 | `use_crewai` | bool | `false` | CrewAI (multi-agent crews) is selected | Computed from `ai_framework` |
 | `use_deepagents` | bool | `false` | DeepAgents (agentic coding) is selected | Computed from `ai_framework` |
-| `llm_provider` | enum | `"openai"` | LLM provider. Values: `openai`, `anthropic`, `google`, `openrouter` | Requires `enable_ai_agent` |
+| `llm_provider` | enum | `"openai"` | LLM provider. Values: `openai`, `anthropic`, `google`, `openrouter` | - |
 | `use_openai` | bool | `true` | OpenAI is selected | Computed from `llm_provider` |
 | `use_anthropic` | bool | `false` | Anthropic is selected | Computed from `llm_provider` |
 | `use_google` | bool | `false` | Google Gemini is selected | Computed from `llm_provider` |
 | `use_openrouter` | bool | `false` | OpenRouter is selected | Computed from `llm_provider` |
-| `enable_conversation_persistence` | bool | `false` | Persist AI conversations to database | Requires `enable_ai_agent` and database |
 | `enable_langsmith` | bool | `false` | Enable LangSmith observability (tracing, prompt management) | Requires LangChain, LangGraph, or DeepAgents |
-| `enable_web_search` | bool | `false` | Enable Tavily web search tool for AI agents | Requires `enable_ai_agent` |
+| `enable_web_search` | bool | `false` | Enable Tavily web search tool for AI agents | - |
 
 **Notes:**
 
@@ -259,10 +260,10 @@ These variables are set automatically by the generator.
 
 | Variable | Type | Default | Description | Dependencies |
 |----------|------|---------|-------------|--------------|
-| `websocket_auth` | enum | `"none"` | WebSocket authentication. Values: `jwt`, `api_key`, `none` | Requires `enable_websockets` |
-| `websocket_auth_jwt` | bool | `false` | JWT auth for WebSocket | Computed from `websocket_auth` |
-| `websocket_auth_api_key` | bool | `false` | API Key auth for WebSocket | Computed from `websocket_auth` |
-| `websocket_auth_none` | bool | `true` | No auth for WebSocket | Computed from `websocket_auth` |
+| `websocket_auth` | enum | `"jwt"` | WebSocket authentication | Always `jwt` |
+| `websocket_auth_jwt` | bool | `true` | JWT auth for WebSocket | Always true |
+| `websocket_auth_api_key` | bool | `false` | API Key auth for WebSocket | Always false |
+| `websocket_auth_none` | bool | `false` | No auth for WebSocket | Always false |
 
 ---
 

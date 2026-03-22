@@ -165,7 +165,7 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{user.email}</h1>
             <div className="mt-1 flex items-center gap-2">
-              {user.is_superuser && (
+              {user.role === "admin" && (
                 <Badge variant="secondary"><Shield className="mr-1 h-3 w-3" />Admin</Badge>
               )}
               {user.is_active && (

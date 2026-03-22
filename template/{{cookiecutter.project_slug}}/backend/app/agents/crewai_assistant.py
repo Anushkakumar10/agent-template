@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_crewai %}
+{%- if cookiecutter.use_crewai %}
 """CrewAI Multi-Agent implementation.
 
 A multi-agent orchestration framework using CrewAI.

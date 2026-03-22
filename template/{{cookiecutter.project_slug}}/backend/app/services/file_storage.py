@@ -1,4 +1,3 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.enable_conversation_persistence %}
 """File storage service for chat file uploads.
 
 Supports local filesystem storage.
@@ -100,4 +99,3 @@ def get_file_storage() -> BaseFileStorage:
     from app.core.config import settings
     media_dir = getattr(settings, "MEDIA_DIR", "media")
     return LocalFileStorage(base_dir=media_dir)
-{%- endif %}

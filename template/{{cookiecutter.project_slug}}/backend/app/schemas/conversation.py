@@ -1,4 +1,3 @@
-{%- if cookiecutter.enable_conversation_persistence %}
 """Conversation schemas for AI chat persistence.
 
 This module contains Pydantic schemas for Conversation, Message, and ToolCall entities.
@@ -12,6 +11,9 @@ from uuid import UUID
 {%- endif %}
 
 from pydantic import Field
+{%- if cookiecutter.use_sqlite %}
+from pydantic import field_validator
+{%- endif %}
 
 from app.schemas.base import BaseSchema, TimestampSchema
 
@@ -25,6 +27,21 @@ class ToolCallBase(BaseSchema):
     tool_call_id: str = Field(..., description="External tool call ID from AI framework")
     tool_name: str = Field(..., max_length=100, description="Name of the tool called")
     args: dict = Field(default_factory=dict, description="Tool arguments")
+
+{%- if cookiecutter.use_sqlite %}
+
+    @field_validator("args", mode="before")
+    @classmethod
+    def deserialize_args(cls, v: object) -> dict:
+        """Deserialize args from JSON string (SQLite stores as TEXT)."""
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return v if isinstance(v, dict) else {}
+{%- endif %}
 
 
 class ToolCallCreate(ToolCallBase):
@@ -192,7 +209,3 @@ class ConversationWithLatestMessage(ConversationRead):
 
     latest_message: MessageReadSimple | None = None
     message_count: int = 0
-
-{%- else %}
-"""Conversation schemas - not configured."""
-{%- endif %}

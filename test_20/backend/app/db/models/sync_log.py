@@ -21,8 +21,12 @@ class SyncLog(TimestampMixin, SQLModel, table=True):
     )
     source: str = Field(sa_column=Column(String(20), nullable=False))  # local, gdrive, s3, upload
     collection_name: str = Field(sa_column=Column(String(255), nullable=False, index=True))
-    status: str = Field(default="running", sa_column=Column(String(20), nullable=False, default="running"))  # running, done, error
-    mode: str = Field(default="full", sa_column=Column(String(20), nullable=False, default="full"))  # full, new_only, update_only
+    status: str = Field(
+        default="running", sa_column=Column(String(20), nullable=False, default="running")
+    )  # running, done, error
+    mode: str = Field(
+        default="full", sa_column=Column(String(20), nullable=False, default="full")
+    )  # full, new_only, update_only
     total_files: int = Field(default=0, sa_column=Column(Integer, nullable=False, default=0))
     ingested: int = Field(default=0, sa_column=Column(Integer, nullable=False, default=0))
     updated: int = Field(default=0, sa_column=Column(Integer, nullable=False, default=0))

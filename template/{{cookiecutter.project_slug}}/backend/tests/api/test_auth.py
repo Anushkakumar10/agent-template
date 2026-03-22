@@ -24,13 +24,13 @@ class MockUser:
         email="test@example.com",
         full_name="Test User",
         is_active=True,
-        is_superuser=False,
+        role="user",
     ):
         self.id = id or uuid4()
         self.email = email
         self.full_name = full_name
         self.is_active = is_active
-        self.is_superuser = is_superuser
+        self.role = role
         self.hashed_password = "hashed"
         self.created_at = datetime.now(UTC)
         self.updated_at = datetime.now(UTC)

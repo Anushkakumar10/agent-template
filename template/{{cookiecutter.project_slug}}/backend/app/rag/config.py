@@ -15,6 +15,39 @@ class DocumentExtensions(StrEnum):
     TXT = ".txt"
 
 
+# Supported file formats per parser
+PYMUPDF_FORMATS: set[str] = {".pdf", ".docx", ".txt", ".md"}
+
+LITEPARSE_FORMATS: set[str] = {
+    ".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md",
+    ".jpg", ".jpeg", ".png", ".tiff",
+}
+
+LLAMAPARSE_FORMATS: set[str] = {
+    # Documents
+    ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".rtf", ".txt", ".md", ".epub",
+    # Images
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp",
+    # Spreadsheets
+    ".xlsx", ".xls", ".csv", ".tsv", ".ods",
+    # Audio
+    ".mp3", ".mp4", ".wav", ".m4a", ".webm",
+    # Web
+    ".html", ".htm", ".xml",
+}
+
+PARSER_FORMATS: dict[str, set[str]] = {
+    "pymupdf": PYMUPDF_FORMATS,
+    "liteparse": LITEPARSE_FORMATS,
+    "llamaparse": LLAMAPARSE_FORMATS,
+}
+
+
+def get_supported_formats(parser_name: str = "pymupdf") -> set[str]:
+    """Get supported file formats for a given parser."""
+    return PARSER_FORMATS.get(parser_name, PYMUPDF_FORMATS)
+
+
 # Known embedding models and their output dimensions.
 # Used to auto-set vector store dimension from model name.
 EMBEDDING_DIMENSIONS: dict[str, int] = {
@@ -83,7 +116,11 @@ class DocumentParser(BaseModel):
 class PdfParser(BaseModel):
     """PDF parsing settings."""
 
-{%- if cookiecutter.use_llamaparse %}
+{%- if cookiecutter.use_all_pdf_parsers %}
+    method: str = "pymupdf"  # Runtime: pymupdf, llamaparse, liteparse
+    api_key: str = ""
+    tier: str = "agentic"
+{%- elif cookiecutter.use_llamaparse %}
     method: str = "llamaparse"
     api_key: str = ""
     tier: str = "agentic"

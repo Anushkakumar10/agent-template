@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.2] - 2026-03-20
 
+### Changed — CLI Simplification (Breaking)
+
+The interactive wizard and CLI have been significantly simplified. Many options that were previously user-configurable are now always enabled or have sensible defaults. This reduces decision fatigue and eliminates invalid configuration combinations.
+
+- **AI Agent always enabled** — Removed `enable_ai_agent` option. AI agent with WebSocket streaming is always included. Stripped `{%- if cookiecutter.enable_ai_agent %}` conditionals from 53 template files.
+- **Auth always JWT + API Key** — Removed `AuthType` enum and `--auth` CLI option. JWT (user management, login, roles) + API Key (utility for programmatic access) are always included. Stripped `WebSocketAuthType` — WebSocket always uses JWT.
+- **Database always required** — Removed `DatabaseType.NONE` and `--database none`. JWT needs user storage. Minimal preset now uses SQLite.
+- **Conversation persistence always on** — Removed `enable_conversation_persistence` option. Chat history always saved to database. Stripped 139 template conditionals.
+- **i18n always enabled** — Removed `enable_i18n` option. `next-intl` always included with `[locale]` routing. Stripped 50 template conditionals.
+- **Example CRUD removed** — Removed `include_example_crud` option. Item model/routes/tests no longer generated. Post-gen hook always cleans up CRUD files.
+- **Session management defaults to enabled** — Changed default from `False` to `True`.
+- **Admin panel simplified** — Removed `AdminEnvironmentType` enum and auth config prompts. Admin panel always uses `dev_staging` environment restriction and always requires auth. Checkbox label clarified: "SQL Admin Panel (SQLAdmin) — web UI for browsing/editing database tables".
+- **Background tasks default Celery** — Changed default from `None` to `Celery`. Celery is first option in wizard (was last). `None` option kept for projects without Redis.
+
+### Added
+
+#### CLI
+
+- **`--s3-rag` flag** — Enable S3/MinIO document ingestion from CLI (previously only available in interactive mode)
+- **S3 ingestion prompt** — Interactive wizard now asks "Enable S3/MinIO document ingestion?"
+- **Image description prompt** — Interactive wizard now asks "Enable image description in documents?" for RAG
+- **Reranker type selection** — Replaced boolean `--reranker` with proper `RerankerType` enum. User's choice (Cohere vs Cross-Encoder) is now preserved instead of being auto-determined by LLM provider
+- **PDF Parser "All" option** — New option installs all 3 parsers (PyMuPDF, LiteParse, LlamaParse). Runtime selection via `PDF_PARSER` and `CHAT_PDF_PARSER` env vars. `PdfParserFactory` creates parser on demand
+- **RAG without Celery** — RAG now works with `BackgroundTasks` (no Celery/Taskiq/ARQ required). Ingestion and sync run in-process via FastAPI `BackgroundTasks`. Removed validation that blocked RAG without a task queue
+- **Retry, sync logs, cancel endpoints always available** — Previously gated behind Celery/Taskiq/ARQ, now work with any background task backend
+
+#### Backend
+
+- **`CHAT_PDF_PARSER` env var** — Separate parser config for chat file attachments (independent from RAG ingestion). Defaults to `pymupdf` for speed
+- **`PdfParserFactory`** — Factory class for runtime PDF parser selection when "All" parsers installed
+- **Conversation IDOR protection** — `get_conversation()` now validates `user_id` ownership. Users can only access their own conversations
+- **OAuth null password guard** — `authenticate()` checks `user.hashed_password is not None` before `verify_password()`. Prevents crash for OAuth-only users
+- **ChatFile cascade delete** — Added `ondelete="CASCADE"` to `user_id` and `message_id` foreign keys in all 4 DB variants
+- **SQLite ToolCall args deserialization** — Added `field_validator` on `ToolCallBase.args` that deserializes JSON strings for SQLite compatibility
+- **Embedding dimension validation** — Runtime check in `EmbeddingService` that embedding output matches configured `dim`. Raises `ValueError` on mismatch
+- **Collection name validation** — Regex check `^[a-zA-Z][a-zA-Z0-9_]{0,63}$` on collection creation. Prevents SQL injection in pgvector and invalid names
+- **Vector store connection cleanup** — Qdrant `client.close()` and PgVector `engine.dispose()` in lifespan shutdown
+
+#### RAG
+
+- **ChromaDB async compliance** — All ChromaDB operations wrapped in `asyncio.to_thread()` to avoid blocking the event loop
+- **ChromaDB `_ensure_collection()`** — Added missing method. `POST /collections/{name}` now works with ChromaDB
+- **ChromaDB filter support** — `search()` now parses `parent_doc_id` filter and passes as ChromaDB `where` clause
+- **ChromaDB consistent metadata** — Now uses `_build_chunk_metadata()` (same as Milvus/Qdrant/pgvector)
+- **Qdrant filter support** — `search()` now parses filter string and passes as `query_filter` with `FieldCondition`
+- **RRF fusion key fix** — Changed merge key from `content[:100]` (collision-prone) to `parent_doc_id:chunk_num`
+
+#### Frontend
+
+- **Refresh token rotation** — `/api/auth/refresh` now updates `refresh_token` cookie when backend returns a new one
+- **WebSocket connection guard** — Prevents orphaned WebSocket instances by checking `CONNECTING` state
+- **Scroll pagination guard** — Conversation sidebar scroll handler checks `isLoading` + fetch mutex prevents concurrent requests
+- **Message deduplication** — Chat messages cleared before loading conversation history, preventing duplicates on switch
+
+### Fixed
+
+- **Port validator** — Returns descriptive error messages ("Port must be between 1024 and 65535") instead of generic `False`
+- **Reverse proxy default** — `ReverseProxyType.NONE` when Docker disabled (was `TRAEFIK_INCLUDED`)
+- **OpenRouter validation** — Consolidated 4 separate checks into single message: "OpenRouter is only supported with PydanticAI, not {framework}"
+- **RAG prompt cancellation** — All questionary calls in `prompt_rag_config()` now wrapped with `_check_cancelled()`. Ctrl+C during RAG config shows "Cancelled." instead of crashing
+- **Stale docstring** — Removed bogus `Args: llm_provider` from `prompt_rag_config()` (function has no parameters)
+- **Hardcoded `lang="en"`** — Root layout now uses locale from i18n config
+- **Milvus version pinned** — Dev compose files use `v2.5.10` (was `latest`), matching production
+- **Frontend CI** — Added `bun run lint` and `bun run type-check` steps to CI pipeline
+- **Tailwind CSS** — Updated from `^4.0.0-beta.8` to `^4.0.0` (stable)
+- **SQLite WebSocket auth** — `contextmanager(get_db_session)()` pattern verified working with mypy
+- **`TYPE_CHECKING` import for ChatFile** — Added to SQLAlchemy PG and SQLite conversation model variants
+- **Duplicate import** — Removed duplicate `import Image from "next/image"` in `message-item.tsx`
+- **RAG search result off-by-one** — Fixed array indexing in expanded view, uses `.find()` by index value
+- **Login loading state** — `setLoading(false)` now in `finally` block (was only in `catch`)
+- **Refresh cookie clearing** — Cookie options (`httpOnly`, `secure`, `sameSite`) now consistent with logout route
+- **Tool call status fallback** — `statusConfig[status]` falls back to `pending` for unknown statuses
+
 ### Added
 
 #### Frontend — Landing Page
@@ -217,8 +290,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Inline `import logging` in routes** - Fixed: moved to module level
 - **Unconditional PDF parser import** - Fixed: conditional on `not use_llamaparse`
 - **Chat page not removed when i18n disabled** - Fixed: remove both `[locale]/` and direct paths
-- **`stores/index.ts` unconditional chat exports** - Fixed: gated behind `enable_ai_agent`
-- **`types/index.ts` unconditional chat export** - Fixed: gated behind `enable_ai_agent`
+- **`stores/index.ts` unconditional chat exports** - Fixed: previously gated behind `enable_ai_agent` (now always enabled)
+- **`types/index.ts` unconditional chat export** - Fixed: previously gated behind `enable_ai_agent` (now always enabled)
 - **`chat-sidebar-store.ts` not cleaned up** - Fixed: added to post-gen hook
 - **`rag/config.py` gated by `use_milvus`** - Fixed: changed to `enable_rag`
 - **Worker tasks gated by `use_milvus`** - Fixed: `rag_ingestion.py`, `celery_app.py`, `arq_app.py` changed to `enable_rag`
@@ -255,10 +328,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Frontend Template Fixes
 
-- **Sidebar "Chat" link visible without AI agent** - Chat navigation item now conditional on `enable_ai_agent`
-- **Frontend chat files not cleaned up** - Post-generation hook now removes chat page, components, hooks, types, and stores when `enable_ai_agent=False`
-- **Chat component exports unconditional** - `chat/index.ts` exports now wrapped in `enable_ai_agent` conditional
-- **Chat hook exports unconditional** - `hooks/index.ts` exports for `useWebSocket`, `useChat`, `useLocalChat` now conditional on `enable_ai_agent`
+- **Sidebar "Chat" link visible without AI agent** - Chat navigation item now always visible (AI agent is always enabled)
+- **Frontend chat files not cleaned up** - No longer applicable (AI agent is always enabled, chat files are always present)
+- **Chat component exports unconditional** - Chat exports are now always included (AI agent is always enabled)
+- **Chat hook exports unconditional** - Hook exports for `useWebSocket`, `useChat`, `useLocalChat` are now always included (AI agent is always enabled)
 - **`WS_URL` and `ROUTES.CHAT` always defined** - `constants.ts` now conditionally defines WebSocket URL and chat route only when AI agent is enabled
 
 ## [0.2.0] - 2026-02-27

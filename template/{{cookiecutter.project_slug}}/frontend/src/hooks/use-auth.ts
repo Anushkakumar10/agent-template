@@ -36,11 +36,12 @@ export function useAuth() {
           credentials
         );
         setUser(response.user);
-        router.push(ROUTES.DASHBOARD);
+        router.push(response.user.role === "admin" ? ROUTES.DASHBOARD : ROUTES.CHAT);
         return response;
       } catch (error) {
-        setLoading(false);
         throw error;
+      } finally {
+        setLoading(false);
       }
     },
     [router, setUser, setLoading]

@@ -1,4 +1,3 @@
-{%- if cookiecutter.enable_ai_agent %}
 # How to: Add a New Agent Tool
 
 ## Overview
@@ -79,4 +78,3 @@ Start the server and ask the agent: "What's the weather in Warsaw?"
 - Write clear docstrings — the agent uses them to decide when to call your tool
 - Handle errors gracefully — return error messages as strings, don't raise exceptions
 - For expensive operations, consider adding caching
-{%- endif %}

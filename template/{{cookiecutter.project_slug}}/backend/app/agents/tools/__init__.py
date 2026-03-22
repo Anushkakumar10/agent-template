@@ -1,4 +1,3 @@
-{%- if cookiecutter.enable_ai_agent %}
 """Agent tools module.
 
 This module contains utility functions that can be used as agent tools.
@@ -16,8 +15,4 @@ from app.agents.tools.rag_tool import search_knowledge_base, search_knowledge_ba
 __all__ = ["get_current_datetime", "search_knowledge_base", "search_knowledge_base_sync"]
 {%- else %}
 __all__ = ["get_current_datetime"]
-{%- endif %}
-
-{%- else %}
-"""Agent tools - not configured."""
 {%- endif %}

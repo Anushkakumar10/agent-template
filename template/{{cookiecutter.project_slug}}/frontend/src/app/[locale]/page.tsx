@@ -1,16 +1,12 @@
 import Link from "next/link";
-{%- if cookiecutter.enable_i18n %}
 import { getTranslations } from "next-intl/server";
-{%- endif %}
 import { Badge, buttonVariants } from "@/components/ui";
 import { LandingNav } from "@/components/layout/landing-nav";
 import { APP_NAME, APP_DESCRIPTION, ROUTES, BACKEND_URL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
-{%- if cookiecutter.enable_ai_agent %}
   Bot,
   Zap,
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
   Database,
 {%- endif %}
@@ -25,52 +21,46 @@ import {
 } from "lucide-react";
 
 export default async function HomePage() {
-{%- if cookiecutter.enable_i18n %}
   const t = await getTranslations("landing");
-{%- endif %}
 
   const features = [
-{%- if cookiecutter.enable_ai_agent %}
     {
       icon: Bot,
-      title: {% if cookiecutter.enable_i18n %}t("featureAiChat"){% else %}"AI-Powered Chat"{% endif %},
-      desc: {% if cookiecutter.enable_i18n %}t("featureAiChatDesc"){% else %}"Conversational AI assistant with real-time streaming, conversation history, and tool-calling capabilities."{% endif %},
+      title: t("featureAiChat"),
+      desc: t("featureAiChatDesc"),
       href: ROUTES.CHAT,
     },
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
     {
       icon: Database,
-      title: {% if cookiecutter.enable_i18n %}t("featureRag"){% else %}"Knowledge Base"{% endif %},
-      desc: {% if cookiecutter.enable_i18n %}t("featureRagDesc"){% else %}"Vector search across your documents with retrieval-augmented generation."{% endif %},
+      title: t("featureRag"),
+      desc: t("featureRagDesc"),
       href: ROUTES.RAG,
     },
 {%- endif %}
 {%- if cookiecutter.use_jwt or cookiecutter.use_api_key %}
     {
       icon: Shield,
-      title: {% if cookiecutter.enable_i18n %}t("featureAuth"){% else %}"Secure Authentication"{% endif %},
-      desc: {% if cookiecutter.enable_i18n %}t("featureAuthDesc"){% else %}"JWT-based auth with refresh tokens, OAuth integration, and role-based access control."{% endif %},
+      title: t("featureAuth"),
+      desc: t("featureAuthDesc"),
     },
 {%- endif %}
     {
       icon: LayoutDashboard,
-      title: {% if cookiecutter.enable_i18n %}t("featureDashboard"){% else %}"Dashboard"{% endif %},
-      desc: {% if cookiecutter.enable_i18n %}t("featureDashboardDesc"){% else %}"System health monitoring, user management, and statistics at a glance."{% endif %},
+      title: t("featureDashboard"),
+      desc: t("featureDashboardDesc"),
       href: ROUTES.DASHBOARD,
     },
     {
       icon: Server,
-      title: {% if cookiecutter.enable_i18n %}t("featureApi"){% else %}"REST API"{% endif %},
-      desc: {% if cookiecutter.enable_i18n %}t("featureApiDesc"){% else %}"Auto-documented FastAPI backend with OpenAPI specs and async database access."{% endif %},
+      title: t("featureApi"),
+      desc: t("featureApiDesc"),
     },
-{%- if cookiecutter.enable_ai_agent %}
     {
       icon: Zap,
-      title: {% if cookiecutter.enable_i18n %}t("featureRealtime"){% else %}"Real-time"{% endif %},
-      desc: {% if cookiecutter.enable_i18n %}t("featureRealtimeDesc"){% else %}"WebSocket-powered streaming for instant AI responses and live updates."{% endif %},
+      title: t("featureRealtime"),
+      desc: t("featureRealtimeDesc"),
     },
-{%- endif %}
   ];
 
   const techItems = [
@@ -88,19 +78,19 @@ export default async function HomePage() {
 {%- if cookiecutter.use_traefik %} "Traefik",{%- endif %}
 {%- if cookiecutter.use_jwt %} "JWT Auth",{%- endif %}
 {%- if cookiecutter.enable_oauth %} "OAuth2",{%- endif %}
-{%- if cookiecutter.enable_ai_agent %} "WebSockets",{%- endif %}
+ "WebSockets",
 {%- if cookiecutter.enable_logfire %} "Logfire", "OpenTelemetry",{%- endif %}
 {%- if cookiecutter.enable_rag %} "PyMuPDF", "BM25",{%- endif %}
-{%- if cookiecutter.enable_i18n %} "next-intl",{%- endif %}
+ "next-intl",
     "Pydantic v2", "Alembic", "Zustand", "TanStack Query", "Vitest",
   ];
 
   return (
     <div className="bg-background min-h-screen">
       <LandingNav
-        signInLabel={ {% if cookiecutter.enable_i18n %}t("signIn"){% else %}"Sign In"{% endif %}}
-        getStartedLabel={ {% if cookiecutter.enable_i18n %}t("getStarted"){% else %}"Get Started"{% endif %}}
-        dashboardLabel={ {% if cookiecutter.enable_i18n %}t("featureDashboard"){% else %}"Dashboard"{% endif %}}
+        signInLabel={ t("signIn")}
+        getStartedLabel={ t("getStarted")}
+        dashboardLabel={ t("featureDashboard")}
       />
 
       <main>
@@ -120,16 +110,16 @@ export default async function HomePage() {
             </div>
 
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              { {% if cookiecutter.enable_i18n %}t("heroTitle"){% else %}"Build Intelligent"{% endif %}}{" "}
+              { t("heroTitle")}{" "}
               <span className="bg-gradient-to-r from-brand to-brand-hover bg-clip-text text-transparent">
-                { {% if cookiecutter.enable_i18n %}t("heroHighlight"){% else %}"Applications"{% endif %}}
+                { t("heroHighlight")}
               </span>
               <br />
-              { {% if cookiecutter.enable_i18n %}t("heroTitleEnd"){% else %}"with Confidence"{% endif %}}
+              { t("heroTitleEnd")}
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              { {% if cookiecutter.enable_i18n %}t("heroSubtitle"){% else %}"A production-ready full-stack platform with AI-powered chat, knowledge base retrieval, secure authentication, and a modern dashboard."{% endif %}}
+              { t("heroSubtitle")}
             </p>
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -137,7 +127,7 @@ export default async function HomePage() {
                 href={ROUTES.{% if cookiecutter.use_jwt or cookiecutter.use_api_key %}REGISTER{% else %}DASHBOARD{% endif %}}
                 className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-3 text-base font-semibold text-brand-foreground transition-all hover:bg-brand-hover hover:shadow-lg"
               >
-                { {% if cookiecutter.enable_i18n %}t("getStarted"){% else %}"Get Started"{% endif %}}
+                { t("getStarted")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
 {%- if cookiecutter.use_jwt or cookiecutter.use_api_key %}
@@ -145,7 +135,7 @@ export default async function HomePage() {
                 href={ROUTES.LOGIN}
                 className="inline-flex items-center rounded-full border border-border bg-background/50 px-8 py-3 text-base font-semibold backdrop-blur-sm transition-all hover:border-border/80 hover:bg-background/80"
               >
-                { {% if cookiecutter.enable_i18n %}t("signIn"){% else %}"Sign In"{% endif %}}
+                { t("signIn")}
               </Link>
 {%- endif %}
             </div>
@@ -177,7 +167,7 @@ export default async function HomePage() {
                         href={feature.href}
                         className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-brand transition-colors hover:text-brand-hover"
                       >
-                        { {% if cookiecutter.enable_i18n %}t("learnMore"){% else %}"Learn More"{% endif %}}
+                        { t("learnMore")}
                         <ChevronRight className="h-3 w-3" />
                       </Link>
                     )}
@@ -192,7 +182,7 @@ export default async function HomePage() {
         <section className="border-t border-border/50 py-16 overflow-hidden">
           <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
             <h2 className="mb-10 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              { {% if cookiecutter.enable_i18n %}t("techStackTitle"){% else %}"Built with modern technologies"{% endif %}}
+              { t("techStackTitle")}
             </h2>
           </div>
           <div className="marquee-container">
@@ -217,24 +207,24 @@ export default async function HomePage() {
             </div>
             <div className="relative">
               <h2 className="mb-4 text-3xl font-bold tracking-tight">
-                { {% if cookiecutter.enable_i18n %}t("ctaTitle"){% else %}"Ready to get started?"{% endif %}}
+                { t("ctaTitle")}
               </h2>
               <p className="mx-auto mb-8 max-w-lg text-muted-foreground">
-                { {% if cookiecutter.enable_i18n %}t("ctaSubtitle"){% else %}"Create your account and start exploring the platform."{% endif %}}
+                { t("ctaSubtitle")}
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
                   href={ROUTES.{% if cookiecutter.use_jwt or cookiecutter.use_api_key %}REGISTER{% else %}DASHBOARD{% endif %}}
                   className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-3 text-base font-semibold text-brand-foreground transition-all hover:bg-brand-hover hover:shadow-lg"
                 >
-                  { {% if cookiecutter.enable_i18n %}t("createAccount"){% else %}"Get Started"{% endif %}}
+                  { t("createAccount")}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a
                   href={ `${BACKEND_URL}/docs`}
                   className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-8")}
                 >
-                  { {% if cookiecutter.enable_i18n %}t("exploreApi"){% else %}"Explore API"{% endif %}}
+                  { t("exploreApi")}
                 </a>
               </div>
             </div>
@@ -249,19 +239,17 @@ export default async function HomePage() {
             <div className="max-w-xs">
               <p className="text-lg font-bold tracking-tight">{APP_NAME}</p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                { {% if cookiecutter.enable_i18n %}t("footerDesc"){% else %}"Full-stack AI application platform with enterprise-grade features."{% endif %}}
+                { t("footerDesc")}
               </p>
             </div>
             <div className="flex gap-16">
               <div>
                 <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  { {% if cookiecutter.enable_i18n %}t("footerProduct"){% else %}"Product"{% endif %}}
+                  { t("footerProduct")}
                 </h4>
                 <ul className="space-y-2">
                   <li><Link href={ROUTES.DASHBOARD} className="text-sm text-muted-foreground transition-colors hover:text-foreground">Dashboard</Link></li>
-{%- if cookiecutter.enable_ai_agent %}
                   <li><Link href={ROUTES.CHAT} className="text-sm text-muted-foreground transition-colors hover:text-foreground">Chat</Link></li>
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
                   <li><Link href={ROUTES.RAG} className="text-sm text-muted-foreground transition-colors hover:text-foreground">Knowledge Base</Link></li>
 {%- endif %}
@@ -269,7 +257,7 @@ export default async function HomePage() {
               </div>
               <div>
                 <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  { {% if cookiecutter.enable_i18n %}t("footerResources"){% else %}"Resources"{% endif %}}
+                  { t("footerResources")}
                 </h4>
                 <ul className="space-y-2">
                   <li><a href={ `${BACKEND_URL}/docs`} className="text-sm text-muted-foreground transition-colors hover:text-foreground">API Docs</a></li>
@@ -284,7 +272,7 @@ export default async function HomePage() {
         <div className="border-t border-border/50">
           <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
             <p className="text-center text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} {APP_NAME}. { {% if cookiecutter.enable_i18n %}t("copyright"){% else %}"All rights reserved."{% endif %}}
+              &copy; {new Date().getFullYear()} {APP_NAME}. { t("copyright")}
             </p>
           </div>
         </div>

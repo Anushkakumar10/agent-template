@@ -8,7 +8,6 @@ import { CopyButton } from "./copy-button";
 import { User, Bot } from "lucide-react";
 import Image from "next/image";
 import { useAuthStore } from "@/stores";
-import Image from "next/image";
 import { getFileUrl } from "@/lib/file-api";
 
 interface MessageItemProps {

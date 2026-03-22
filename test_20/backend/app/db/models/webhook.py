@@ -63,7 +63,9 @@ class WebhookDelivery(SQLModel, table=True):
         sa_column=Column(PG_UUID(as_uuid=True), primary_key=True),
     )
     webhook_id: uuid.UUID = Field(
-        sa_column=Column(PG_UUID(as_uuid=True), ForeignKey("webhooks.id"), nullable=False, index=True),
+        sa_column=Column(
+            PG_UUID(as_uuid=True), ForeignKey("webhooks.id"), nullable=False, index=True
+        ),
     )
     event_type: str = Field(max_length=100)
     payload: str = Field(sa_column=Column(Text, nullable=False))

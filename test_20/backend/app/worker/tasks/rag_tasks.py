@@ -50,9 +50,8 @@ async def _run_ingestion(
     from uuid import UUID
 
     from app.core.config import settings
-    from app.db.session import get_db_context
     from app.db.models.rag_document import RAGDocument
-    from app.rag.config import RAGSettings
+    from app.db.session import get_db_context
     from app.rag.documents import DocumentProcessor
     from app.rag.embeddings import EmbeddingService
     from app.rag.ingestion import IngestionService
@@ -100,11 +99,11 @@ async def _run_ingestion(
 
 async def _update_status(rag_document_id: str, status: str, error_message: str | None = None):
     """Update RAGDocument status in DB."""
-    from datetime import UTC, datetime
+    from datetime import datetime
     from uuid import UUID
 
-    from app.db.session import get_db_context
     from app.db.models.rag_document import RAGDocument
+    from app.db.session import get_db_context
 
     try:
         async with get_db_context() as db:
@@ -112,7 +111,9 @@ async def _update_status(rag_document_id: str, status: str, error_message: str |
             if rag_doc:
                 rag_doc.status = status
                 rag_doc.error_message = error_message
-                rag_doc.completed_at = datetime.now(datetime.timezone.utc) if status in ("done", "error") else None
+                rag_doc.completed_at = (
+                    datetime.now(datetime.timezone.utc) if status in ("done", "error") else None
+                )
                 await db.commit()
     except Exception as e:
         logger.warning(f"Failed to update RAGDocument status: {e}")
@@ -122,15 +123,24 @@ async def _notify_ws(rag_document_id: str, status: str, filename: str):
     """Send notification via Redis pub/sub for WebSocket delivery."""
     try:
         import redis.asyncio as aioredis
+
         from app.core.config import settings
 
-        r = aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")
+        r = aioredis.from_url(
+            f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+        )
         import json
-        await r.publish("rag_status", json.dumps({
-            "document_id": rag_document_id,
-            "status": status,
-            "filename": filename,
-        }))
+
+        await r.publish(
+            "rag_status",
+            json.dumps(
+                {
+                    "document_id": rag_document_id,
+                    "status": status,
+                    "filename": filename,
+                }
+            ),
+        )
         await r.aclose()
     except Exception as e:
         logger.warning(f"Failed to send WS notification: {e}")
@@ -149,9 +159,7 @@ def sync_collection_task(
     logger.info(f"Starting sync: {source} -> {collection_name} (mode={mode})")
 
     try:
-        result = asyncio.run(
-            _run_sync(sync_log_id, source, collection_name, mode, path)
-        )
+        result = asyncio.run(_run_sync(sync_log_id, source, collection_name, mode, path))
         return result
     except Exception as exc:
         logger.error(f"Sync failed: {exc}")
@@ -171,14 +179,14 @@ async def _run_sync(
     from uuid import UUID
 
     from app.core.config import settings
-    from app.db.session import get_db_context
-    from app.db.models.sync_log import SyncLog
     from app.db.models.rag_document import RAGDocument
+    from app.db.models.sync_log import SyncLog
+    from app.db.session import get_db_context
+    from app.rag.config import DocumentExtensions
     from app.rag.documents import DocumentProcessor
     from app.rag.embeddings import EmbeddingService
     from app.rag.ingestion import IngestionService
     from app.rag.vectorstore import MilvusVectorStore as VectorStore
-    from app.rag.config import DocumentExtensions
 
     rag_settings = settings.rag
     embed_service = EmbeddingService(settings=rag_settings)
@@ -221,7 +229,9 @@ async def _run_sync(
                     skipped += 1
                     continue
                 file_hash = hashlib.sha256(filepath.read_bytes()).hexdigest()
-                existing_hash = await ingestion_service.get_existing_hash(collection_name, source_path)
+                existing_hash = await ingestion_service.get_existing_hash(
+                    collection_name, source_path
+                )
                 if existing_hash and file_hash == existing_hash:
                     skipped += 1
                     continue
@@ -269,16 +279,25 @@ async def _run_sync(
             await db.commit()
 
     # Send SSE notification
-    await _notify_sync_status(sync_log_id, "done", collection_name, ingested, updated, skipped, failed)
+    await _notify_sync_status(
+        sync_log_id, "done", collection_name, ingested, updated, skipped, failed
+    )
 
-    return {"status": "done", "ingested": ingested, "updated": updated, "skipped": skipped, "failed": failed}
+    return {
+        "status": "done",
+        "ingested": ingested,
+        "updated": updated,
+        "skipped": skipped,
+        "failed": failed,
+    }
 
 
 async def _update_sync_log(sync_log_id: str, status: str, error_message: str | None = None):
     from datetime import UTC, datetime
     from uuid import UUID
-    from app.db.session import get_db_context
+
     from app.db.models.sync_log import SyncLog
+    from app.db.session import get_db_context
 
     try:
         async with get_db_context() as db:
@@ -293,22 +312,40 @@ async def _update_sync_log(sync_log_id: str, status: str, error_message: str | N
         logger.warning(f"Failed to update SyncLog: {e}")
 
 
-async def _notify_sync_status(sync_log_id: str, status: str, collection: str, ingested: int, updated: int, skipped: int, failed: int):
+async def _notify_sync_status(
+    sync_log_id: str,
+    status: str,
+    collection: str,
+    ingested: int,
+    updated: int,
+    skipped: int,
+    failed: int,
+):
     try:
         import json
+
         import redis.asyncio as aioredis
+
         from app.core.config import settings
-        r = aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")
-        await r.publish("rag_status", json.dumps({
-            "type": "sync",
-            "sync_log_id": sync_log_id,
-            "status": status,
-            "collection": collection,
-            "ingested": ingested,
-            "updated": updated,
-            "skipped": skipped,
-            "failed": failed,
-        }))
+
+        r = aioredis.from_url(
+            f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+        )
+        await r.publish(
+            "rag_status",
+            json.dumps(
+                {
+                    "type": "sync",
+                    "sync_log_id": sync_log_id,
+                    "status": status,
+                    "collection": collection,
+                    "ingested": ingested,
+                    "updated": updated,
+                    "skipped": skipped,
+                    "failed": failed,
+                }
+            ),
+        )
         await r.aclose()
     except Exception as e:
         logger.warning(f"Failed to send sync notification: {e}")

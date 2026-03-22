@@ -62,13 +62,16 @@ async def upload_avatar(
     MAX_AVATAR_SIZE = 2 * 1024 * 1024  # 2MB
 
     if file.content_type not in ALLOWED_AVATAR_TYPES:
-        raise HTTPException(status_code=400, detail="Only JPEG, PNG, WebP, and GIF images are allowed")
+        raise HTTPException(
+            status_code=400, detail="Only JPEG, PNG, WebP, and GIF images are allowed"
+        )
 
     data = await file.read()
     if len(data) > MAX_AVATAR_SIZE:
         raise HTTPException(status_code=413, detail="Avatar image too large. Maximum 2MB.")
 
     from app.services.file_storage import get_file_storage
+
     storage = get_file_storage()
 
     # Delete old avatar if exists

@@ -1,33 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
-import { useChat, useLocalChat } from "@/hooks";
+import { useEffect, useRef, useCallback, useState } from "react";
+import { useChat } from "@/hooks";
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
 import { ToolApprovalDialog } from "./tool-approval-dialog";
-import { useState as useModelState } from "react";
 import { Bot, ChevronDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui";
 import type { PendingApproval, Decision } from "@/types";
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
 import { useConversationStore, useChatStore, useAuthStore } from "@/stores";
 import { useConversations } from "@/hooks";
-{%- endif %}
 
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
-interface ChatContainerProps {
-  useLocalStorage?: boolean;
-}
-
-export function ChatContainer({ useLocalStorage = false }: ChatContainerProps) {
-  const { isAuthenticated } = useAuthStore();
-
-  const shouldUseLocal = useLocalStorage || !isAuthenticated;
-
-  if (shouldUseLocal) {
-    return <LocalChatContainer />;
-  }
-
+export function ChatContainer() {
   return <AuthenticatedChatContainer />;
 }
 
@@ -89,6 +73,7 @@ function AuthenticatedChatContainer() {
   // Load messages from conversation store when switching to a saved conversation
   useEffect(() => {
     if (currentMessages.length > 0) {
+      clearMessages();
       currentMessages.forEach((msg) => {
         addChatMessage({
           id: msg.id,
@@ -132,59 +117,29 @@ function AuthenticatedChatContainer() {
     />
   );
 }
-{%- endif %}
 
-function LocalChatContainer() {
-  const {
-    messages,
-    isConnected,
-    isProcessing,
-    connect,
-    disconnect,
-    sendMessage,
-    clearMessages,
-    pendingApproval,
-    sendResumeDecisions,
-  } = useLocalChat();
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+function ModelSelector({ onChange }: { onChange: (model: string | null) => void }) {
+  const [availableModels, setAvailableModels] = useState<{value: string; label: string}[]>([
+    { value: "", label: "Default" },
+  ]);
+  const [selected, setSelected] = useState(availableModels[0]);
 
   useEffect(() => {
-    connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+    fetch("/api/v1/agent/models", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.models) {
+          const models = [
+            { value: "", label: `Default (${data.default})` },
+            ...data.models.map((m: string) => ({ value: m, label: m })),
+          ];
+          setAvailableModels(models);
+          setSelected(models[0]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  return (
-    <ChatUI
-      messages={messages}
-      isConnected={isConnected}
-      isProcessing={isProcessing}
-      sendMessage={sendMessage}
-
-      messagesEndRef={messagesEndRef}
-      pendingApproval={pendingApproval}
-      onResumeDecisions={sendResumeDecisions}
-    />
-  );
-}
-
-{%- if not (cookiecutter.enable_conversation_persistence and cookiecutter.use_database) %}
-export function ChatContainer() {
-  return <LocalChatContainer />;
-}
-{%- endif %}
-
-const AVAILABLE_MODELS = [
-  { value: "", label: "Default" },
-  { value: "{{ cookiecutter.llm_provider }}/{{ cookiecutter.ai_framework }}", label: "Default Model" },
-];
-
-function ModelSelector({ models, onChange }: { models: typeof AVAILABLE_MODELS; onChange: (model: string | null) => void }) {
-  const [selected, setSelected] = useModelState(models[0]);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -194,7 +149,7 @@ function ModelSelector({ models, onChange }: { models: typeof AVAILABLE_MODELS; 
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        {models.map((m) => (
+        {availableModels.map((m) => (
           <DropdownMenuItem key={m.value} onClick={() => { setSelected(m); onChange(m.value || null); }} className="flex items-center justify-between text-xs">
             {m.label}
             {selected.value === m.value && <Check className="h-3.5 w-3.5" />}
@@ -273,7 +228,7 @@ function ChatUI({
               />
             </div>
             {onModelChange && (
-              <ModelSelector models={AVAILABLE_MODELS} onChange={onModelChange} />
+              <ModelSelector onChange={onModelChange} />
             )}
           </div>
         </div>

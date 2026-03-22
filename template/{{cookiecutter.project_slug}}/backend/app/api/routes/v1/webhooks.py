@@ -8,7 +8,7 @@ from uuid import UUID
 
 from app.api.deps import WebhookSvc
 {%- if cookiecutter.use_jwt %}
-from app.api.deps import CurrentUser
+from app.api.deps import CurrentAdmin
 {%- endif %}
 from app.schemas.webhook import (
     WebhookCreate,
@@ -31,7 +31,7 @@ async def create_webhook(
     data: WebhookCreate,
     webhook_service: WebhookSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """Create a new webhook subscription."""
@@ -57,7 +57,7 @@ async def create_webhook(
 async def list_webhooks(
     webhook_service: WebhookSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -194,7 +194,7 @@ def create_webhook(
     data: WebhookCreate,
     webhook_service: WebhookSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """Create a new webhook subscription."""
@@ -220,7 +220,7 @@ def create_webhook(
 def list_webhooks(
     webhook_service: WebhookSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -337,7 +337,7 @@ async def create_webhook(
     data: WebhookCreate,
     webhook_service: WebhookSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
 ):
     """Create a new webhook subscription."""
@@ -363,7 +363,7 @@ async def create_webhook(
 async def list_webhooks(
     webhook_service: WebhookSvc,
 {%- if cookiecutter.use_jwt %}
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 {%- endif %}
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),

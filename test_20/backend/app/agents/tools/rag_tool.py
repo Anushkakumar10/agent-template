@@ -49,7 +49,7 @@ def get_retrieval_service() -> "BaseRetrievalService":
 
 async def search_knowledge_base(
     query: str,
-    collection: str = "documents",
+    collection: str | None = None,
     collections: list[str] | None = None,
     top_k: int = 5,
 ) -> str:
@@ -57,14 +57,20 @@ async def search_knowledge_base(
 
     Args:
         query: The search query string.
-        collection: Name of a single collection to search (default: "documents").
+        collection: Name of a single collection to search. If None, uses RAG_DEFAULT_COLLECTION from settings.
         collections: List of collection names for cross-collection search (overrides collection).
         top_k: Number of top results to retrieve (default: 5).
 
     Returns:
         Formatted string with search results including citations.
     """
+    import os
+
     service = get_retrieval_service()
+
+    # Resolve default collection from env
+    default_collection = os.environ.get("RAG_DEFAULT_COLLECTION", "all")
+    target_collection = collection or default_collection
 
     if collections and len(collections) > 1:
         results = await service.retrieve_multi(
@@ -72,11 +78,27 @@ async def search_knowledge_base(
             collection_names=collections,
             limit=top_k,
         )
+    elif target_collection == "all":
+        # Search across all available collections
+        try:
+            all_collections = await service.store.list_collections()
+            if not all_collections:
+                return "No collections found in the knowledge base."
+            if len(all_collections) == 1:
+                results = await service.retrieve(
+                    query=query, collection_name=all_collections[0], limit=top_k
+                )
+            else:
+                results = await service.retrieve_multi(
+                    query=query, collection_names=all_collections, limit=top_k
+                )
+        except Exception as e:
+            logger.error(f"Failed to list collections: {e}")
+            return f"Error accessing knowledge base: {e}"
     else:
-        target = collections[0] if collections else collection
         results = await service.retrieve(
             query=query,
-            collection_name=target,
+            collection_name=target_collection,
             limit=top_k,
         )
 

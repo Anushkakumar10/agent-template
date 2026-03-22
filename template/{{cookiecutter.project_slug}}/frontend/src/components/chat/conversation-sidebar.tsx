@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
 "use client";
 
 import { useEffect, useState } from "react";
@@ -157,6 +157,7 @@ interface ConversationListProps {
   onRename: (id: string, title: string) => void;
   onNewChat: () => void;
   onNavigate?: () => void;
+  onLoadMore?: () => void;
 }
 
 function ConversationList({
@@ -169,6 +170,7 @@ function ConversationList({
   onRename,
   onNewChat,
   onNavigate,
+  onLoadMore,
 }: ConversationListProps) {
   const activeConversations = (conversations ?? []).filter((c) => !c.is_archived);
 
@@ -196,7 +198,12 @@ function ConversationList({
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin" onScroll={(e) => {
+        const el = e.currentTarget;
+        if (!isLoading && el.scrollHeight - el.scrollTop - el.clientHeight < 100) {
+          onLoadMore?.();
+        }
+      }}>
         {isLoading && conversations.length === 0 ? (
           <div className="space-y-2 py-2">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-9 w-full rounded-md" />)}
@@ -239,6 +246,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
     currentConversationId,
     isLoading,
     fetchConversations,
+    fetchMoreConversations,
     selectConversation,
     deleteConversation,
     archiveConversation,
@@ -259,6 +267,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
     onArchive: archiveConversation,
     onRename: renameConversation,
     onNewChat: startNewChat,
+    onLoadMore: fetchMoreConversations,
   };
 
   if (isCollapsed) {

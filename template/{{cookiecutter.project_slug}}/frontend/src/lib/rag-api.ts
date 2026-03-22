@@ -144,6 +144,7 @@ export async function ingestFile(collectionName: string, file: File, replace = f
   const response = await fetch(url, {
     method: "POST",
     body: formData,
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -152,6 +153,56 @@ export async function ingestFile(collectionName: string, file: File, replace = f
   }
 
   return response.json();
+}
+
+// Sync source types
+export interface SyncSourceCreate {
+  name: string;
+  connector_type: string;
+  collection_name: string;
+  config: Record<string, unknown>;
+  sync_mode?: string;
+  schedule_minutes?: number | null;
+}
+
+export interface SyncSourceRead {
+  id: string;
+  name: string;
+  connector_type: string;
+  collection_name: string;
+  config: Record<string, unknown>;
+  sync_mode: string;
+  schedule_minutes: number | null;
+  is_active: boolean;
+  last_sync_at: string | null;
+  last_sync_status: string | null;
+  last_error: string | null;
+  created_at: string | null;
+}
+
+export interface SyncSourceList {
+  items: SyncSourceRead[];
+  total: number;
+}
+
+export interface ConnectorConfigField {
+  type: string;
+  required: boolean;
+  label: string;
+  help?: string;
+  default?: unknown;
+  secret?: boolean;
+}
+
+export interface ConnectorInfo {
+  type: string;
+  name: string;
+  config_schema: Record<string, ConnectorConfigField>;
+  enabled: boolean;
+}
+
+export interface ConnectorList {
+  items: ConnectorInfo[];
 }
 
 // Sync types and functions
@@ -185,4 +236,33 @@ export async function listSyncLogs(collectionName?: string, limit = 20): Promise
 
 export async function triggerSync(collectionName: string, mode: string, path: string): Promise<{ id: string; status: string; message: string }> {
   return apiClient.post("/v1/rag/sync/local", { collection_name: collectionName, mode, path });
+}
+
+export async function cancelSync(syncId: string): Promise<{ message: string }> {
+  return apiClient.delete(`/v1/rag/sync/${syncId}`);
+}
+
+// Sync Sources
+export async function listSyncSources(): Promise<SyncSourceList> {
+  return apiClient.get<SyncSourceList>("/v1/rag/sync/sources");
+}
+
+export async function createSyncSource(data: SyncSourceCreate): Promise<SyncSourceRead> {
+  return apiClient.post<SyncSourceRead>("/v1/rag/sync/sources", data);
+}
+
+export async function updateSyncSource(sourceId: string, data: Partial<SyncSourceCreate>): Promise<SyncSourceRead> {
+  return apiClient.patch<SyncSourceRead>(`/v1/rag/sync/sources/${sourceId}`, data);
+}
+
+export async function deleteSyncSource(sourceId: string): Promise<void> {
+  return apiClient.delete(`/v1/rag/sync/sources/${sourceId}`);
+}
+
+export async function triggerSyncSource(sourceId: string): Promise<{ id: string; status: string; message: string }> {
+  return apiClient.post(`/v1/rag/sync/sources/${sourceId}/trigger`);
+}
+
+export async function listConnectors(): Promise<ConnectorList> {
+  return apiClient.get<ConnectorList>("/v1/rag/sync/connectors");
 }

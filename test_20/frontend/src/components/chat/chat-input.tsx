@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Button, Badge } from "@/components/ui";
-import { Send, Loader2, Mic, MicOff, Paperclip, X, Image as ImageIcon, FileText } from "lucide-react";
+import { Button, Badge, Spinner } from "@/components/ui";
+import { Send, Mic, MicOff, Paperclip, X, Image as ImageIcon, FileText } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { uploadFile, getFileUrl, type FileUploadResponse } from "@/lib/file-api";
@@ -183,7 +183,7 @@ export function ChatInput({ onSend, disabled, isProcessing }: ChatInputProps) {
           ))}
           {isUploading && (
             <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed">
-              <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+              <Spinner className="text-muted-foreground h-5 w-5" />
             </div>
           )}
         </div>
@@ -231,7 +231,7 @@ export function ChatInput({ onSend, disabled, isProcessing }: ChatInputProps) {
             title="Attach file"
           >
             {isUploading ? (
-              <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+              <Spinner className="text-muted-foreground h-4 w-4" />
             ) : (
               <Paperclip className="text-muted-foreground h-4 w-4" />
             )}
@@ -253,7 +253,7 @@ export function ChatInput({ onSend, disabled, isProcessing }: ChatInputProps) {
             className="h-9 w-9 rounded-lg"
           >
             {isProcessing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
             ) : (
               <Send className="h-4 w-4" />
             )}

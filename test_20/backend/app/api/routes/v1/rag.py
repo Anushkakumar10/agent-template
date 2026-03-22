@@ -2,15 +2,21 @@
 
 import logging
 import tempfile
-from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
-from app.api.deps import CurrentUser, DBSession, IngestionSvc, RetrievalSvc, VectorStoreSvc
+from app.api.deps import (
+    CurrentAdmin,
+    CurrentUser,
+    DBSession,
+    IngestionSvc,
+    RetrievalSvc,
+    VectorStoreSvc,
+)
 from app.db.models.rag_document import RAGDocument
 from app.db.models.sync_log import SyncLog
 from app.schemas.rag import (
@@ -40,20 +46,24 @@ router = APIRouter()
 @router.get("/collections", response_model=RAGCollectionList)
 async def list_collections(
     vector_store: VectorStoreSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 ):
     """List all available collections in the vector store."""
     names = await vector_store.list_collections()
     return RAGCollectionList(items=names)
 
 
-@router.post("/collections/{name}", status_code=status.HTTP_201_CREATED, response_model=RAGMessageResponse)
+@router.post(
+    "/collections/{name}", status_code=status.HTTP_201_CREATED, response_model=RAGMessageResponse
+)
 async def create_collection(
     name: str,
     vector_store: VectorStoreSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 ):
     """Create and initialize a new collection."""
+    if name.lower() == "all":
+        raise HTTPException(status_code=400, detail="'all' is a reserved collection name")
     await vector_store._ensure_collection(name)
     return RAGMessageResponse(message=f"Collection '{name}' created successfully.")
 
@@ -62,7 +72,7 @@ async def create_collection(
 async def drop_collection(
     name: str,
     vector_store: VectorStoreSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 ):
     """Drop an entire collection and all its vectors."""
     await vector_store.delete_collection(name)
@@ -72,7 +82,7 @@ async def drop_collection(
 async def get_collection_info(
     name: str,
     vector_store: VectorStoreSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 ):
     """Retrieve stats for a specific collection."""
     return await vector_store.get_collection_info(name)
@@ -82,7 +92,7 @@ async def get_collection_info(
 async def list_documents(
     name: str,
     vector_store: VectorStoreSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 ):
     """List all documents in a specific collection."""
     documents = await vector_store.get_documents(name)
@@ -141,7 +151,7 @@ async def delete_document(
     name: str,
     document_id: str,
     ingestion_service: IngestionSvc,
-    current_user: CurrentUser,
+    current_user: CurrentAdmin,
 ):
     """Delete a specific document by its ID from a collection."""
     success = await ingestion_service.remove_document(name, document_id)
@@ -149,18 +159,21 @@ async def delete_document(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
 
-@router.post("/collections/{name}/ingest", response_model=RAGIngestResponse, response_model_exclude_none=True)
+@router.post(
+    "/collections/{name}/ingest", response_model=RAGIngestResponse, response_model_exclude_none=True
+)
 async def ingest_file(
     name: str,
     file: UploadFile = File(...),
     db: DBSession = None,
     ingestion_service: IngestionSvc = None,
     vector_store: VectorStoreSvc = None,
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
     replace: bool = Query(False, description="Replace existing document with same source path"),
 ):
     """Upload and ingest a file into a collection. Tracks status in DB."""
     from app.core.config import settings as app_settings
+
     ALLOWED = {".pdf", ".docx", ".txt", ".md"}
     max_size = app_settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
@@ -171,10 +184,13 @@ async def ingest_file(
 
     data = await file.read()
     if len(data) > max_size:
-        raise HTTPException(status_code=413, detail=f"File too large. Maximum {app_settings.MAX_UPLOAD_SIZE_MB}MB.")
+        raise HTTPException(
+            status_code=413, detail=f"File too large. Maximum {app_settings.MAX_UPLOAD_SIZE_MB}MB."
+        )
 
     # Save original file to storage for later viewing
     from app.services.file_storage import get_file_storage
+
     storage = get_file_storage()
     storage_path = await storage.save(f"rag/{name}", filename, data)
 
@@ -198,6 +214,7 @@ async def ingest_file(
 
     # Save to temp file for Celery worker
     import os
+
     tmp_dir = os.path.join(tempfile.gettempdir(), "rag_ingest")
     os.makedirs(tmp_dir, exist_ok=True)
     tmp_path = os.path.join(tmp_dir, f"{doc_id}{ext}")
@@ -206,6 +223,7 @@ async def ingest_file(
 
     # Dispatch async Celery task
     from app.worker.tasks.rag_tasks import ingest_document_task
+
     ingest_document_task.delay(
         rag_document_id=doc_id,
         collection_name=name,
@@ -229,7 +247,7 @@ async def ingest_file(
 @router.get("/documents", response_model=RAGTrackedDocumentList)
 async def list_rag_documents(
     db: DBSession = None,
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
     collection_name: str | None = Query(None),
 ):
     """List all tracked RAG documents, optionally filtered by collection."""
@@ -265,10 +283,11 @@ async def list_rag_documents(
 async def download_rag_document(
     doc_id: str,
     db: DBSession = None,
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 ):
     """Download the original file of an ingested document."""
     from fastapi.responses import FileResponse
+
     from app.services.file_storage import get_file_storage
 
     rag_doc = await db.get(RAGDocument, UUID(doc_id))
@@ -282,8 +301,17 @@ async def download_rag_document(
     if not file_path:
         raise HTTPException(status_code=404, detail="File not found on disk")
 
-    mime_map = {"pdf": "application/pdf", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "txt": "text/plain", "md": "text/markdown"}
-    return FileResponse(path=file_path, filename=rag_doc.filename, media_type=mime_map.get(rag_doc.filetype, "application/octet-stream"))
+    mime_map = {
+        "pdf": "application/pdf",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "txt": "text/plain",
+        "md": "text/markdown",
+    }
+    return FileResponse(
+        path=file_path,
+        filename=rag_doc.filename,
+        media_type=mime_map.get(rag_doc.filetype, "application/octet-stream"),
+    )
 
 
 @router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -291,7 +319,7 @@ async def delete_rag_document(
     doc_id: str,
     db: DBSession = None,
     ingestion_service: IngestionSvc = None,
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 ):
     """Delete a document from SQL, vector store, and file storage."""
     from app.services.file_storage import get_file_storage
@@ -303,7 +331,9 @@ async def delete_rag_document(
     # 1. Delete from vector store
     if rag_doc.vector_document_id:
         try:
-            await ingestion_service.remove_document(rag_doc.collection_name, rag_doc.vector_document_id)
+            await ingestion_service.remove_document(
+                rag_doc.collection_name, rag_doc.vector_document_id
+            )
         except Exception as e:
             logger.warning(f"Failed to delete from vector store: {e}")
 
@@ -324,7 +354,7 @@ async def delete_rag_document(
 async def retry_ingestion(
     doc_id: str,
     db: DBSession = None,
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 ):
     """Retry a failed document ingestion."""
     rag_doc = await db.get(RAGDocument, UUID(doc_id))
@@ -348,7 +378,7 @@ async def retry_ingestion(
 @router.get("/sync/logs", response_model=RAGSyncLogList)
 async def list_sync_logs(
     db: DBSession = None,
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
     collection_name: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
 ):
@@ -386,7 +416,7 @@ async def list_sync_logs(
 async def trigger_local_sync(
     request: RAGSyncRequest,
     db: DBSession = None,
-    current_user: CurrentUser = None,
+    current_user: CurrentAdmin = None,
 ):
     """Trigger a local directory sync via Celery task."""
     from app.worker.tasks.rag_tasks import sync_collection_task
@@ -417,7 +447,6 @@ async def trigger_local_sync(
 
 
 # SSE for RAG status updates (replaces WebSocket — simpler, auto-reconnect)
-import json
 from collections.abc import AsyncIterable
 
 from fastapi.sse import EventSourceResponse, ServerSentEvent
@@ -433,9 +462,12 @@ async def rag_status_stream() -> AsyncIterable[ServerSentEvent]:
     import asyncio
 
     import redis.asyncio as aioredis
+
     from app.core.config import settings
 
-    r = aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")
+    r = aioredis.from_url(
+        f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+    )
     pubsub = r.pubsub()
     await pubsub.subscribe("rag_status")
     event_id = 0
@@ -443,7 +475,11 @@ async def rag_status_stream() -> AsyncIterable[ServerSentEvent]:
     try:
         async for message in pubsub.listen():
             if message["type"] == "message":
-                data = message["data"].decode() if isinstance(message["data"], bytes) else message["data"]
+                data = (
+                    message["data"].decode()
+                    if isinstance(message["data"], bytes)
+                    else message["data"]
+                )
                 event_id += 1
                 yield ServerSentEvent(raw_data=data, event="status", id=str(event_id))
     except asyncio.CancelledError:

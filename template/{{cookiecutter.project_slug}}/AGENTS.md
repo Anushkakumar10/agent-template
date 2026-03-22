@@ -10,11 +10,11 @@ This file provides guidance for AI coding agents (Codex, Copilot, Cursor, Zed, O
 {%- if cookiecutter.use_postgresql %}, PostgreSQL{%- endif %}
 {%- if cookiecutter.use_mongodb %}, MongoDB{%- endif %}
 {%- if cookiecutter.use_sqlite %}, SQLite{%- endif %}
-{%- if cookiecutter.use_jwt %}, JWT auth{%- endif %}
+, JWT + API Key auth
 {%- if cookiecutter.enable_redis %}, Redis{%- endif %}
-{%- if cookiecutter.enable_ai_agent %}, {{ cookiecutter.ai_framework }} ({{ cookiecutter.llm_provider }}){%- endif %}
+, {{ cookiecutter.ai_framework }} ({{ cookiecutter.llm_provider }})
 {%- if cookiecutter.enable_rag %}, RAG ({{ cookiecutter.vector_store }}){%- endif %}
-{%- if cookiecutter.use_frontend %}, Next.js 15{%- endif %}
+{%- if cookiecutter.use_frontend %}, Next.js 15 (i18n){%- endif %}
 
 ## Commands
 
@@ -36,6 +36,11 @@ uv run alembic revision --autogenerate -m "Description"
 # RAG
 uv run {{ cookiecutter.project_slug }} rag-ingest /path/to/file.pdf --collection docs
 uv run {{ cookiecutter.project_slug }} rag-search "query" --collection docs
+
+# Sync Sources
+uv run {{ cookiecutter.project_slug }} cmd rag-sources
+uv run {{ cookiecutter.project_slug }} cmd rag-source-add
+uv run {{ cookiecutter.project_slug }} cmd rag-source-sync
 {%- endif %}
 ```
 
@@ -48,11 +53,10 @@ backend/app/
 ├── repositories/     # Data access
 ├── schemas/          # Pydantic models
 ├── db/models/        # DB models
-{%- if cookiecutter.enable_ai_agent %}
 ├── agents/           # AI agents
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
 ├── rag/              # RAG (embeddings, vector store, ingestion)
+│   └── connectors/   # Sync source connectors
 {%- endif %}
 └── commands/         # CLI commands
 ```
@@ -64,7 +68,8 @@ backend/app/
 - Separate `Create`, `Update`, `Response` schemas
 - Commands auto-discovered from `app/commands/`
 {%- if cookiecutter.enable_rag %}
-- Document ingestion via CLI commands only
+- Document ingestion via CLI and API upload
+- Sync sources: configurable connectors with scheduled sync
 {%- endif %}
 
 ## More Info

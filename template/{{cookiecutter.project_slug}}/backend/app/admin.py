@@ -17,16 +17,11 @@ from app.core.config import settings
 from app.core.security import verify_password
 {%- endif %}
 from app.db.base import Base
-from app.db.models.user import User
+from app.db.models.user import User, UserRole
 {%- if cookiecutter.enable_session_management %}
 from app.db.models.session import Session
 {%- endif %}
-{%- if cookiecutter.include_example_crud %}
-from app.db.models.item import Item
-{%- endif %}
-{%- if cookiecutter.enable_conversation_persistence %}
 from app.db.models.conversation import Conversation, Message, ToolCall
-{%- endif %}
 {%- if cookiecutter.enable_webhooks %}
 from app.db.models.webhook import Webhook, WebhookDelivery
 {%- endif %}
@@ -55,7 +50,6 @@ AUTO_GENERATED_COLUMNS: list[str] = [
 MODEL_ICONS: dict[str, str] = {
     "User": "fa-solid fa-user",
     "Session": "fa-solid fa-key",
-    "Item": "fa-solid fa-box",
     "Conversation": "fa-solid fa-comments",
     "Message": "fa-solid fa-message",
     "ToolCall": "fa-solid fa-wrench",
@@ -341,7 +335,7 @@ class AdminAuth(AuthenticationBackend):
             if (
                 user
                 and verify_password(str(password), user.hashed_password)
-                and user.is_superuser
+                and user.has_role(UserRole.ADMIN)
             ):
                 # Store user info in session
                 request.session["admin_user_id"] = str(user.id)
@@ -366,7 +360,7 @@ class AdminAuth(AuthenticationBackend):
 
         with DBSession(get_sync_engine()) as session:
             user = session.query(User).filter(User.id == admin_user_id).first()
-            if user and user.is_superuser and user.is_active:
+            if user and user.has_role(UserRole.ADMIN) and user.is_active:
                 return True
 
         # User no longer valid, clear session
@@ -387,12 +381,10 @@ CUSTOM_MODEL_CONFIGS: dict[type, dict[str, Any]] = {
         "can_create": False,  # Sessions are created via login
     },
 {%- endif %}
-{%- if cookiecutter.enable_conversation_persistence %}
     ToolCall: {
         "icon": "fa-solid fa-wrench",
         "can_create": False,  # Tool calls are created by the agent
     },
-{%- endif %}
 {%- if cookiecutter.enable_webhooks %}
     Webhook: {
         "icon": "fa-solid fa-link",

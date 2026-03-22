@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     DEBUG: bool = False
     ENVIRONMENT: Literal["development", "local", "staging", "production"] = "local"
+    TIMEZONE: str = "{{ cookiecutter.timezone }}"  # IANA timezone (e.g. "UTC", "Europe/Warsaw", "America/New_York")
     MODELS_CACHE_DIR: Path = Path("./models_cache")
     MEDIA_DIR: Path = Path("./media")
     MAX_UPLOAD_SIZE_MB: int = 50  # Max file upload size in MB
@@ -238,12 +239,11 @@ class Settings(BaseSettings):
     S3_REGION: str = "us-east-1"
 {%- endif %}
 
-{%- if cookiecutter.enable_ai_agent %}
 
     # === AI Agent ({{ cookiecutter.ai_framework }}, {{ cookiecutter.llm_provider }}) ===
 {%- if cookiecutter.use_openai %}
     OPENAI_API_KEY: str = ""
-    AI_MODEL: str = "gpt-4o-mini"
+    AI_MODEL: str = "gpt-4.1-mini"
 {%- endif %}
 {%- if cookiecutter.use_anthropic %}
     ANTHROPIC_API_KEY: str = ""
@@ -251,13 +251,46 @@ class Settings(BaseSettings):
 {%- endif %}
 {%- if cookiecutter.use_google %}
     GOOGLE_API_KEY: str = ""
-    AI_MODEL: str = "gemini-2.0-flash"
+    AI_MODEL: str = "gemini-2.5-flash"
 {%- endif %}
 {%- if cookiecutter.use_openrouter %}
     OPENROUTER_API_KEY: str = ""
-    AI_MODEL: str = "anthropic/claude-3.5-sonnet"
+    AI_MODEL: str = "anthropic/claude-sonnet-4-6"
 {%- endif %}
     AI_TEMPERATURE: float = 0.7
+{%- if cookiecutter.use_openai %}
+    AI_AVAILABLE_MODELS: list[str] = [
+        "gpt-4.1-mini",
+        "gpt-4.1",
+        "gpt-4.1-nano",
+        "o4-mini",
+        "o3",
+        "gpt-4o",
+        "gpt-4o-mini",
+    ]
+{%- endif %}
+{%- if cookiecutter.use_anthropic %}
+    AI_AVAILABLE_MODELS: list[str] = [
+        "claude-sonnet-4-6",
+        "claude-sonnet-4-5-20241022",
+        "claude-haiku-3-5-20241022",
+    ]
+{%- endif %}
+{%- if cookiecutter.use_google %}
+    AI_AVAILABLE_MODELS: list[str] = [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash",
+    ]
+{%- endif %}
+{%- if cookiecutter.use_openrouter %}
+    AI_AVAILABLE_MODELS: list[str] = [
+        "anthropic/claude-sonnet-4-6",
+        "openai/gpt-4.1-mini",
+        "google/gemini-2.5-flash",
+        "deepseek/deepseek-r1",
+    ]
+{%- endif %}
     AI_FRAMEWORK: str = "{{ cookiecutter.ai_framework }}"
     LLM_PROVIDER: str = "{{ cookiecutter.llm_provider }}"
 {%- if cookiecutter.enable_langsmith %}
@@ -288,7 +321,6 @@ class Settings(BaseSettings):
     DEEPAGENTS_INTERRUPT_TOOLS: str | None = None
     # Allowed decisions for interrupted tools: approve,edit,reject
     DEEPAGENTS_ALLOWED_DECISIONS: str = "approve,edit,reject"
-{%- endif %}
 {%- endif %}
 
 {%- if cookiecutter.enable_rag %}
@@ -359,7 +391,13 @@ class Settings(BaseSettings):
     {%- endif %}
 
     # Document Parser
-    {%- if cookiecutter.pdf_parser == "llamaparse" or cookiecutter.use_llamaparse %}
+    {%- if cookiecutter.use_all_pdf_parsers %}
+    # PDF Parser runtime selection
+    PDF_PARSER: str = "pymupdf"  # For RAG ingestion: pymupdf, llamaparse, liteparse
+    CHAT_PDF_PARSER: str = "pymupdf"  # For chat file attachments: pymupdf, llamaparse, liteparse
+    LLAMAPARSE_API_KEY: str = ""
+    LLAMAPARSE_TIER: str = "agentic"  # fast, cost_effective, agentic, agentic_plus
+    {%- elif cookiecutter.pdf_parser == "llamaparse" or cookiecutter.use_llamaparse %}
     LLAMAPARSE_API_KEY: str = ""
     LLAMAPARSE_TIER: str = "agentic"  # fast, cost_effective, agentic, agentic_plus
     {%- endif %}
@@ -414,7 +452,13 @@ class Settings(BaseSettings):
         """Build RAG-specific settings."""
         from app.rag.config import RAGSettings, DocumentParser, PdfParser, EmbeddingsConfig
 
-        {%- if cookiecutter.use_llamaparse %}
+        {%- if cookiecutter.use_all_pdf_parsers %}
+        pdf_parser = PdfParser(
+            method=self.PDF_PARSER,
+            api_key=self.LLAMAPARSE_API_KEY,
+            tier=self.LLAMAPARSE_TIER,
+        )
+        {%- elif cookiecutter.use_llamaparse %}
         pdf_parser = PdfParser(api_key=self.LLAMAPARSE_API_KEY, tier=self.LLAMAPARSE_TIER)
         {%- else %}
         pdf_parser = PdfParser()

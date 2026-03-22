@@ -156,29 +156,33 @@ function RAGSearchResults({ result }: { result: string }) {
       </div>
 
       {/* Expanded view */}
-      {expandedIdx !== null && (
-        <Card className="border-primary/50 bg-primary/5">
-          <CardContent className="p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">[{items[expandedIdx - 1]?.index}]</Badge>
-                <span className="text-xs font-medium">{items[expandedIdx - 1]?.source}</span>
+      {expandedIdx !== null && (() => {
+        const expandedItem = items.find(i => i.index === expandedIdx);
+        if (!expandedItem) return null;
+        return (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">[{expandedItem.index}]</Badge>
+                  <span className="text-xs font-medium">{expandedItem.source}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setExpandedIdx(null)}
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => setExpandedIdx(null)}
-              >
-                <ChevronUp className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
-              {items[expandedIdx - 1]?.content}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                {expandedItem.content}
+              </p>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }
@@ -264,7 +268,7 @@ export function ToolCallCard({ toolCall }: ToolCallCardProps) {
     error: { icon: AlertCircle, color: "text-red-500", animate: false },
   };
 
-  const { icon: StatusIcon, color, animate } = statusConfig[toolCall.status];
+  const { icon: StatusIcon, color, animate } = statusConfig[toolCall.status] || statusConfig.pending;
 
   const resultText =
     toolCall.result !== undefined

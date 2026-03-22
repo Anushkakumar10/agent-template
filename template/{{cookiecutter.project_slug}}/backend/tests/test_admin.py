@@ -244,7 +244,7 @@ class TestPluralize:
     def test_regular_pluralization(self):
         """Test regular word pluralization (add 's')."""
         assert pluralize("User") == "Users"
-        assert pluralize("Item") == "Items"
+        assert pluralize("Conversation") == "Conversations"
         assert pluralize("Model") == "Models"
 
     def test_words_ending_in_y(self):
@@ -675,7 +675,7 @@ class TestAdminAuth:
         mock_verify.return_value = False
 
         mock_user = MagicMock()
-        mock_user.is_superuser = True
+        mock_user.role = "admin"
         mock_user.hashed_password = "hashed"
 
         mock_session = MagicMock()
@@ -706,7 +706,7 @@ class TestAdminAuth:
         mock_verify.return_value = True
 
         mock_user = MagicMock()
-        mock_user.is_superuser = False
+        mock_user.role = "user"
         mock_user.hashed_password = "hashed"
 
         mock_session = MagicMock()
@@ -739,7 +739,7 @@ class TestAdminAuth:
         mock_user = MagicMock()
         mock_user.id = "user-123"
         mock_user.email = "admin@test.com"
-        mock_user.is_superuser = True
+        mock_user.role = "admin"
         mock_user.hashed_password = "hashed"
 
         mock_session = MagicMock()
@@ -813,7 +813,7 @@ class TestAdminAuth:
         mock_request.session = {"admin_user_id": "user-123"}
 
         mock_user = MagicMock()
-        mock_user.is_superuser = True
+        mock_user.role = "admin"
         mock_user.is_active = False
 
         mock_session = MagicMock()
@@ -840,7 +840,7 @@ class TestAdminAuth:
         mock_request.session = {"admin_user_id": "user-123"}
 
         mock_user = MagicMock()
-        mock_user.is_superuser = False
+        mock_user.role = "user"
         mock_user.is_active = True
 
         mock_session = MagicMock()
@@ -867,7 +867,7 @@ class TestAdminAuth:
         mock_request.session = {"admin_user_id": "user-123"}
 
         mock_user = MagicMock()
-        mock_user.is_superuser = True
+        mock_user.role = "admin"
         mock_user.is_active = True
 
         mock_session = MagicMock()

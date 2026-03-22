@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_langgraph %}
+{%- if cookiecutter.use_langgraph %}
 """LangGraph ReAct Agent implementation.
 
 A simple ReAct (Reasoning + Acting) agent built with LangGraph.

@@ -146,7 +146,7 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{user.email}</h1>
             <div className="mt-1 flex items-center gap-2">
-              {user.is_superuser && <Badge variant="secondary"><Shield className="mr-1 h-3 w-3" />Admin</Badge>}
+              {user.role === "admin" && <Badge variant="secondary"><Shield className="mr-1 h-3 w-3" />Admin</Badge>}
               {user.is_active && <Badge variant="outline" className="text-green-600">Active</Badge>}
               {user.created_at && (
                 <span className="text-muted-foreground text-xs">Since {new Date(user.created_at).toLocaleDateString()}</span>

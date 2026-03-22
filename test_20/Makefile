@@ -7,6 +7,8 @@ quickstart: install docker-up
 	uv run --directory backend test_20 db upgrade || true
 	@echo "Creating admin user (admin@example.com / admin123)..."
 	uv run --directory backend test_20 user create --email admin@example.com --password admin123 --superuser 2>/dev/null || true
+	@# Ensure admin role is set (in case user already existed)
+	@docker exec test_20_db psql -U postgres -d test_20 -c "UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';" 2>/dev/null || true
 	@echo ""
 	@echo "🚀 Ready! All services running:"
 	@echo "   API:      http://localhost:8000"

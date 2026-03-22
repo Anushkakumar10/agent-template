@@ -22,8 +22,7 @@ celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
-    timezone="UTC",
-    enable_utc=True,
+    timezone="{{ cookiecutter.timezone }}",
     # Task execution settings
     task_acks_late=True,
     task_reject_on_worker_lost=True,
@@ -52,6 +51,13 @@ celery_app.conf.beat_schedule = {
     #     "schedule": crontab(hour=0, minute=0),
     # },
 }
+
+{%- if cookiecutter.enable_rag %}
+celery_app.conf.beat_schedule["rag-sync-check"] = {
+    "task": "app.worker.tasks.rag_tasks.check_scheduled_syncs",
+    "schedule": 60.0,  # Every 60 seconds
+}
+{%- endif %}
 
 {%- if cookiecutter.enable_logfire and cookiecutter.logfire_celery %}
 

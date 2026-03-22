@@ -22,9 +22,7 @@ class WebhookEventType(StrEnum):
     USER_DELETED = "user.deleted"
 
     # Custom events (extend as needed)
-    ITEM_CREATED = "item.created"
-    ITEM_UPDATED = "item.updated"
-    ITEM_DELETED = "item.deleted"
+    CUSTOM_EVENT = "custom.event"
 
 
 class Webhook(TimestampMixin, SQLModel, table=True):
@@ -109,9 +107,7 @@ class WebhookEventType(StrEnum):
     USER_DELETED = "user.deleted"
 
     # Custom events (extend as needed)
-    ITEM_CREATED = "item.created"
-    ITEM_UPDATED = "item.updated"
-    ITEM_DELETED = "item.deleted"
+    CUSTOM_EVENT = "custom.event"
 
 
 class Webhook(Base, TimestampMixin):
@@ -192,9 +188,7 @@ class WebhookEventType(StrEnum):
     USER_DELETED = "user.deleted"
 
     # Custom events (extend as needed)
-    ITEM_CREATED = "item.created"
-    ITEM_UPDATED = "item.updated"
-    ITEM_DELETED = "item.deleted"
+    CUSTOM_EVENT = "custom.event"
 
 
 class Webhook(TimestampMixin, SQLModel, table=True):
@@ -288,9 +282,7 @@ class WebhookEventType(StrEnum):
     USER_DELETED = "user.deleted"
 
     # Custom events (extend as needed)
-    ITEM_CREATED = "item.created"
-    ITEM_UPDATED = "item.updated"
-    ITEM_DELETED = "item.deleted"
+    CUSTOM_EVENT = "custom.event"
 
 
 class Webhook(Base, TimestampMixin):
@@ -375,10 +367,8 @@ class WebhookEventType(StrEnum):
     USER_UPDATED = "user.updated"
     USER_DELETED = "user.deleted"
 
-    # Custom events
-    ITEM_CREATED = "item.created"
-    ITEM_UPDATED = "item.updated"
-    ITEM_DELETED = "item.deleted"
+    # Custom events (extend as needed)
+    CUSTOM_EVENT = "custom.event"
 
 
 class WebhookDelivery(Document):

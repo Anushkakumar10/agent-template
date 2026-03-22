@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_pydantic_ai %}
+{%- if cookiecutter.use_pydantic_ai %}
 """Tests for AI agent module (PydanticAI)."""
 
 from unittest.mock import MagicMock, patch
@@ -120,7 +120,7 @@ class TestHistoryConversion:
         ]
         assert len(history) == 3
         assert all("role" in msg and "content" in msg for msg in history)
-{%- elif cookiecutter.enable_ai_agent and cookiecutter.use_langchain %}
+{%- elif cookiecutter.use_langchain %}
 """Tests for AI agent module (LangChain)."""
 
 from unittest.mock import MagicMock, patch

@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_postgresql and cookiecutter.use_sqlmodel %}
+{%- if cookiecutter.use_postgresql and cookiecutter.use_sqlmodel %}
 """Conversation and message models for AI chat persistence using SQLModel."""
 
 import uuid
@@ -151,18 +151,21 @@ class ToolCall(SQLModel, table=True):
         return f"<ToolCall(id={self.id}, tool_name={self.tool_name}, status={self.status})>"
 
 
-{%- elif cookiecutter.enable_conversation_persistence and cookiecutter.use_postgresql %}
+{%- elif cookiecutter.use_postgresql %}
 """Conversation and message models for AI chat persistence."""
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.db.models.chat_file import ChatFile
 
 
 class Conversation(Base, TimestampMixin):
@@ -245,6 +248,11 @@ class Message(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ToolCall.started_at",
     )
+    files: Mapped[list["ChatFile"]] = relationship(
+        "ChatFile",
+        foreign_keys="ChatFile.message_id",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Message(id={self.id}, role={self.role})>"
@@ -299,7 +307,7 @@ class ToolCall(Base):
         return f"<ToolCall(id={self.id}, tool_name={self.tool_name}, status={self.status})>"
 
 
-{%- elif cookiecutter.enable_conversation_persistence and cookiecutter.use_sqlite and cookiecutter.use_sqlmodel %}
+{%- elif cookiecutter.use_sqlite and cookiecutter.use_sqlmodel %}
 """Conversation and message models for AI chat persistence using SQLModel."""
 
 import uuid
@@ -416,16 +424,20 @@ class ToolCall(SQLModel, table=True):
         return f"<ToolCall(id={self.id}, tool_name={self.tool_name})>"
 
 
-{%- elif cookiecutter.enable_conversation_persistence and cookiecutter.use_sqlite %}
+{%- elif cookiecutter.use_sqlite %}
 """Conversation and message models for AI chat persistence."""
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.db.models.chat_file import ChatFile
 
 
 class Conversation(Base, TimestampMixin):
@@ -488,6 +500,11 @@ class Message(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ToolCall.started_at",
     )
+    files: Mapped[list["ChatFile"]] = relationship(
+        "ChatFile",
+        foreign_keys="ChatFile.message_id",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Message(id={self.id}, role={self.role})>"
@@ -523,7 +540,7 @@ class ToolCall(Base):
         return f"<ToolCall(id={self.id}, tool_name={self.tool_name})>"
 
 
-{%- elif cookiecutter.enable_conversation_persistence and cookiecutter.use_mongodb %}
+{%- elif cookiecutter.use_mongodb %}
 """Conversation and message models for AI chat persistence (MongoDB)."""
 
 from datetime import UTC, datetime

@@ -134,6 +134,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: {{ cookiecutter.project_slug }}_backend
+    volumes:
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     env_file:
       - .env.prod
       - ./backend/.env
@@ -370,6 +378,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: {{ cookiecutter.project_slug }}_celery_worker
+    volumes:
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     command: celery -A app.worker.celery_app worker --loglevel=warning --concurrency=4
     env_file:
       - .env.prod
@@ -503,6 +519,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: {{ cookiecutter.project_slug }}_taskiq_worker
+    volumes:
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     command: taskiq worker app.worker.taskiq_app:broker --workers 4
     env_file:
       - .env.prod
@@ -593,6 +617,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: {{ cookiecutter.project_slug }}_arq_worker
+    volumes:
+      - media_data:/app/media
+{%- if cookiecutter.use_sqlite %}
+      - sqlite_data:/app/data
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+      - chroma_data:/app/chroma_data
+{%- endif %}
     command: arq app.worker.arq_app.WorkerSettings
     env_file:
       - .env.prod
@@ -694,6 +726,13 @@ networks:
     internal: true
 
 volumes:
+  media_data:
+{%- if cookiecutter.use_sqlite %}
+  sqlite_data:
+{%- endif %}
+{%- if cookiecutter.use_chromadb %}
+  chroma_data:
+{%- endif %}
 {%- if cookiecutter.include_traefik_service %}
   traefik_letsencrypt:
 {%- endif %}

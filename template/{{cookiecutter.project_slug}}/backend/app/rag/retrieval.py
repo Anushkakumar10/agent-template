@@ -1,6 +1,7 @@
 {%- if cookiecutter.enable_rag %}
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -17,29 +18,29 @@ logger = logging.getLogger(__name__)
 
 class BaseRetrievalService(ABC):
     """Abstract base class for retrieval service implementations.
-    
+
     Defines the interface for querying the vector store and retrieving
     relevant document chunks based on a query.
     """
-    
+
     @abstractmethod
     async def retrieve(
-        self, 
-        query: str, 
+        self,
+        query: str,
         collection_name: str,
         limit: int = 5,
         min_score: float = 0.0,
         filter: str = ""
     ) -> list[SearchResult]:
         """Execute the retrieval pipeline to find relevant chunks.
-        
+
         Args:
             query: The search query text.
             collection_name: Name of the collection to search in.
             limit: Maximum number of results to return.
             min_score: Minimum similarity score threshold (0.0 to 1.0).
             filter: Optional filter expression for the search.
-            
+
         Returns:
             List of SearchResult objects sorted by relevance.
         """
@@ -47,23 +48,23 @@ class BaseRetrievalService(ABC):
 
     @abstractmethod
     async def retrieve_by_document(
-        self, 
-        query: str, 
-        collection_name: str, 
+        self,
+        query: str,
+        collection_name: str,
         document_id: str,
         limit: int = 3
     ) -> list[SearchResult]:
         """Specialized retrieval restricted to a single document.
-        
+
         Useful for "Chat with this PDF" functionality where results
         should only come from a specific document.
-        
+
         Args:
             query: The search query text.
             collection_name: Name of the collection to search in.
             document_id: ID of the document to restrict search to.
             limit: Maximum number of results to return.
-            
+
         Returns:
             List of SearchResult objects from the specified document.
         """
@@ -83,7 +84,7 @@ class RetrievalService(BaseRetrievalService):
         rerank_service: RerankService | None = None,
     ):
         """Initialize the Milvus retrieval service.
-        
+
         Args:
             vector_store: The vector store to query.
             settings: RAG configuration settings.
@@ -107,12 +108,12 @@ class RetrievalService(BaseRetrievalService):
         result_map: dict[str, SearchResult] = {}
 
         for rank, r in enumerate(vector_results):
-            key = r.content[:100]
+            key = f"{r.parent_doc_id}:{r.metadata.get('chunk_num', '')}" if r.parent_doc_id else hashlib.md5(r.content.encode()).hexdigest()
             scores[key] = scores.get(key, 0) + 1.0 / (k + rank + 1)
             result_map[key] = r
 
         for rank, r in enumerate(bm25_results):
-            key = r.content[:100]
+            key = f"{r.parent_doc_id}:{r.metadata.get('chunk_num', '')}" if r.parent_doc_id else hashlib.md5(r.content.encode()).hexdigest()
             scores[key] = scores.get(key, 0) + 1.0 / (k + rank + 1)
             if key not in result_map:
                 result_map[key] = r
@@ -170,8 +171,8 @@ class RetrievalService(BaseRetrievalService):
         ]
 
     async def retrieve(
-        self, 
-        query: str, 
+        self,
+        query: str,
         collection_name: str,
         limit: int = 5,
         min_score: float = 0.0,
@@ -179,7 +180,7 @@ class RetrievalService(BaseRetrievalService):
         use_reranker: bool = False,
     ) -> list[SearchResult]:
         """Execute the retrieval pipeline: Vector Search + Reranking (optional) + Filtering.
-        
+
         Args:
             query: The search query text.
             collection_name: Name of the collection to search in.
@@ -187,24 +188,24 @@ class RetrievalService(BaseRetrievalService):
             min_score: Minimum similarity score threshold (0.0 to 1.0).
             filter: Optional filter expression for the search.
             use_reranker: Whether to use reranking (if configured).
-            
+
         Returns:
             List of SearchResult objects sorted by relevance.
         """
         # Determine if we should actually use reranking
         should_rerank = use_reranker and self._reranker_enabled
-        
+
         # Fetch more results if reranking is enabled (reranker will reduce)
         # We fetch 3x results to give reranker room to pick best ones
         fetch_multiplier = 3 if should_rerank else 2
-        
+
         logger.info(
             f"[RETRIEVAL] Query: '{query[:50]}...', collection: {collection_name}, "
             f"limit: {limit}, filter: '{filter}', rerank: {should_rerank}"
         )
-        
+
         start_time = time.time()
-        
+
         # Step 1: Execute Vector Search via the Vector Store
         raw_results = await self.store.search(
             collection_name=collection_name,
@@ -234,19 +235,19 @@ class RetrievalService(BaseRetrievalService):
             )
 
         results = raw_results
-        
+
         # Step 2: Apply reranking if enabled and requested
         if should_rerank and self.rerank_service:
             logger.info("[RETRIEVAL] Applying reranking...")
             rerank_start = time.time()
-            
+
             # Rerank the results - fetches more initially so reranker can pick best
             results = await self.rerank_service.rerank(
                 query=query,
                 results=raw_results,
                 top_k=limit * 2,  # Get more from reranker before filtering
             )
-            
+
             rerank_time = time.time() - rerank_start
             logger.info(
                 f"[RETRIEVAL] Reranking completed in {rerank_time:.3f}s, "
@@ -256,30 +257,30 @@ class RetrievalService(BaseRetrievalService):
             logger.warning(
                 "[RETRIEVAL] Reranking requested but not configured - skipping"
             )
-        
+
         # Step 3: Post-processing: Filter by score
         # Cosine similarity is higher = better.
         filtered_results = [
-            res for res in results 
+            res for res in results
             if res.score >= min_score
         ]
-        
+
         # Log filtered results
         for i, r in enumerate(filtered_results[:3]):
             logger.debug(
                 f"[RETRIEVAL] Final result #{i+1}: score={r.score:.4f}, "
                 f"content='{r.content[:50]}...'"
             )
-        
+
         # Apply final limit
         final_results = filtered_results[:limit]
-        
+
         total_time = time.time() - start_time
         logger.info(
             f"[RETRIEVAL] Total retrieval time: {total_time:.3f}s, "
             f"returning {len(final_results)} results"
         )
-        
+
         return final_results
 
     async def retrieve_multi(
@@ -315,25 +316,25 @@ class RetrievalService(BaseRetrievalService):
         return all_results[:limit]
 
     async def retrieve_by_document(
-        self, 
-        query: str, 
-        collection_name: str, 
+        self,
+        query: str,
+        collection_name: str,
         document_id: str,
         limit: int = 3,
         use_reranker: bool = False,
     ) -> list[SearchResult]:
         """Specialized retrieval restricted to a single document.
-        
+
         Useful for "Chat with this PDF" functionality where results
         should only come from a specific document.
-        
+
         Args:
             query: The search query text.
             collection_name: Name of the collection to search in.
             document_id: ID of the document to restrict search to.
             limit: Maximum number of results to return.
             use_reranker: Whether to use reranking (if configured).
-            
+
         Returns:
             List of SearchResult objects from the specified document.
         """
@@ -345,9 +346,9 @@ class RetrievalService(BaseRetrievalService):
             f"query='{query[:30]}...', limit={limit}, rerank={use_reranker}"
         )
         return await self.retrieve(
-            query=query, 
-            collection_name=collection_name, 
-            limit=limit, 
+            query=query,
+            collection_name=collection_name,
+            limit=limit,
             filter=filter_expr,
             use_reranker=use_reranker,
         )

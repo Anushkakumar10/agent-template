@@ -1,4 +1,3 @@
-{%- if cookiecutter.enable_ai_agent %}
 # How to: Customize the Agent Prompt
 
 ## Where to Edit
@@ -96,4 +95,3 @@ def get_prompt(persona: str = "default") -> str:
 - Test with real user queries, not just ideal cases
 - Include example outputs in the prompt for consistent formatting
 - Use the temperature setting (`AI_TEMPERATURE` in `.env`) to control creativity
-{%- endif %}

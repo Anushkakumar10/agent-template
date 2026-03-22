@@ -14,7 +14,7 @@ import random
 import string
 
 import click
-{% if cookiecutter.use_jwt or cookiecutter.include_example_crud %}
+{% if cookiecutter.use_jwt %}
 from sqlalchemy import delete, select
 {% endif %}
 
@@ -47,22 +47,6 @@ def random_name() -> str:
     return f"{random.choice(first_names)} {random.choice(last_names)}"
 
 
-def random_title() -> str:
-    """Generate a random item title."""
-    if HAS_FAKER:
-        return fake.sentence(nb_words=4).rstrip('.')
-    adjectives = ["Amazing", "Great", "Awesome", "Fantastic", "Incredible", "Beautiful"]
-    nouns = ["Widget", "Gadget", "Thing", "Product", "Item", "Object"]
-    return f"{random.choice(adjectives)} {random.choice(nouns)}"
-
-
-def random_description() -> str:
-    """Generate a random description."""
-    if HAS_FAKER:
-        return fake.paragraph(nb_sentences=3)
-    return "This is a sample description for development purposes."
-
-
 @command("seed", help="Seed database with sample data")
 @click.option("--count", "-c", default=10, type=int, help="Number of records to create")
 @click.option("--clear", is_flag=True, help="Clear existing data before seeding")
@@ -70,18 +54,12 @@ def random_description() -> str:
 {%- if cookiecutter.use_jwt %}
 @click.option("--users/--no-users", default=True, help="Seed users (default: True)")
 {%- endif %}
-{%- if cookiecutter.include_example_crud %}
-@click.option("--items/--no-items", default=True, help="Seed items (default: True)")
-{%- endif %}
 def seed(
     count: int,
     clear: bool,
     dry_run: bool,
 {%- if cookiecutter.use_jwt %}
     users: bool,
-{%- endif %}
-{%- if cookiecutter.include_example_crud %}
-    items: bool,
 {%- endif %}
 ) -> None:
     """
@@ -92,7 +70,7 @@ def seed(
         project cmd seed --clear --count 100
         project cmd seed --dry-run
     {%- if cookiecutter.use_jwt %}
-        project cmd seed --no-users --items  # Only seed items
+        project cmd seed --no-users  # Skip user seeding
     {%- endif %}
     """
     if not HAS_FAKER:
@@ -106,22 +84,15 @@ def seed(
         if users:
             info("[DRY RUN] Would create users")
 {%- endif %}
-{%- if cookiecutter.include_example_crud %}
-        if items:
-            info("[DRY RUN] Would create items")
-{%- endif %}
         return
 
-{%- if not cookiecutter.use_jwt and not cookiecutter.include_example_crud %}
-    info("No entities configured to seed. Enable JWT users or example CRUD to use this command.")
+{%- if not cookiecutter.use_jwt %}
+    info("No entities configured to seed. Enable JWT users to use this command.")
 {%- elif cookiecutter.use_postgresql %}
     from app.db.session import async_session_maker
 {%- if cookiecutter.use_jwt %}
     from app.db.models.user import User
     from app.core.security import get_password_hash
-{%- endif %}
-{%- if cookiecutter.include_example_crud %}
-    from app.db.models.item import Item
 {%- endif %}
 
     async def _seed():
@@ -132,8 +103,8 @@ def seed(
             # Seed users
             if users:
                 if clear:
-                    info("Clearing existing users (except superusers)...")
-                    await session.execute(delete(User).where(User.is_superuser == False))  # noqa: E712
+                    info("Clearing existing users (except admins)...")
+                    await session.execute(delete(User).where(User.role != "admin"))
                     await session.commit()
 
                 # Check how many users already exist
@@ -150,39 +121,11 @@ def seed(
                             hashed_password=get_password_hash("password123"),
                             full_name=random_name(),
                             is_active=True,
-                            is_superuser=False,
                             role="user",
                         )
                         session.add(user)
                     await session.commit()
                     created_counts["users"] = count
-{%- endif %}
-
-{%- if cookiecutter.include_example_crud %}
-            # Seed items
-            if items:
-                if clear:
-                    info("Clearing existing items...")
-                    await session.execute(delete(Item))
-                    await session.commit()
-
-                # Check how many items already exist
-                result = await session.execute(select(Item).limit(1))
-                existing = result.scalars().first()
-
-                if existing and not clear:
-                    info("Items already exist. Use --clear to replace them.")
-                else:
-                    info(f"Creating {count} sample items...")
-                    for _ in range(count):
-                        item = Item(
-                            title=random_title(),
-                            description=random_description(),
-                            is_active=random.choice([True, True, True, False]),  # 75% active
-                        )
-                        session.add(item)
-                    await session.commit()
-                    created_counts["items"] = count
 {%- endif %}
 
             if created_counts:
@@ -198,9 +141,6 @@ def seed(
     from app.db.models.user import User
     from app.core.security import get_password_hash
 {%- endif %}
-{%- if cookiecutter.include_example_crud %}
-    from app.db.models.item import Item
-{%- endif %}
 
     with SessionLocal() as session:
         created_counts = {}
@@ -209,8 +149,8 @@ def seed(
         # Seed users
         if users:
             if clear:
-                info("Clearing existing users (except superusers)...")
-                session.execute(delete(User).where(User.is_superuser == False))  # noqa: E712
+                info("Clearing existing users (except admins)...")
+                session.execute(delete(User).where(User.role != "admin"))
                 session.commit()
 
             # Check how many users already exist
@@ -227,39 +167,11 @@ def seed(
                         hashed_password=get_password_hash("password123"),
                         full_name=random_name(),
                         is_active=True,
-                        is_superuser=False,
                         role="user",
                     )
                     session.add(user)
                 session.commit()
                 created_counts["users"] = count
-{%- endif %}
-
-{%- if cookiecutter.include_example_crud %}
-        # Seed items
-        if items:
-            if clear:
-                info("Clearing existing items...")
-                session.execute(delete(Item))
-                session.commit()
-
-            # Check how many items already exist
-            result = session.execute(select(Item).limit(1))
-            existing = result.scalars().first()
-
-            if existing and not clear:
-                info("Items already exist. Use --clear to replace them.")
-            else:
-                info(f"Creating {count} sample items...")
-                for _ in range(count):
-                    item = Item(
-                        title=random_title(),
-                        description=random_description(),
-                        is_active=random.choice([True, True, True, False]),  # 75% active
-                    )
-                    session.add(item)
-                session.commit()
-                created_counts["items"] = count
 {%- endif %}
 
         if created_counts:

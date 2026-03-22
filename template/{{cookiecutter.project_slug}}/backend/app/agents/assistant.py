@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_pydantic_ai %}
+{%- if cookiecutter.use_pydantic_ai %}
 """Assistant agent with PydanticAI.
 
 The main conversational agent that can be extended with custom tools.
@@ -132,22 +132,22 @@ class AssistantAgent:
 {%- if cookiecutter.enable_rag %}
         @agent.tool
         async def search_documents(
-            ctx: RunContext[Deps], query: str, collection: str = "documents", top_k: int = 5
+            ctx: RunContext[Deps], query: str, top_k: int = 5
         ) -> str:
             """Search the knowledge base for relevant documents.
 
             Use this tool to find information from uploaded documents before answering user queries.
+            Searches across all available collections automatically.
             Cite sources by referring to the document filename from the search results.
 
             Args:
                 query: The search query string.
-                collection: Name of the collection to search (default: "documents").
                 top_k: Number of top results to retrieve (default: 5).
 
             Returns:
                 Formatted string with search results including content and scores.
             """
-            return await search_knowledge_base(query=query, collection=collection, top_k=top_k)
+            return await search_knowledge_base(query=query, top_k=top_k)
 {%- endif %}
 
 {%- if cookiecutter.enable_web_search %}

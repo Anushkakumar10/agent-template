@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_postgresql %}
+{%- if cookiecutter.use_postgresql %}
 """Conversation repository (PostgreSQL async).
 
 Contains database operations for Conversation, Message, and ToolCall entities.
@@ -282,7 +282,7 @@ async def complete_tool_call(
     return db_tool_call
 
 
-{%- elif cookiecutter.enable_conversation_persistence and cookiecutter.use_sqlite %}
+{%- elif cookiecutter.use_sqlite %}
 """Conversation repository (SQLite sync).
 
 Contains database operations for Conversation, Message, and ToolCall entities.
@@ -542,6 +542,18 @@ def create_tool_call(
     return tool_call
 
 
+def deserialize_tool_call_args(tool_call: ToolCall) -> dict:
+    """Deserialize tool call args from JSON string (SQLite stores as TEXT)."""
+    import json
+
+    if isinstance(tool_call.args, str):
+        try:
+            return json.loads(tool_call.args)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return tool_call.args if isinstance(tool_call.args, dict) else {}
+
+
 def complete_tool_call(
     db: Session,
     *,
@@ -566,7 +578,7 @@ def complete_tool_call(
     return db_tool_call
 
 
-{%- elif cookiecutter.enable_conversation_persistence and cookiecutter.use_mongodb %}
+{%- elif cookiecutter.use_mongodb %}
 """Conversation repository (MongoDB).
 
 Contains database operations for Conversation, Message, and ToolCall entities.

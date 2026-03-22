@@ -1,17 +1,17 @@
 {%- if cookiecutter.enable_rag and cookiecutter.enable_rag_image_description %}
 """LLM-based image description for RAG document processing.
 
-Extracts text descriptions from images using vision-capable LLMs.
-The descriptions are appended to page content before chunking,
-making image content searchable via text embeddings.
+Uses the configured AI framework (PydanticAI, LangChain, etc.) to describe
+images extracted from documents. Descriptions are appended to page content
+before chunking, making image content searchable via text embeddings.
+
+Configuration:
+    RAG_IMAGE_DESCRIPTION_MODEL — LLM model to use (defaults to AI_MODEL from .env)
 """
 
 import base64
 import logging
 from abc import ABC, abstractmethod
-from io import BytesIO
-
-from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -21,172 +21,195 @@ IMAGE_DESCRIPTION_PROMPT = (
     "Be concise but comprehensive."
 )
 
-MAX_IMAGE_DIMENSION = 1024
-
-
-def resize_image(image_bytes: bytes, max_dim: int = MAX_IMAGE_DIMENSION) -> bytes:
-    """Resize image to fit within max_dim while preserving aspect ratio."""
-    img = Image.open(BytesIO(image_bytes))
-    if img.width <= max_dim and img.height <= max_dim:
-        return image_bytes
-    img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    return buffer.getvalue()
-
 
 class BaseImageDescriber(ABC):
     """Abstract base for LLM-based image description."""
 
     @abstractmethod
     async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
-        """Generate a text description of an image.
-
-        Args:
-            image_bytes: Raw image data.
-            mime_type: MIME type of the image.
-
-        Returns:
-            Text description of the image content.
-        """
+        """Generate a text description of an image."""
 
 
-{%- if cookiecutter.use_openai %}
-class OpenAIImageDescriber(BaseImageDescriber):
-    """Image description using OpenAI GPT-4o vision."""
+def _b64_encode(image_bytes: bytes) -> str:
+    """Base64-encode raw image bytes."""
+    return base64.b64encode(image_bytes).decode("utf-8")
 
-    def __init__(self, api_key: str, model: str = "gpt-4o"):
-        from openai import AsyncOpenAI
-        self.client = AsyncOpenAI(api_key=api_key)
-        self.model = model
+
+{%- if cookiecutter.use_pydantic_ai %}
+
+
+class PydanticAIImageDescriber(BaseImageDescriber):
+    """Image description using PydanticAI (supports all providers)."""
+
+    def __init__(self, model_name: str | None = None):
+        from app.core.config import settings
+        self.model_name = model_name or getattr(settings, "RAG_IMAGE_DESCRIPTION_MODEL", None) or settings.AI_MODEL
 
     async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
-        resized = resize_image(image_bytes)
-        b64 = base64.b64encode(resized).decode("utf-8")
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+            from pydantic_ai import Agent
+            from pydantic_ai.messages import BinaryContent
+
+            agent = Agent(self.model_name)
+            result = await agent.run(
+                [
+                    BinaryContent(data=image_bytes, media_type=mime_type),
+                    IMAGE_DESCRIPTION_PROMPT,
+                ]
+            )
+            return result.output if hasattr(result, "output") else str(result.data)
+        except Exception as e:
+            logger.error(f"PydanticAI image description failed: {e}")
+            return ""
+
+
+{%- elif cookiecutter.use_langchain or cookiecutter.use_langgraph %}
+
+
+class LangChainImageDescriber(BaseImageDescriber):
+    """Image description using LangChain ChatModel with vision."""
+
+    def __init__(self, model_name: str | None = None):
+        from app.core.config import settings
+        self.model_name = model_name or getattr(settings, "RAG_IMAGE_DESCRIPTION_MODEL", None) or settings.AI_MODEL
+        self._llm = None
+
+    def _get_llm(self):
+        if self._llm is None:
+{%- if cookiecutter.use_openai %}
+            from langchain_openai import ChatOpenAI
+            self._llm = ChatOpenAI(model=self.model_name)
+{%- elif cookiecutter.use_anthropic %}
+            from langchain_anthropic import ChatAnthropic
+            self._llm = ChatAnthropic(model=self.model_name)
+{%- elif cookiecutter.use_google %}
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            self._llm = ChatGoogleGenerativeAI(model=self.model_name)
+{%- endif %}
+        return self._llm
+
+    async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
+        try:
+            from langchain_core.messages import HumanMessage
+
+            b64 = _b64_encode(image_bytes)
+            llm = self._get_llm()
+            message = HumanMessage(
+                content=[
+                    {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
                     {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:{mime_type};base64,{b64}"},
-                            },
-                        ],
-                    }
-                ],
-                max_tokens=300,
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime_type};base64,{b64}"},
+                    },
+                ]
+            )
+            response = await llm.ainvoke([message])
+            return response.content if isinstance(response.content, str) else str(response.content)
+        except Exception as e:
+            logger.error(f"LangChain image description failed: {e}")
+            return ""
+
+
+{%- elif cookiecutter.use_crewai %}
+
+
+class CrewAIImageDescriber(BaseImageDescriber):
+    """Image description using CrewAI (delegates to LLM provider directly)."""
+
+    def __init__(self, model_name: str | None = None):
+        from app.core.config import settings
+        self.model_name = model_name or getattr(settings, "RAG_IMAGE_DESCRIPTION_MODEL", None) or settings.AI_MODEL
+
+    async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
+        try:
+{%- if cookiecutter.use_openai %}
+            from openai import AsyncOpenAI
+            from app.core.config import settings
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            b64 = _b64_encode(image_bytes)
+            response = await client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": [
+                    {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
+                ]}],
+                max_tokens=500,
             )
             return response.choices[0].message.content or ""
-        except Exception as e:
-            logger.error(f"OpenAI image description failed: {e}")
-            return ""
-{%- endif %}
-
-{%- if cookiecutter.use_anthropic %}
-class AnthropicImageDescriber(BaseImageDescriber):
-    """Image description using Anthropic Claude vision."""
-
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-6"):
-        from anthropic import AsyncAnthropic
-        self.client = AsyncAnthropic(api_key=api_key)
-        self.model = model
-
-    async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
-        resized = resize_image(image_bytes)
-        b64 = base64.b64encode(resized).decode("utf-8")
-        media_type = mime_type if mime_type in ("image/png", "image/jpeg", "image/gif", "image/webp") else "image/png"
-        try:
-            response = await self.client.messages.create(
-                model=self.model,
-                max_tokens=300,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": media_type,
-                                    "data": b64,
-                                },
-                            },
-                            {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
-                        ],
-                    }
-                ],
+{%- elif cookiecutter.use_anthropic %}
+            from anthropic import AsyncAnthropic
+            from app.core.config import settings
+            client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+            b64 = _b64_encode(image_bytes)
+            response = await client.messages.create(
+                model=self.model_name, max_tokens=500,
+                messages=[{"role": "user", "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": mime_type, "data": b64}},
+                    {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
+                ]}],
             )
             return response.content[0].text if response.content else ""
-        except Exception as e:
-            logger.error(f"Anthropic image description failed: {e}")
-            return ""
-{%- endif %}
-
-{%- if cookiecutter.use_openrouter %}
-class OpenRouterImageDescriber(BaseImageDescriber):
-    """Image description using OpenRouter (OpenAI-compatible API)."""
-
-    def __init__(self, api_key: str, model: str = "anthropic/claude-3.5-sonnet"):
-        from openai import AsyncOpenAI
-        self.client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
-        self.model = model
-
-    async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
-        resized = resize_image(image_bytes)
-        b64 = base64.b64encode(resized).decode("utf-8")
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:{mime_type};base64,{b64}"},
-                            },
-                        ],
-                    }
-                ],
-                max_tokens=300,
-            )
-            return response.choices[0].message.content or ""
-        except Exception as e:
-            logger.error(f"OpenRouter image description failed: {e}")
-            return ""
-{%- endif %}
-
-{%- if cookiecutter.use_google %}
-class GeminiImageDescriber(BaseImageDescriber):
-    """Image description using Google Gemini vision."""
-
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
-        from google import genai
-        self.client = genai.Client(api_key=api_key)
-        self.model = model
-
-    async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
-        import asyncio
-        from google.genai import types as genai_types
-        resized = resize_image(image_bytes)
-        try:
+{%- elif cookiecutter.use_google %}
+            import asyncio
+            from google import genai
+            from google.genai import types as genai_types
+            from app.core.config import settings
+            client = genai.Client(api_key=settings.GOOGLE_API_KEY)
             response = await asyncio.to_thread(
-                lambda: self.client.models.generate_content(
-                    model=self.model,
-                    contents=[
-                        genai_types.Part.from_bytes(data=resized, mime_type=mime_type),
-                        IMAGE_DESCRIPTION_PROMPT,
-                    ],
+                lambda: client.models.generate_content(
+                    model=self.model_name,
+                    contents=[genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type), IMAGE_DESCRIPTION_PROMPT],
                 )
             )
             return response.text or ""
+{%- endif %}
         except Exception as e:
-            logger.error(f"Gemini image description failed: {e}")
+            logger.error(f"CrewAI image description failed: {e}")
+            return ""
+
+
+{%- elif cookiecutter.use_deepagents %}
+
+
+class DeepAgentsImageDescriber(BaseImageDescriber):
+    """Image description using DeepAgents (delegates to LLM provider directly)."""
+
+    def __init__(self, model_name: str | None = None):
+        from app.core.config import settings
+        self.model_name = model_name or getattr(settings, "RAG_IMAGE_DESCRIPTION_MODEL", None) or settings.AI_MODEL
+
+    async def describe(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
+        try:
+{%- if cookiecutter.use_openai %}
+            from openai import AsyncOpenAI
+            from app.core.config import settings
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            b64 = _b64_encode(image_bytes)
+            response = await client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": [
+                    {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
+                ]}],
+                max_tokens=500,
+            )
+            return response.choices[0].message.content or ""
+{%- elif cookiecutter.use_anthropic %}
+            from anthropic import AsyncAnthropic
+            from app.core.config import settings
+            client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+            b64 = _b64_encode(image_bytes)
+            response = await client.messages.create(
+                model=self.model_name, max_tokens=500,
+                messages=[{"role": "user", "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": mime_type, "data": b64}},
+                    {"type": "text", "text": IMAGE_DESCRIPTION_PROMPT},
+                ]}],
+            )
+            return response.content[0].text if response.content else ""
+{%- endif %}
+        except Exception as e:
+            logger.error(f"DeepAgents image description failed: {e}")
             return ""
 {%- endif %}
 {%- endif %}

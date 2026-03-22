@@ -62,7 +62,7 @@ class RAGMessageResponse(BaseModel):
     """Simple message response."""
     message: str
 
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_postgresql %}
+{%- if cookiecutter.use_postgresql %}
 
 
 class RAGTrackedDocumentItem(BaseModel):

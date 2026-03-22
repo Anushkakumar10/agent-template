@@ -1,4 +1,3 @@
-{%- if cookiecutter.enable_i18n %}
 "use client";
 
 import { useLocale } from "next-intl";
@@ -75,13 +74,3 @@ export function LanguageSwitcherCompact() {
     </div>
   );
 }
-{%- else %}
-// i18n is disabled - no language switcher component
-export function LanguageSwitcher() {
-  return null;
-}
-
-export function LanguageSwitcherCompact() {
-  return null;
-}
-{%- endif %}

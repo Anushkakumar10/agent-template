@@ -228,7 +228,7 @@ def post_generation_tasks(project_path: Path, config: ProjectConfig) -> None:
         console.print()
         console.print(f"[bold cyan]RAG ({vs}):[/]")
         console.print(f"  uv run {slug} rag-ingest /path/to/docs/ --collection documents")
-        console.print(f"  uv run {slug} rag-search \"your query\" --collection documents")
+        console.print(f'  uv run {slug} rag-search "your query" --collection documents')
         console.print(f"  uv run {slug} rag-collections")
 
     if config.enable_web_search:

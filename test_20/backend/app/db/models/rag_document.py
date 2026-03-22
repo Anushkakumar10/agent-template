@@ -25,10 +25,14 @@ class RAGDocument(TimestampMixin, SQLModel, table=True):
     filetype: str = Field(sa_column=Column(String(20), nullable=False))
     storage_path: str | None = Field(default=None, sa_column=Column(String(500), nullable=True))
     # processing | done | error
-    status: str = Field(default="processing", sa_column=Column(String(20), nullable=False, default="processing"))
+    status: str = Field(
+        default="processing", sa_column=Column(String(20), nullable=False, default="processing")
+    )
     error_message: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     # Set after successful ingestion
-    vector_document_id: str | None = Field(default=None, sa_column=Column(String(255), nullable=True))
+    vector_document_id: str | None = Field(
+        default=None, sa_column=Column(String(255), nullable=True)
+    )
     chunk_count: int = Field(default=0, sa_column=Column(Integer, nullable=False, default=0))
     # When processing started/finished
     started_at: datetime = Field(

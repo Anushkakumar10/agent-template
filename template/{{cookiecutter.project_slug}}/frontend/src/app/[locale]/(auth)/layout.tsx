@@ -4,18 +4,14 @@ import { APP_NAME, APP_DESCRIPTION, ROUTES } from "@/lib/constants";
 import { Bot, MessageSquare, Database, Shield, Zap, Lock } from "lucide-react";
 
 const features = [
-{%- if cookiecutter.enable_ai_agent %}
   { icon: MessageSquare, label: "AI Chat" },
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
   { icon: Database, label: "Knowledge Base" },
 {%- endif %}
 {%- if cookiecutter.use_jwt %}
   { icon: Shield, label: "Secure Auth" },
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent %}
   { icon: Zap, label: "Real-time" },
-{%- endif %}
 ];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {

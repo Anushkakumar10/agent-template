@@ -6,11 +6,11 @@ import { useWebSocket } from "./use-websocket";
 import { useChatStore } from "@/stores";
 import type { ChatMessage, ToolCall, WSEvent, PendingApproval, Decision } from "@/types";
 import { WS_URL } from "@/lib/constants";
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
 import { useConversationStore } from "@/stores";
 {%- endif %}
 
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
 interface UseChatOptions {
   conversationId?: string | null;
   onConversationCreated?: (conversationId: string) => void;
@@ -68,7 +68,7 @@ export function useChat() {
       };
 
       switch (wsEvent.type) {
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
         case "conversation_created": {
           // Handle new conversation created by backend
           const { conversation_id } = wsEvent.data as { conversation_id: string };
@@ -327,7 +327,7 @@ export function useChat() {
         }
       }
     },
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
     [currentMessageId, addMessage, updateMessage, addToolCall, updateToolCall, setCurrentConversationId, onConversationCreated]
 {%- else %}
     [currentMessageId, addMessage, updateMessage, addToolCall, updateToolCall]
@@ -351,7 +351,7 @@ export function useChat() {
         fileIds,
       });
       setIsProcessing(true);
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
       const payload: Record<string, unknown> = {
         message: content,
         conversation_id: conversationId || null,
@@ -366,7 +366,7 @@ export function useChat() {
       sendMessage(payload);
 {%- endif %}
     },
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
     [addMessage, sendMessage, conversationId]
 {%- else %}
     [addMessage, sendMessage]

@@ -104,7 +104,7 @@ dependencies = [
 {%- if cookiecutter.enable_file_storage %}
     "boto3>=1.35.0",
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_pydantic_ai %}
+{%- if cookiecutter.use_pydantic_ai %}
 {%- if cookiecutter.use_openai %}
     "pydantic-ai>=0.0.39",
 {%- endif %}
@@ -118,7 +118,7 @@ dependencies = [
     "pydantic-ai-slim[openrouter]>=0.0.39",
 {%- endif %}
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_langchain %}
+{%- if cookiecutter.use_langchain %}
     "langchain>=0.3.0",
 {%- if cookiecutter.use_openai %}
     "langchain-openai>=0.3.0",
@@ -131,7 +131,7 @@ dependencies = [
 {%- endif %}
     "langgraph>=0.2.0",
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_langgraph %}
+{%- if cookiecutter.use_langgraph %}
     "langchain-core>=0.3.0",
 {%- if cookiecutter.use_openai %}
     "langchain-openai>=0.3.0",
@@ -145,7 +145,7 @@ dependencies = [
     "langgraph>=0.2.0",
     "langgraph-checkpoint>=2.0.0",
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_crewai %}
+{%- if cookiecutter.use_crewai %}
     "crewai>=1.0.0",
 {%- if cookiecutter.use_openai %}
     "langchain-openai>=0.3.0",
@@ -157,7 +157,7 @@ dependencies = [
     "langchain-google-genai>=2.0.0",
 {%- endif %}
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_deepagents %}
+{%- if cookiecutter.use_deepagents %}
     "deepagents>=0.1.0",
 {%- if cookiecutter.use_openai %}
     "langchain-openai>=0.3.0",
@@ -205,7 +205,13 @@ dependencies = [
 {%- if cookiecutter.use_cross_encoder_reranker %}
     "sentence-transformers>=3.0.0",
 {%- endif %}
-{%- if cookiecutter.use_llamaparse %}
+{%- if cookiecutter.use_all_pdf_parsers %}
+    "pymupdf>=1.25.0",
+    "pillow>=10.0.0",
+    "python-docx>=1.1.0",
+    "llama-cloud>=1.0.0",
+    "liteparse>=0.1.0",
+{%- elif cookiecutter.use_llamaparse %}
     "llama-cloud>=1.0.0",
 {%- elif cookiecutter.use_liteparse %}
     "liteparse>=0.1.0",

@@ -16,6 +16,7 @@ services:
     volumes:
       - ./backend/app:/app/app:ro
       - ./backend/cli:/app/cli:ro
+      - media_data:/app/media
     env_file:
       - ./backend/.env
     environment:
@@ -146,6 +147,7 @@ services:
     container_name: test_20_celery_worker
     volumes:
       - ./backend/app:/app/app:ro
+      - media_data:/app/media
     command: celery -A app.worker.celery_app worker --loglevel=debug
     env_file:
       - ./backend/.env
@@ -222,3 +224,4 @@ volumes:
   etcd_data:
   minio_data:
   milvus_data:
+  media_data:

@@ -12,9 +12,7 @@ import {
   XCircle,
   User,
   ArrowRight,
-{%- if cookiecutter.enable_ai_agent %}
   MessageSquare,
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
   Database,
 {%- endif %}
@@ -70,7 +68,8 @@ export default function DashboardPage() {
           } catch { /* ignore */ }
         }
         setRagStats({ collections: data.items.length, vectors: totalVectors });
-      } catch {
+      } catch (err) {
+        console.error("Failed to load RAG stats:", err);
         setRagStats({ collections: 0, vectors: 0 });
       }
     };
@@ -124,13 +123,12 @@ export default function DashboardPage() {
               <Skeleton className="h-5 w-40 rounded" />
             )}
             <p className="text-xs text-muted-foreground">
-              {user?.is_superuser ? "Admin" : "User"}
+              {user?.role === "admin" ? "Admin" : "User"}
               {user?.created_at && ` · Since ${new Date(user.created_at).toLocaleDateString()}`}
             </p>
           </CardContent>
         </Card>
 
-{%- if cookiecutter.enable_ai_agent %}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">AI Agent</CardTitle>
@@ -141,7 +139,6 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">{{ cookiecutter.llm_provider }} provider</p>
           </CardContent>
         </Card>
-{%- endif %}
 
 {%- if cookiecutter.enable_rag %}
         <Card>
@@ -165,7 +162,6 @@ export default function DashboardPage() {
       <div>
         <h2 className="mb-3 text-lg font-semibold">Quick Actions</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-{%- if cookiecutter.enable_ai_agent %}
           <Link href={ROUTES.CHAT}>
             <Card className="cursor-pointer transition-colors hover:bg-accent">
               <CardContent className="flex items-center gap-3 p-4">
@@ -178,7 +174,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
-{%- endif %}
 
 {%- if cookiecutter.enable_rag %}
           <Link href={ROUTES.RAG}>
@@ -215,6 +210,19 @@ export default function DashboardPage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium">API Documentation</p>
                   <p className="text-xs text-muted-foreground">OpenAPI / Swagger docs</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </a>
+
+          <a href="/api/conversations/export" download="conversations_export.json">
+            <Card className="cursor-pointer transition-colors hover:bg-accent">
+              <CardContent className="flex items-center gap-3 p-4">
+                <ArrowRight className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Export Conversations</p>
+                  <p className="text-xs text-muted-foreground">Download all chats as JSON</p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </CardContent>

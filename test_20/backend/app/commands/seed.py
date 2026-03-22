@@ -110,8 +110,8 @@ def seed(
             # Seed users
             if users:
                 if clear:
-                    info("Clearing existing users (except superusers)...")
-                    await session.execute(delete(User).where(User.is_superuser == False))  # noqa: E712
+                    info("Clearing existing users (except admins)...")
+                    await session.execute(delete(User).where(User.role != "admin"))
                     await session.commit()
 
                 # Check how many users already exist
@@ -128,7 +128,6 @@ def seed(
                             hashed_password=get_password_hash("password123"),
                             full_name=random_name(),
                             is_active=True,
-                            is_superuser=False,
                             role="user",
                         )
                         session.add(user)

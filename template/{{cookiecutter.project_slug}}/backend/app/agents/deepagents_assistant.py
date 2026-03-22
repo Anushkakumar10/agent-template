@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_deepagents %}
+{%- if cookiecutter.use_deepagents %}
 """DeepAgents implementation with middleware stacking and human-in-the-loop.
 
 DeepAgents is a framework for building agentic coding assistants.

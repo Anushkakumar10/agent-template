@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Avatar, AvatarFallback, Skeleton } from "@/components/ui";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/hooks";
@@ -33,6 +34,14 @@ function timeAgo(dateStr: string): string {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
+
+  // Admin-only page
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.replace(ROUTES.CHAT);
+    }
+  }, [user, router]);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [healthError, setHealthError] = useState(false);
@@ -159,7 +168,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-0.5">
                   {recentConversations.map(conv => (
-                    <Link key={conv.id} href={ROUTES.CHAT}
+                    <Link key={conv.id} href={`${ROUTES.CHAT}?id=${conv.id}`}
                       className="hover:bg-muted/50 flex items-center justify-between rounded-md px-3 py-2 transition-colors">
                       <div className="flex items-center gap-2.5 overflow-hidden">
                         <MessageSquare className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
@@ -290,7 +299,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{user?.email}</p>
                   <p className="text-muted-foreground text-[10px]">
-                    {user?.is_superuser ? "Admin" : "User"}
+                    {user?.role === "admin" ? "Admin" : "User"}
                     {user?.created_at && ` · Since ${new Date(user.created_at).toLocaleDateString()}`}
                   </p>
                 </div>

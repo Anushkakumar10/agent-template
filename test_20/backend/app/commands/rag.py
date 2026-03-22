@@ -301,7 +301,9 @@ def rag_ingest(path: str, collection: str, recursive: bool, replace: bool, sync_
     """
     _, vector_store, processor, _, ingestion = get_rag_services()
     asyncio.run(
-        ingest_path_async(path, collection, recursive, vector_store, processor, ingestion, replace, sync_mode)
+        ingest_path_async(
+            path, collection, recursive, vector_store, processor, ingestion, replace, sync_mode
+        )
     )
 
 

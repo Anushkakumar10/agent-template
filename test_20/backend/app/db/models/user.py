@@ -41,10 +41,13 @@ class User(TimestampMixin, SQLModel, table=True):
     hashed_password: str | None = Field(default=None, max_length=255)
     full_name: str | None = Field(default=None, max_length=255)
     is_active: bool = Field(default=True)
-    is_superuser: bool = Field(default=False)
     role: str = Field(default=UserRole.USER.value, max_length=50)
-    oauth_provider: str | None = Field(default=None, sa_column=Column(String(50), nullable=True, index=True))
-    oauth_id: str | None = Field(default=None, sa_column=Column(String(255), nullable=True, index=True))
+    oauth_provider: str | None = Field(
+        default=None, sa_column=Column(String(50), nullable=True, index=True)
+    )
+    oauth_id: str | None = Field(
+        default=None, sa_column=Column(String(255), nullable=True, index=True)
+    )
     avatar_url: str | None = Field(default=None, sa_column=Column(String(500), nullable=True))
 
     # Relationship to sessions

@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.enable_conversation_persistence and cookiecutter.use_jwt %}
+{%- if cookiecutter.use_jwt %}
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:{{ cookiecutter.backend_port }}";
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   }
 }
 {%- else %}
-// File upload not available (requires AI agent + conversation persistence + JWT)
+// File upload not available (requires conversation persistence + JWT)
 export async function POST() {
   return new Response("Not implemented", { status: 501 });
 }

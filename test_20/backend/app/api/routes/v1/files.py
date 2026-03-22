@@ -1,22 +1,19 @@
 """File upload and download endpoints for chat attachments."""
 
 import logging
-import tempfile
-from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 
-from app.api.deps import DBSession, CurrentUser
+from app.api.deps import CurrentUser, DBSession
 from app.db.models.chat_file import ChatFile
-from app.schemas.file import FileUploadResponse, FileInfo
+from app.schemas.file import FileInfo, FileUploadResponse
 from app.services.file_storage import (
-    get_file_storage,
-    classify_file,
     ALLOWED_MIME_TYPES,
-    MAX_UPLOAD_SIZE,
+    classify_file,
+    get_file_storage,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,6 +64,7 @@ def _parse_docx_content(data: bytes) -> str | None:
     """Extract text from DOCX."""
     try:
         import io
+
         from docx import Document as DOCXDocument
 
         doc = DOCXDocument(io.BytesIO(data))
@@ -96,6 +94,7 @@ async def upload_file(
 
     # Read file
     from app.core.config import settings
+
     max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     data = await file.read()
     if len(data) > max_size:

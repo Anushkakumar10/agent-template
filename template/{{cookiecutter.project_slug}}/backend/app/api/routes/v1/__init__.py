@@ -1,5 +1,5 @@
 """API v1 router aggregation."""
-{%- if cookiecutter.use_jwt or cookiecutter.enable_oauth or cookiecutter.include_example_crud or cookiecutter.enable_conversation_persistence or cookiecutter.enable_webhooks or cookiecutter.enable_websockets or cookiecutter.enable_ai_agent %}
+{%- if cookiecutter.use_jwt or cookiecutter.enable_oauth or cookiecutter.enable_webhooks %}
 # ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 {%- endif %}
 
@@ -15,25 +15,17 @@ from app.api.routes.v1 import oauth
 {%- if cookiecutter.enable_session_management and cookiecutter.use_jwt %}
 from app.api.routes.v1 import sessions
 {%- endif %}
-{%- if cookiecutter.include_example_crud and cookiecutter.use_database %}
-from app.api.routes.v1 import items
-{%- endif %}
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
 from app.api.routes.v1 import conversations
 {%- endif %}
 {%- if cookiecutter.enable_webhooks and cookiecutter.use_database %}
 from app.api.routes.v1 import webhooks
 {%- endif %}
-{%- if cookiecutter.enable_websockets %}
-from app.api.routes.v1 import ws
-{%- endif %}
-{%- if cookiecutter.enable_ai_agent %}
 from app.api.routes.v1 import agent
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
 from app.api.routes.v1 import rag
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.enable_conversation_persistence and cookiecutter.use_jwt %}
+{%- if cookiecutter.use_jwt %}
 from app.api.routes.v1 import files
 {%- endif %}
 
@@ -63,13 +55,7 @@ v1_router.include_router(oauth.router, prefix="/oauth", tags=["oauth"])
 v1_router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 {%- endif %}
 
-{%- if cookiecutter.include_example_crud and cookiecutter.use_database %}
-
-# Example CRUD routes (items)
-v1_router.include_router(items.router, prefix="/items", tags=["items"])
-{%- endif %}
-
-{%- if cookiecutter.enable_conversation_persistence and cookiecutter.use_database %}
+{%- if cookiecutter.use_database %}
 
 # Conversation routes (AI chat persistence)
 v1_router.include_router(conversations.router, prefix="/conversations", tags=["conversations"])
@@ -81,16 +67,9 @@ v1_router.include_router(conversations.router, prefix="/conversations", tags=["c
 v1_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 {%- endif %}
 
-{%- if cookiecutter.enable_websockets %}
-
-# WebSocket routes
-v1_router.include_router(ws.router, tags=["websocket"])
-{%- endif %}
-{%- if cookiecutter.enable_ai_agent %}
 
 # AI Agent routes
 v1_router.include_router(agent.router, tags=["agent"])
-{%- endif %}
 
 {%- if cookiecutter.enable_rag %}
 
@@ -98,7 +77,7 @@ v1_router.include_router(agent.router, tags=["agent"])
 v1_router.include_router(rag.router, prefix="/rag", tags=["rag"])
 {%- endif %}
 
-{%- if cookiecutter.enable_ai_agent and cookiecutter.enable_conversation_persistence and cookiecutter.use_jwt %}
+{%- if cookiecutter.use_jwt %}
 
 # File upload/download routes
 v1_router.include_router(files.router, tags=["files"])

@@ -5,9 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks";
 {%- endif %}
 import { ThemeToggle } from "@/components/theme";
-{%- if cookiecutter.enable_i18n %}
 import { LanguageSwitcherCompact } from "@/components/language-switcher";
-{%- endif %}
 import { APP_NAME, ROUTES } from "@/lib/constants";
 {%- if cookiecutter.use_jwt or cookiecutter.use_api_key %}
 import { LogOut, User } from "lucide-react";
@@ -32,9 +30,7 @@ export function LandingNav({ signInLabel, getStartedLabel, dashboardLabel }: Lan
         </Link>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
-{%- if cookiecutter.enable_i18n %}
           <LanguageSwitcherCompact />
-{%- endif %}
           <ThemeToggle />
 
 {%- if cookiecutter.use_jwt or cookiecutter.use_api_key %}

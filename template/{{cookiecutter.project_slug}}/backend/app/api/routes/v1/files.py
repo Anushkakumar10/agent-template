@@ -1,4 +1,4 @@
-{%- if cookiecutter.enable_ai_agent and cookiecutter.enable_conversation_persistence and cookiecutter.use_jwt %}
+{%- if cookiecutter.use_jwt %}
 """File upload and download endpoints for chat attachments."""
 
 import logging
@@ -7,111 +7,45 @@ from uuid import UUID
 {%- endif %}
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
-from fastapi.responses import FileResponse, Response
-from sqlalchemy import select
+from fastapi.responses import FileResponse
 
-from app.api.deps import DBSession, CurrentUser
-from app.db.models.chat_file import ChatFile
+from app.api.deps import CurrentUser, FileUploadSvc
 from app.schemas.file import FileUploadResponse, FileInfo
-from app.services.file_storage import (
-    get_file_storage,
-    classify_file,
-    ALLOWED_MIME_TYPES,
-    MAX_UPLOAD_SIZE,
-)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/files", tags=["files"])
 
 
-def _parse_text_content(data: bytes, mime_type: str) -> str | None:
-    """Extract text content from text-based files."""
-    try:
-        return data.decode("utf-8")
-    except (UnicodeDecodeError, ValueError):
-        return None
-
-
-{%- if not cookiecutter.use_llamaparse %}
-def _parse_pdf_content(data: bytes) -> str | None:
-    """Extract text from PDF using PyMuPDF."""
-    try:
-        import pymupdf
-        doc = pymupdf.open(stream=data, filetype="pdf")
-        texts = []
-        for page in doc:
-            blocks = page.get_text("blocks")
-            for b in blocks:
-                if b[6] == 0:
-                    text = b[4].strip()
-                    if text:
-                        texts.append(text)
-            try:
-                tables = page.find_tables()
-                if tables and tables.tables:
-                    for table in tables.tables:
-                        df = table.to_pandas()
-                        if not df.empty:
-                            texts.append(df.to_markdown(index=False))
-            except Exception:
-                pass
-        doc.close()
-        return "\n\n".join(texts) if texts else None
-    except Exception as e:
-        logger.warning(f"PDF parsing failed: {e}")
-        return None
-
-
-def _parse_docx_content(data: bytes) -> str | None:
-    """Extract text from DOCX."""
-    try:
-        import io
-        from docx import Document as DOCXDocument
-        doc = DOCXDocument(io.BytesIO(data))
-        return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
-    except Exception as e:
-        logger.warning(f"DOCX parsing failed: {e}")
-        return None
-{%- endif %}
-
-
 @router.post("/upload", response_model=FileUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_file(
     file: UploadFile = File(...),
-    db: DBSession = None,
-    current_user: CurrentUser = None,
+    file_upload_svc: FileUploadSvc = None,  # type: ignore[assignment]
+    current_user: CurrentUser = None,  # type: ignore[assignment]
 ):
     """Upload a file for use in chat."""
-    if file.content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type '{file.content_type}' is not supported.",
-        )
-
     data = await file.read()
-    if len(data) > MAX_UPLOAD_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024*1024)}MB.",
-        )
+    is_valid, error = file_upload_svc.validate_upload(file.content_type, len(data))
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
 
-    file_type = classify_file(file.content_type or "", file.filename or "unknown")
-
-    parsed_content = None
-    if file_type == "text":
-        parsed_content = _parse_text_content(data, file.content_type or "")
-{%- if not cookiecutter.use_llamaparse %}
-    elif file_type == "pdf":
-        parsed_content = _parse_pdf_content(data)
-    elif file_type == "docx":
-        parsed_content = _parse_docx_content(data)
+    file_type = file_upload_svc.classify_file(file.content_type or "", file.filename or "unknown")
+{%- if cookiecutter.use_postgresql %}
+    parsed_content = await file_upload_svc.parse_content(data, file_type, file.content_type or "")
+{%- else %}
+    parsed_content = file_upload_svc.parse_content(data, file_type, file.content_type or "")
 {%- endif %}
+
+    from app.services.file_storage import get_file_storage
 
     storage = get_file_storage()
     storage_path = await storage.save(str(current_user.id), file.filename or "unknown", data)
 
-    chat_file = ChatFile(
+{%- if cookiecutter.use_postgresql %}
+    chat_file = await file_upload_svc.create_chat_file(
+{%- else %}
+    chat_file = file_upload_svc.create_chat_file(
+{%- endif %}
         user_id=current_user.id,
         filename=file.filename or "unknown",
         mime_type=file.content_type or "application/octet-stream",
@@ -120,10 +54,6 @@ async def upload_file(
         file_type=file_type,
         parsed_content=parsed_content,
     )
-    db.add(chat_file)
-    await db.flush()
-    await db.commit()
-    await db.refresh(chat_file)
 
     return FileUploadResponse(
         id=chat_file.id,
@@ -134,24 +64,29 @@ async def upload_file(
     )
 
 
-@router.get("/{file_id}", response_class=Response)
-async def download_file(
+@router.get("/{file_id}")
 {%- if cookiecutter.use_postgresql %}
+async def download_file(
     file_id: UUID,
 {%- else %}
+def download_file(
     file_id: str,
 {%- endif %}
-    db: DBSession = None,
-    current_user: CurrentUser = None,
+    file_upload_svc: FileUploadSvc = None,  # type: ignore[assignment]
+    current_user: CurrentUser = None,  # type: ignore[assignment]
 ):
     """Download a file. Only the owner can access their files."""
-    result = await db.execute(select(ChatFile).where(ChatFile.id == file_id))
-    chat_file = result.scalar_one_or_none()
+    from app.core.exceptions import NotFoundError
+    from app.services.file_storage import get_file_storage
 
-    if not chat_file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-    if chat_file.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    try:
+{%- if cookiecutter.use_postgresql %}
+        chat_file = await file_upload_svc.get_user_file(file_id, current_user.id)
+{%- else %}
+        chat_file = file_upload_svc.get_user_file(file_id, current_user.id)
+{%- endif %}
+    except NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found") from None
 
     storage = get_file_storage()
     file_path = storage.get_full_path(chat_file.storage_path)
@@ -162,23 +97,27 @@ async def download_file(
 
 
 @router.get("/{file_id}/info", response_model=FileInfo)
-async def get_file_info(
 {%- if cookiecutter.use_postgresql %}
+async def get_file_info(
     file_id: UUID,
 {%- else %}
+def get_file_info(
     file_id: str,
 {%- endif %}
-    db: DBSession = None,
-    current_user: CurrentUser = None,
+    file_upload_svc: FileUploadSvc = None,  # type: ignore[assignment]
+    current_user: CurrentUser = None,  # type: ignore[assignment]
 ):
     """Get file metadata. Only the owner can access."""
-    result = await db.execute(select(ChatFile).where(ChatFile.id == file_id))
-    chat_file = result.scalar_one_or_none()
+    from app.core.exceptions import NotFoundError
 
-    if not chat_file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-    if chat_file.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    try:
+{%- if cookiecutter.use_postgresql %}
+        chat_file = await file_upload_svc.get_user_file(file_id, current_user.id)
+{%- else %}
+        chat_file = file_upload_svc.get_user_file(file_id, current_user.id)
+{%- endif %}
+    except NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found") from None
 
     return FileInfo(
         id=chat_file.id,

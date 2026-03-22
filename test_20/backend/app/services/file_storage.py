@@ -13,12 +13,23 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_MIME_TYPES = {
     # Images
-    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
     # Text
-    "text/plain", "text/markdown", "text/csv", "text/html", "text/css",
-    "text/xml", "text/x-python", "text/javascript", "text/x-yaml",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "text/html",
+    "text/css",
+    "text/xml",
+    "text/x-python",
+    "text/javascript",
+    "text/x-yaml",
     # Application
-    "application/json", "application/pdf",
+    "application/json",
+    "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # docx
     "application/x-yaml",
 }

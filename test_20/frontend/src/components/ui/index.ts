@@ -22,3 +22,4 @@ export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableC
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./accordion";
 export { Checkbox } from "./checkbox";
 export { RadioGroup, RadioGroupItem } from "./radio-group";
+export { Spinner } from "./spinner";

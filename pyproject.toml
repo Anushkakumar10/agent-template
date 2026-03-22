@@ -101,6 +101,7 @@ line-length = 100
 exclude = [
     "template",
     "test",
+    "test_*",
 ]
 
 [tool.ruff.lint]

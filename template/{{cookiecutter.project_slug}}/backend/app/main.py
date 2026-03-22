@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
     instrument_httpx()
 {%- endif %}
 
-{%- if cookiecutter.enable_logfire and cookiecutter.enable_ai_agent and cookiecutter.use_pydantic_ai %}
+{%- if cookiecutter.enable_logfire and cookiecutter.use_pydantic_ai %}
     from app.core.logfire_setup import instrument_pydantic_ai
     instrument_pydantic_ai()
 {%- endif %}
@@ -203,6 +203,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
     except Exception:
         pass
 {%- endif %}
+{%- if cookiecutter.use_qdrant %}
+    try:
+        if "vector_store" in state:
+            await state["vector_store"].client.close()
+    except Exception:
+        pass
+{%- endif %}
+{%- if cookiecutter.use_pgvector %}
+    try:
+        if "vector_store" in state:
+            await state["vector_store"].engine.dispose()
+    except Exception:
+        pass
+{%- endif %}
 {%- endif %}
 
 
@@ -246,30 +260,20 @@ def create_app() -> FastAPI:
             "description": "Session management - view and manage active login sessions",
         },
 {%- endif %}
-{%- if cookiecutter.include_example_crud %}
-        {
-            "name": "items",
-            "description": "Example CRUD endpoints demonstrating the API pattern",
-        },
-{%- endif %}
-{%- if cookiecutter.enable_conversation_persistence %}
         {
             "name": "conversations",
             "description": "AI conversation persistence - manage chat history",
         },
-{%- endif %}
 {%- if cookiecutter.enable_webhooks %}
         {
             "name": "webhooks",
             "description": "Webhook management - subscribe to events and manage deliveries",
         },
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent %}
         {
             "name": "agent",
             "description": "AI agent WebSocket endpoint for real-time chat",
         },
-{%- endif %}
 {%- if cookiecutter.enable_websockets %}
         {
             "name": "websocket",
@@ -310,10 +314,10 @@ def create_app() -> FastAPI:
 {%- if cookiecutter.enable_rate_limiting %}
 - **Rate Limiting**: Request rate limiting per client
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_pydantic_ai %}
+{%- if cookiecutter.use_pydantic_ai %}
 - **AI Agent**: PydanticAI-powered conversational assistant
 {%- endif %}
-{%- if cookiecutter.enable_ai_agent and cookiecutter.use_langchain %}
+{%- if cookiecutter.use_langchain %}
 - **AI Agent**: LangChain-powered conversational assistant
 {%- endif %}
 {%- if cookiecutter.enable_logfire %}

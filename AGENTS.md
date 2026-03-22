@@ -20,9 +20,16 @@ uv run mypy fastapi_gen    # Type check
 
 ```bash
 ak-agent-template                                  # Interactive wizard (default)
-ak-agent-template create my_app --database postgresql --auth jwt
-ak-agent-template create my_app --ai-agent --rag --task-queue celery
+ak-agent-template create my_app --database postgresql
+ak-agent-template create my_app --rag --task-queue celery
 ak-agent-template templates                        # List all options
+```
+
+Generated project CLI includes sync source commands:
+```bash
+uv run <project_slug> cmd rag-sources              # List configured sources
+uv run <project_slug> cmd rag-source-add           # Add a new source
+uv run <project_slug> cmd rag-source-sync          # Trigger sync for a source
 ```
 
 ## Architecture
@@ -52,7 +59,9 @@ Jinja2 conditionals: `{%- if cookiecutter.enable_rag %}...{%- endif %}`
 - **5 AI Frameworks**: PydanticAI, LangChain, LangGraph, CrewAI, DeepAgents
 - **4 LLM Providers**: OpenAI, Anthropic, Google Gemini, OpenRouter
 - **RAG**: 4 vector stores (Milvus, Qdrant, ChromaDB, pgvector), 4 embedding providers, reranking, image description
-- **Document Sources**: Local files (CLI), Google Drive (service account), S3/MinIO
+- **Document Sources**: Local files (CLI), API upload, Google Drive (service account), S3/MinIO
+- **Sync Sources**: Configurable connectors (Google Drive, S3) with scheduled sync
+- **PDF Parsers**: PyMuPDF, LiteParse, LlamaParse (runtime selection via env var)
 - **Observability**: Logfire (PydanticAI), LangSmith (LangChain/LangGraph/DeepAgents)
 
 ## Common Tasks
@@ -71,6 +80,13 @@ Jinja2 conditionals: `{%- if cookiecutter.enable_rag %}...{%- endif %}`
 3. Implement `<Name>VectorStore(BaseVectorStore)` in `rag/vectorstore.py`
 4. Add conditional in `api/deps.py`, `commands/rag.py`, `agents/tools/rag_tool.py`
 5. Add Docker service (if needed) and dependencies
+
+**Adding a new sync connector:**
+1. Create connector class in `rag/connectors/` following the `BaseConnector` pattern
+2. Register connector type in `rag/connectors/__init__.py`
+3. Add CLI command in `commands/rag.py` (e.g. `rag-source-add`, `rag-source-sync`)
+4. Add sync source schema in `schemas/sync_source.py`
+5. Wire up background task in `worker/tasks/rag_tasks.py`
 
 ## Reference
 

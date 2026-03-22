@@ -33,10 +33,10 @@ uv run mypy fastapi_gen
 ak-agent-template
 
 # Quick project creation
-ak-agent-template create my_project --database postgresql --auth jwt
+ak-agent-template create my_project --database postgresql
 
-# With AI agent + RAG
-ak-agent-template create my_project --ai-agent --ai-framework pydantic_ai --rag --database postgresql --task-queue celery
+# With RAG
+ak-agent-template create my_project --ai-framework pydantic_ai --rag --database postgresql --task-queue celery
 
 # List available options
 ak-agent-template templates
@@ -69,6 +69,7 @@ template/
     │   │   ├── services/               # Business logic
     │   │   ├── agents/                  # AI agents (5 frameworks)
     │   │   ├── rag/                     # RAG module (4 vector stores, embeddings, sources)
+    │   │   │   └── connectors/          # Sync source connectors (Google Drive, S3)
     │   │   ├── commands/                # Django-style CLI commands
     │   │   └── worker/                  # Background tasks (Celery/Taskiq/ARQ)
     │   ├── cli/                         # Generated project CLI
@@ -83,12 +84,14 @@ template/
 - 4 vector store backends: Milvus, Qdrant, ChromaDB, pgvector
 - 4 embedding providers: OpenAI, Voyage, Gemini (multimodal), SentenceTransformers
 - RAG document sources: local files (CLI), Google Drive, S3/MinIO
-- Document ingestion is CLI-only (no upload API endpoints)
+- Document ingestion via CLI and API upload
+- Sync sources: configurable connectors (Google Drive, S3) with scheduled sync
+- 3 PDF parsers: PyMuPDF, LiteParse, LlamaParse (runtime selection via env var)
 - Image description via LLM vision API (optional, opt-in)
 - LlamaParse support for 130+ document formats
 - Logfire for PydanticAI observability, LangSmith for LangChain/LangGraph/DeepAgents
-- Repository + Service pattern for data access
-- All database options except SQLite are async
+- Repository + Service pattern — routes never contain direct DB calls
+- Database always required (PostgreSQL async, MongoDB async, SQLite sync)
 
 ## Where to Find More Info
 

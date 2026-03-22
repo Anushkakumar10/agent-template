@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button, Card, Input, Badge, Skeleton,
+import { useAuth } from "@/hooks";
+import { ROUTES } from "@/lib/constants";
+import { Button, Card, Input, Badge, Skeleton, Spinner,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui";
 import {
-  Database, Search, Trash2, FileText, Plus, Upload, Loader2, FolderOpen,
+  Database, Search, Trash2, FileText, Plus, Upload, FolderOpen,
   CheckCircle, XCircle, ChevronLeft, Download, Eye,
 } from "lucide-react";
 import {
@@ -28,12 +31,21 @@ function StatusIcon({ status }: { status: string }) {
     <span role="status" aria-label={label}>
       {status === "done" && <CheckCircle className="h-4 w-4 text-green-500" />}
       {status === "error" && <XCircle className="h-4 w-4 text-red-500" />}
-      {status !== "done" && status !== "error" && <Loader2 className="h-4 w-4 animate-spin text-brand" />}
+      {status !== "done" && status !== "error" && <Spinner className="h-4 w-4 text-brand" />}
     </span>
   );
 }
 
 export default function RAGPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.replace(ROUTES.CHAT);
+    }
+  }, [user, router]);
+
   const [collections, setCollections] = useState<CollectionWithInfo[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [docs, setDocs] = useState<RAGTrackedDocument[]>([]);
@@ -47,7 +59,20 @@ export default function RAGPage() {
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; filename: string } | null>(null);
   const [newName, setNewName] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [tab, setTab] = useState<"documents" | "search" | "sync">("documents");
+  const [tab, setTabState] = useState<"documents" | "search" | "sync">(() => {
+    if (typeof window !== "undefined") {
+      const t = new URLSearchParams(window.location.search).get("tab");
+      if (t === "search" || t === "sync") return t;
+    }
+    return "documents";
+  });
+  const setTab = (t: "documents" | "search" | "sync") => {
+    setTabState(t);
+    const url = new URL(window.location.href);
+    if (t === "documents") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", t);
+    window.history.replaceState({}, "", url.toString());
+  };
   const [syncLogs, setSyncLogs] = useState<RAGSyncLog[]>([]);
   const [syncLogsLoading, setSyncLogsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -305,7 +330,7 @@ export default function RAGPage() {
               <div className="flex items-center gap-2">
                 {uploadProgress ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-brand" aria-hidden="true" />
+                    <Spinner className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
                     <span>{uploadProgress.current}/{uploadProgress.total}</span>
                     <span className="max-w-[120px] truncate">{uploadProgress.filename}</span>
                   </div>
@@ -339,7 +364,7 @@ export default function RAGPage() {
               <button className={`px-3 py-2 text-sm font-medium ${tab === "search" ? "border-b-2 border-brand text-foreground" : "text-muted-foreground"}`} onClick={() => setTab("search")}>
                 Search
               </button>
-              <button className={`px-3 py-2 text-sm font-medium ${tab === "sync" ? "border-b-2 border-brand text-foreground" : "text-muted-foreground"}`} onClick={() => { setTab("sync"); fetchSyncLogs(); }}>
+              <button className={`px-3 py-2 text-sm font-medium ${tab === "sync" ? "border-b-2 border-brand text-foreground" : "text-muted-foreground"}`} onClick={() => { setTab("sync"); if (syncLogs.length === 0 && !syncLogsLoading) fetchSyncLogs(); }}>
                 Sync
               </button>
             </div>
@@ -477,7 +502,7 @@ export default function RAGPage() {
               )}
 
               {tab === "sync" && (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* Connectors */}
                   <div>
                     <h3 className="mb-3 text-sm font-semibold">Sources</h3>

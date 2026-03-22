@@ -7,9 +7,7 @@ import { ROUTES } from "@/lib/constants";
 
 const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.DASHBOARD]: "Dashboard",
-{%- if cookiecutter.enable_ai_agent %}
   [ROUTES.CHAT]: "Chat",
-{%- endif %}
 {%- if cookiecutter.enable_rag %}
   [ROUTES.RAG]: "Knowledge Base",
 {%- endif %}
