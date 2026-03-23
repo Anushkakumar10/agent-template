@@ -32,7 +32,7 @@ class SyncSourceCreate(BaseModel):
     name: str
     connector_type: str
     collection_name: str
-    config: dict
+    config: dict[str, object]
     sync_mode: str = "new_only"
     schedule_minutes: int | None = None
 
@@ -41,7 +41,7 @@ class SyncSourceUpdate(BaseModel):
     """Schema for updating an existing sync source."""
 
     name: str | None = None
-    config: dict | None = None
+    config: dict[str, object] | None = None
     sync_mode: str | None = None
     schedule_minutes: int | None = None
     is_active: bool | None = None
@@ -55,7 +55,7 @@ class SyncSourceRead(BaseModel):
     name: str
     connector_type: str
     collection_name: str
-    config: dict
+    config: dict[str, object]
     sync_mode: str
     schedule_minutes: int | None
     is_active: bool

@@ -94,7 +94,7 @@ async def list_collections_async(vector_store: BaseVectorStore) -> None:
 
 
 @command("rag-collections", help="List collections with stats")
-def rag_collections():
+def rag_collections() -> None:
     """List all available collections in the vector store with their statistics."""
     _, vector_store, _, _, _ = get_rag_services()
     asyncio.run(list_collections_async(vector_store))
@@ -186,13 +186,13 @@ async def ingest_path_async(
             # Sync mode checks
             source_path = str(filepath.resolve())
             if sync_mode in ("new_only", "update_only"):
-                existing_id = await ingestion.find_existing(collection, source_path)
+                existing_id: str | None = await ingestion.find_existing(collection, source_path)
 
                 if sync_mode == "new_only":
                     if existing_id:
                         # File exists — check if content changed via hash
-                        file_hash = hashlib.sha256(filepath.read_bytes()).hexdigest()
-                        existing_hash = await ingestion.get_existing_hash(collection, source_path)
+                        file_hash: str = hashlib.sha256(filepath.read_bytes()).hexdigest()
+                        existing_hash: str | None = await ingestion.get_existing_hash(collection, source_path)
                         if existing_hash and file_hash == existing_hash:
                             skipped_count += 1
                             continue
@@ -315,7 +315,7 @@ async def ingest_path_async(
     default="full",
     help="Sync mode: full (replace all), new_only (add new + update changed), update_only (only update changed, skip new)",
 )
-def rag_ingest(path: str, collection: str, recursive: bool, replace: bool, sync_mode: str):
+def rag_ingest(path: str, collection: str, recursive: bool, replace: bool, sync_mode: str) -> None:
     """
     Ingest a file or directory into the knowledge base.
 
@@ -391,7 +391,7 @@ async def search_async(
     type=int,
     help="Number of results to return (default: 4)",
 )
-def rag_search(query: str, collection: str, top_k: int):
+def rag_search(query: str, collection: str, top_k: int) -> None:
     """
     Search the knowledge base for relevant content.
 
@@ -438,7 +438,7 @@ async def drop_collection_async(
     is_flag=True,
     help="Skip confirmation prompt",
 )
-def rag_drop(collection: str, yes: bool):
+def rag_drop(collection: str, yes: bool) -> None:
     """
     Drop a collection and all its data.
 
@@ -453,7 +453,7 @@ def rag_drop(collection: str, yes: bool):
 
 
 @command("rag-stats", help="Show overall RAG system statistics")
-def rag_stats():
+def rag_stats() -> None:
     """Display overall RAG system statistics."""
     settings, vector_store, _, _, _ = get_rag_services()
 
@@ -520,7 +520,7 @@ def rag_sync_gdrive(collection: str, folder_id: str) -> None:
     _, vector_store, processor, _, ingestion = get_rag_services()
     source = GoogleDriveSource()
 
-    async def _sync():
+    async def _sync() -> None:
         result = await source.sync(
             collection_name=collection,
             ingestion_service=ingestion,
@@ -531,7 +531,7 @@ def rag_sync_gdrive(collection: str, folder_id: str) -> None:
             for err in result.errors:
                 warning(f"  {err}")
 
-    asyncio.run(_sync())
+    asyncio.run(_sync())  # type: ignore[no-untyped-call]
 {%- endif %}
 
 {%- if cookiecutter.enable_s3_ingestion %}
@@ -548,7 +548,7 @@ def rag_sync_s3(collection: str, prefix: str, bucket: str) -> None:
     _, vector_store, processor, _, ingestion = get_rag_services()
     source = S3Source(bucket=bucket)
 
-    async def _sync():
+    async def _sync() -> None:
         result = await source.sync(
             collection_name=collection,
             ingestion_service=ingestion,
@@ -559,19 +559,19 @@ def rag_sync_s3(collection: str, prefix: str, bucket: str) -> None:
             for err in result.errors:
                 warning(f"  {err}")
 
-    asyncio.run(_sync())
+    asyncio.run(_sync())  # type: ignore[no-untyped-call]
 {%- endif %}
 
 {%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
 
 
 @command("rag-sources", help="List configured sync sources")
-def rag_sources():
+def rag_sources() -> None:
     """List all configured sync sources with their status."""
 {%- if cookiecutter.use_postgresql %}
     from app.db.session import get_db_context
 
-    async def _list():
+    async def _list() -> None:
         async with get_db_context() as db:
             from app.services.sync_source import SyncSourceService
 
@@ -599,14 +599,14 @@ def rag_sources():
                     click.echo(f"    Last error: {s.last_error}")
                 click.echo()
 
-    asyncio.run(_list())
+    asyncio.run(_list())  # type: ignore[no-untyped-call]
 {%- else %}
     from contextlib import contextmanager
 
     from app.db.session import get_db_session
     from app.services.sync_source import SyncSourceService
 
-    with contextmanager(get_db_session)() as db:
+    with contextmanager(get_db_session)() as db:  # type: ignore[no-untyped-call]
         svc = SyncSourceService(db)
         sources = svc.list_sources()
 
@@ -640,7 +640,7 @@ def rag_sources():
 @click.option("--config", "config_json", required=True, help="Config JSON string")
 @click.option("--sync-mode", default="new_only", type=click.Choice(["full", "new_only", "update_only"]), help="Sync mode")
 @click.option("--schedule", "schedule_minutes", type=int, default=0, help="Schedule interval in minutes (0=manual)")
-def rag_source_add(name: str, connector_type: str, collection: str, config_json: str, sync_mode: str, schedule_minutes: int):
+def rag_source_add(name: str, connector_type: str, collection: str, config_json: str, sync_mode: str, schedule_minutes: int) -> None:
     """
     Add a new sync source configuration.
 
@@ -670,7 +670,7 @@ def rag_source_add(name: str, connector_type: str, collection: str, config_json:
 {%- if cookiecutter.use_postgresql %}
     from app.db.session import get_db_context
 
-    async def _create():
+    async def _create() -> None:
         async with get_db_context() as db:
             from app.services.sync_source import SyncSourceService
 
@@ -681,14 +681,14 @@ def rag_source_add(name: str, connector_type: str, collection: str, config_json:
             except ValueError as e:
                 error(f"Failed to create source: {e}")
 
-    asyncio.run(_create())
+    asyncio.run(_create())  # type: ignore[no-untyped-call]
 {%- else %}
     from contextlib import contextmanager
 
     from app.db.session import get_db_session
     from app.services.sync_source import SyncSourceService
 
-    with contextmanager(get_db_session)() as db:
+    with contextmanager(get_db_session)() as db:  # type: ignore[no-untyped-call]
         svc = SyncSourceService(db)
         try:
             source = svc.create_source(data)
@@ -701,7 +701,7 @@ def rag_source_add(name: str, connector_type: str, collection: str, config_json:
 @command("rag-source-remove", help="Remove a sync source")
 @click.argument("source_id")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
-def rag_source_remove(source_id: str, yes: bool):
+def rag_source_remove(source_id: str, yes: bool) -> None:
     """
     Remove a sync source configuration.
 
@@ -716,7 +716,7 @@ def rag_source_remove(source_id: str, yes: bool):
 {%- if cookiecutter.use_postgresql %}
     from app.db.session import get_db_context
 
-    async def _remove():
+    async def _remove() -> None:
         async with get_db_context() as db:
             from app.services.sync_source import SyncSourceService
 
@@ -727,14 +727,14 @@ def rag_source_remove(source_id: str, yes: bool):
             except Exception as e:
                 error(f"Failed to remove source: {e}")
 
-    asyncio.run(_remove())
+    asyncio.run(_remove())  # type: ignore[no-untyped-call]
 {%- else %}
     from contextlib import contextmanager
 
     from app.db.session import get_db_session
     from app.services.sync_source import SyncSourceService
 
-    with contextmanager(get_db_session)() as db:
+    with contextmanager(get_db_session)() as db:  # type: ignore[no-untyped-call]
         svc = SyncSourceService(db)
         try:
             svc.delete_source(source_id)
@@ -747,7 +747,7 @@ def rag_source_remove(source_id: str, yes: bool):
 @command("rag-source-sync", help="Trigger sync for a source")
 @click.argument("source_id", required=False)
 @click.option("--all", "sync_all", is_flag=True, help="Sync all active sources")
-def rag_source_sync(source_id: str | None, sync_all: bool):
+def rag_source_sync(source_id: str | None, sync_all: bool) -> None:
     """
     Trigger sync for a configured source (or all active sources).
 
@@ -764,7 +764,7 @@ def rag_source_sync(source_id: str | None, sync_all: bool):
 {%- if cookiecutter.use_postgresql %}
     from app.db.session import get_db_context
 
-    async def _sync():
+    async def _sync() -> None:
         async with get_db_context() as db:
             from app.services.sync_source import SyncSourceService
 
@@ -784,19 +784,20 @@ def rag_source_sync(source_id: str | None, sync_all: bool):
                         error(f"  {s.name}: failed - {e}")
             else:
                 try:
+                    assert source_id is not None
                     log = await svc.trigger_sync(source_id)
                     success(f"Sync triggered (log_id={log.id})")
                 except Exception as e:
                     error(f"Failed to trigger sync: {e}")
 
-    asyncio.run(_sync())
+    asyncio.run(_sync())  # type: ignore[no-untyped-call]
 {%- else %}
     from contextlib import contextmanager
 
     from app.db.session import get_db_session
     from app.services.sync_source import SyncSourceService
 
-    with contextmanager(get_db_session)() as db:
+    with contextmanager(get_db_session)() as db:  # type: ignore[no-untyped-call]
         svc = SyncSourceService(db)
 
         if sync_all:
@@ -813,6 +814,7 @@ def rag_source_sync(source_id: str | None, sync_all: bool):
                     error(f"  {s.name}: failed - {e}")
         else:
             try:
+                assert source_id is not None
                 log = svc.trigger_sync(source_id)
                 success(f"Sync triggered (log_id={log.id})")
             except Exception as e:

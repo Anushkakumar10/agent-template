@@ -134,7 +134,7 @@ class ToolCall(SQLModel, table=True):
     )
     tool_call_id: str = Field(max_length=100)
     tool_name: str = Field(max_length=100)
-    args: dict = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False, default=dict))
+    args: dict[str, object] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False, default=dict))
     result: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     status: str = Field(default="pending", max_length=20)  # pending, running, completed, failed
     started_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
@@ -287,7 +287,7 @@ class ToolCall(Base):
     )
     tool_call_id: Mapped[str] = mapped_column(String(100), nullable=False)
     tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    args: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    args: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict)
     result: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending"
@@ -556,7 +556,7 @@ class ToolCall(Document):
     message_id: str
     tool_call_id: str
     tool_name: str
-    args: dict = Field(default_factory=dict)
+    args: dict[str, object] = Field(default_factory=dict)
     result: Optional[str] = None
     status: Literal["pending", "running", "completed", "failed"] = "pending"
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

@@ -4,6 +4,7 @@
 import logging
 import tempfile
 from pathlib import Path
+from typing import Any
 {%- if (cookiecutter.use_postgresql or cookiecutter.use_sqlite) or ((cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq) and cookiecutter.enable_redis) %}
 import json
 {%- endif %}
@@ -55,7 +56,7 @@ router = APIRouter()
 
 
 @router.get("/supported-formats")
-async def get_supported_formats_endpoint():
+async def get_supported_formats_endpoint() -> Any:
     """Return file formats supported by the current PDF parser configuration."""
     from app.rag.config import get_supported_formats
 
@@ -78,7 +79,7 @@ async def list_collections(
 {%- if cookiecutter.use_jwt %}
     _: CurrentAdmin,
 {%- endif %}
-):
+) -> Any:
     """List all available collections in the vector store."""
     names = await vector_store.list_collections()
     return RAGCollectionList(items=names)
@@ -91,14 +92,14 @@ async def create_collection(
 {%- if cookiecutter.use_jwt %}
     _: CurrentAdmin,
 {%- endif %}
-):
+) -> Any:
     """Create and initialize a new collection."""
     import re
     if not re.match(r'^[a-zA-Z][a-zA-Z0-9_]{0,63}$', name):
         raise HTTPException(status_code=400, detail="Collection name must start with a letter and contain only letters, numbers, and underscores (max 64 chars)")
     if name.lower() == "all":
         raise HTTPException(status_code=400, detail="'all' is a reserved collection name")
-    await vector_store._ensure_collection(name)
+    await vector_store._ensure_collection(name)  # type: ignore[attr-defined]
     return RAGMessageResponse(message=f"Collection '{name}' created successfully.")
 
 
@@ -107,12 +108,12 @@ async def drop_collection(
     name: str,
     vector_store: VectorStoreSvc,
 {%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
-    rag_doc_svc: RAGDocumentSvc = None,
+    rag_doc_svc: RAGDocumentSvc | None = None,
 {%- endif %}
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Drop an entire collection — vectors and all SQL document records."""
     await vector_store.delete_collection(name)
 {%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
@@ -128,7 +129,7 @@ async def get_collection_info(
 {%- if cookiecutter.use_jwt %}
     _: CurrentAdmin,
 {%- endif %}
-):
+) -> Any:
     """Retrieve stats for a specific collection."""
     return await vector_store.get_collection_info(name)
 
@@ -140,7 +141,7 @@ async def list_documents(
 {%- if cookiecutter.use_jwt %}
     _: CurrentAdmin,
 {%- endif %}
-):
+) -> Any:
     """List all documents in a specific collection."""
     documents = await vector_store.get_documents(name)
     return RAGDocumentList(
@@ -167,7 +168,7 @@ async def search_documents(
     current_user: CurrentUser,
     {%- endif %}
     use_reranker: bool = Query(False, description="Whether to use reranking (if configured)"),
-):
+) -> Any:
     """Search for relevant document chunks. Supports multi-collection search."""
     if request.collection_names and len(request.collection_names) > 1:
         results = await retrieval_service.retrieve_multi(
@@ -202,7 +203,7 @@ async def delete_document(
 {%- if cookiecutter.use_jwt %}
     _: CurrentAdmin,
 {%- endif %}
-):
+) -> Any:
     """Delete a specific document by its ID from a collection."""
     success = await ingestion_service.remove_document(name, document_id)
     if not success:
@@ -216,14 +217,14 @@ async def ingest_file(
     name: str,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    rag_doc_svc: RAGDocumentSvc = None,
-    ingestion_service: IngestionSvc = None,
-    vector_store: VectorStoreSvc = None,
+    rag_doc_svc: RAGDocumentSvc | None = None,
+    ingestion_service: IngestionSvc | None = None,
+    vector_store: VectorStoreSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
     replace: bool = Query(False),
-):
+) -> Any:
     """Upload and ingest a file into a collection. Tracks status in DB."""
     from app.core.config import settings as app_settings
     from app.rag.config import get_supported_formats
@@ -268,7 +269,7 @@ async def ingest_file(
 {%- endif %}
     doc_id = rag_doc.id
 
-    await vector_store._ensure_collection(name)
+    await vector_store._ensure_collection(name)  # type: ignore[attr-defined]
 {%- if cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq %}
 
     # Save to shared media volume (accessible by both app and worker containers)
@@ -359,12 +360,12 @@ async def list_rag_documents(
 {%- else %}
 def list_rag_documents(
 {%- endif %}
-    rag_doc_svc: RAGDocumentSvc = None,
+    rag_doc_svc: RAGDocumentSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
     collection_name: str | None = Query(None),
-):
+) -> Any:
     """List tracked RAG documents."""
 {%- if cookiecutter.use_postgresql %}
     docs = await rag_doc_svc.list_documents(collection_name)
@@ -394,11 +395,11 @@ async def download_rag_document(
 def download_rag_document(
 {%- endif %}
     doc_id: str,
-    rag_doc_svc: RAGDocumentSvc = None,
+    rag_doc_svc: RAGDocumentSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Download the original file."""
     from fastapi.responses import FileResponse
 
@@ -420,12 +421,12 @@ async def delete_rag_document(
 def delete_rag_document(
 {%- endif %}
     doc_id: str,
-    rag_doc_svc: RAGDocumentSvc = None,
-    ingestion_service: IngestionSvc = None,
+    rag_doc_svc: RAGDocumentSvc | None = None,
+    ingestion_service: IngestionSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Delete a document from SQL, vector store, and file storage."""
     try:
 {%- if cookiecutter.use_postgresql %}
@@ -445,11 +446,11 @@ async def retry_ingestion(
 def retry_ingestion(
 {%- endif %}
     doc_id: str,
-    rag_doc_svc: RAGDocumentSvc = None,
+    rag_doc_svc: RAGDocumentSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Retry a failed document ingestion."""
     try:
 {%- if cookiecutter.use_postgresql %}
@@ -470,13 +471,13 @@ async def list_sync_logs(
 {%- else %}
 def list_sync_logs(
 {%- endif %}
-    rag_sync_svc: RAGSyncSvc = None,
+    rag_sync_svc: RAGSyncSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
     collection_name: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
-):
+) -> Any:
     """List sync operation logs."""
 {%- if cookiecutter.use_postgresql %}
     logs = await rag_sync_svc.list_sync_logs(collection_name=collection_name, limit=limit)
@@ -503,11 +504,11 @@ def list_sync_logs(
 async def trigger_local_sync(
     request: RAGSyncRequest,
     background_tasks: BackgroundTasks,
-    rag_sync_svc: RAGSyncSvc = None,
+    rag_sync_svc: RAGSyncSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Trigger a local directory sync via background task."""
 {%- if cookiecutter.use_postgresql %}
     sync_log = await rag_sync_svc.create_sync_log(
@@ -591,11 +592,11 @@ async def cancel_sync(
 def cancel_sync(
 {%- endif %}
     sync_id: str,
-    rag_sync_svc: RAGSyncSvc = None,
+    rag_sync_svc: RAGSyncSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Cancel a running sync operation."""
     try:
 {%- if cookiecutter.use_postgresql %}
@@ -619,11 +620,11 @@ async def list_sync_sources(
 {%- else %}
 def list_sync_sources(
 {%- endif %}
-    sync_source_svc: SyncSourceSvc = None,
+    sync_source_svc: SyncSourceSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """List all configured sync sources."""
 {%- if cookiecutter.use_postgresql %}
     sources = await sync_source_svc.list_sources()
@@ -652,11 +653,11 @@ async def create_sync_source(
 def create_sync_source(
 {%- endif %}
     data: SyncSourceCreate,
-    sync_source_svc: SyncSourceSvc = None,
+    sync_source_svc: SyncSourceSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Create a new sync source configuration."""
     try:
 {%- if cookiecutter.use_postgresql %}
@@ -685,11 +686,11 @@ def update_sync_source(
 {%- endif %}
     source_id: str,
     data: SyncSourceUpdate,
-    sync_source_svc: SyncSourceSvc = None,
+    sync_source_svc: SyncSourceSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Update an existing sync source configuration."""
     try:
 {%- if cookiecutter.use_postgresql %}
@@ -718,11 +719,11 @@ async def delete_sync_source(
 def delete_sync_source(
 {%- endif %}
     source_id: str,
-    sync_source_svc: SyncSourceSvc = None,
+    sync_source_svc: SyncSourceSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Delete a sync source configuration."""
     try:
 {%- if cookiecutter.use_postgresql %}
@@ -738,11 +739,11 @@ def delete_sync_source(
 async def trigger_sync_source(
     source_id: str,
     background_tasks: BackgroundTasks,
-    sync_source_svc: SyncSourceSvc = None,
+    sync_source_svc: SyncSourceSvc | None = None,
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """Trigger a manual sync for a configured source."""
     try:
 {%- if cookiecutter.use_postgresql %}
@@ -818,9 +819,9 @@ async def trigger_sync_source(
 @router.get("/sync/connectors", response_model=ConnectorList)
 async def list_connectors(
 {%- if cookiecutter.use_jwt %}
-    _: CurrentAdmin = None,
+    _: CurrentAdmin | None = None,
 {%- endif %}
-):
+) -> Any:
     """List available sync connector types with their config schemas."""
     from app.rag.connectors import CONNECTOR_REGISTRY
 
@@ -854,7 +855,7 @@ async def rag_status_stream() -> AsyncIterable[ServerSentEvent]:
     import redis.asyncio as aioredis
     from app.core.config import settings
 
-    r = aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")
+    r = aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")  # type: ignore[no-untyped-call]
     pubsub = r.pubsub()
     await pubsub.subscribe("rag_status")
     event_id = 0

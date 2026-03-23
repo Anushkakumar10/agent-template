@@ -90,6 +90,7 @@ class SyncSourceService:
         source = await sync_source_repo.update(
             self.db, UUID(source_id), **updates
         )
+        assert source is not None  # verified above via get_source
         await self.db.commit()
         await self.db.refresh(source)
         return source
@@ -241,6 +242,7 @@ class SyncSourceService:
         self.get_source(source_id)  # verify exists
         updates = data.model_dump(exclude_unset=True)
         source = sync_source_repo.update(self.db, source_id, **updates)
+        assert source is not None  # verified above via get_source
         self.db.commit()
         self.db.refresh(source)
         return source

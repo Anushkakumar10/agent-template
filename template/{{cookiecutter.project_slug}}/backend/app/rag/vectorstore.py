@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 
-from app.rag.models import CollectionInfo, Document, SearchResult, DocumentInfo
+from app.rag.models import CollectionInfo, Document, DocumentPageChunk, SearchResult, DocumentInfo
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class BaseVectorStore(ABC):
     async def get_documents(self, collection_name: str) -> list[DocumentInfo]:
         """Returns list of unique documents in a collection."""
 
-    def _build_chunk_metadata(self, chunk, document: Document) -> dict:
+    def _build_chunk_metadata(self, chunk: "DocumentPageChunk", document: Document) -> dict[str, object]:
         """Build metadata dict for a chunk."""
         meta = {
             "page_num": chunk.page_num,
@@ -56,9 +56,9 @@ class BaseVectorStore(ABC):
         """Sanitize document_id to prevent filter injection."""
         return document_id.replace('"', "").replace("\\", "")
 
-    def _group_documents(self, results: list[dict]) -> list[DocumentInfo]:
+    def _group_documents(self, results: list[dict[str, object]]) -> list[DocumentInfo]:
         """Group query results by parent_doc_id into DocumentInfo list."""
-        doc_map: dict[str, dict] = {}
+        doc_map: dict[str, dict[str, object]] = {}
         for item in results:
             doc_id = item.get("parent_doc_id")
             metadata = item.get("metadata", {})
@@ -108,7 +108,7 @@ class MilvusVectorStore(BaseVectorStore):
             uri=app_settings.MILVUS_URI, token=app_settings.MILVUS_TOKEN
         )
 
-    async def _ensure_collection(self, name: str):
+    async def _ensure_collection(self, name: str) -> None:
         if not await self.client.has_collection(name):
             schema = self.client.create_schema(auto_id=False)
             schema.add_field("id", DataType.VARCHAR, is_primary=True, max_length=100)
@@ -179,7 +179,8 @@ class MilvusVectorStore(BaseVectorStore):
         return self._group_documents(results)
 
     async def list_collections(self) -> list[str]:
-        return await self.client.list_collections()
+        result: list[str] = await self.client.list_collections()
+        return result
 {%- endif %}
 
 
@@ -204,7 +205,7 @@ class QdrantVectorStore(BaseVectorStore):
             api_key=app_settings.QDRANT_API_KEY or None,
         )
 
-    async def _ensure_collection(self, name: str):
+    async def _ensure_collection(self, name: str) -> None:
         collections = await self.client.get_collections()
         if name not in [c.name for c in collections.collections]:
             await self.client.create_collection(
@@ -319,7 +320,7 @@ class ChromaVectorStore(BaseVectorStore):
         else:
             self.client = chromadb.PersistentClient(path=app_settings.CHROMA_PERSIST_DIR)
 
-    def _get_collection(self, name: str):
+    def _get_collection(self, name: str) -> object:
         return self.client.get_or_create_collection(
             name=name,
             metadata={"hnsw:space": "cosine"},
@@ -354,7 +355,7 @@ class ChromaVectorStore(BaseVectorStore):
 
         def _query():
             collection = self._get_collection(collection_name)
-            kwargs: dict = {
+            kwargs: dict[str, object] = {
                 "query_embeddings": [query_vector],
                 "n_results": limit,
                 "include": ["documents", "metadatas", "distances"],
@@ -466,7 +467,7 @@ class PgVectorStore(BaseVectorStore):
         """Get validated table name for a collection."""
         return f"rag_{_validate_collection_name(name)}"
 
-    async def _ensure_collection(self, name: str):
+    async def _ensure_collection(self, name: str) -> None:
         """Create table for collection if not exists."""
         table = self._table(name)
         async with self.async_session() as session:

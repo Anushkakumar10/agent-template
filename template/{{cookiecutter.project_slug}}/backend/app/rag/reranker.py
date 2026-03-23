@@ -323,7 +323,7 @@ class RerankService:
             settings: RAG configuration settings containing reranker config.
         """
         self.settings = settings
-        config = settings.reranker_config
+        config = settings.reranker_config  # type: ignore[attr-defined]
         self._reranker: Optional[BaseReranker] = None
         
         {%- if cookiecutter.use_cohere_reranker %}

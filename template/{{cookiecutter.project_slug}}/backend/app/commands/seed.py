@@ -95,7 +95,7 @@ def seed(
     from app.core.security import get_password_hash
 {%- endif %}
 
-    async def _seed():
+    async def _seed() -> None:
         async with async_session_maker() as session:
             created_counts = {}
 
@@ -134,7 +134,7 @@ def seed(
             else:
                 info("No records created.")
 
-    asyncio.run(_seed())
+    asyncio.run(_seed())  # type: ignore[no-untyped-call]
 {%- elif cookiecutter.use_sqlite %}
     from app.db.session import SessionLocal
 {%- if cookiecutter.use_jwt %}

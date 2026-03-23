@@ -39,7 +39,7 @@ def cleanup(days: int, dry_run: bool, force: bool) -> None:
 {%- if cookiecutter.use_postgresql %}
     from app.db.session import async_session_maker
 
-    async def _cleanup():
+    async def _cleanup() -> None:
         async with async_session_maker() as _session:
             info(f"Cleaning up records older than {cutoff_date}...")
 
@@ -54,7 +54,7 @@ def cleanup(days: int, dry_run: bool, force: bool) -> None:
             deleted_count = 0  # Replace with actual count
             success(f"Deleted {deleted_count} records.")
 
-    asyncio.run(_cleanup())
+    asyncio.run(_cleanup())  # type: ignore[no-untyped-call]
 {%- elif cookiecutter.use_sqlite %}
     from app.db.session import SessionLocal
 

@@ -50,8 +50,9 @@ async def get_due_for_sync(db: AsyncSession) -> list[SyncSource]:
     sources = list(result.scalars().all())
     return [
         s for s in sources
-        if s.last_sync_at is None
-        or s.last_sync_at + timedelta(minutes=s.schedule_minutes) <= now
+        if s.schedule_minutes is not None
+        and (s.last_sync_at is None
+        or s.last_sync_at + timedelta(minutes=s.schedule_minutes) <= now)
     ]
 
 
@@ -61,7 +62,7 @@ async def create(
     name: str,
     connector_type: str,
     collection_name: str,
-    config: dict,
+    config: dict[str, object],
     sync_mode: str = "new_only",
     schedule_minutes: int | None = None,
 ) -> SyncSource:
@@ -82,7 +83,7 @@ async def create(
 async def update(
     db: AsyncSession,
     source_id: UUID,
-    **updates,
+    **updates: object,
 ) -> SyncSource | None:
     """Update a sync source with the given fields."""
     source = await db.get(SyncSource, source_id)
@@ -176,8 +177,9 @@ def get_due_for_sync(db: Session) -> list[SyncSource]:
     return [
         s
         for s in sources
-        if s.last_sync_at is None
-        or s.last_sync_at + timedelta(minutes=s.schedule_minutes) <= now
+        if s.schedule_minutes is not None
+        and (s.last_sync_at is None
+        or s.last_sync_at + timedelta(minutes=s.schedule_minutes) <= now)
     ]
 
 
@@ -187,7 +189,7 @@ def create(
     name: str,
     connector_type: str,
     collection_name: str,
-    config: dict,
+    config: dict[str, object],
     sync_mode: str = "new_only",
     schedule_minutes: int | None = None,
 ) -> SyncSource:
@@ -208,7 +210,7 @@ def create(
 def update(
     db: Session,
     source_id: str,
-    **updates,
+    **updates: object,
 ) -> SyncSource | None:
     """Update a sync source with the given fields."""
     source = db.get(SyncSource, source_id)

@@ -247,7 +247,7 @@ jobs:
           POSTGRES_DB: test_db
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-that-is-long-enough
         run: uv run pytest -v
 
   generate-mongodb:
@@ -299,7 +299,7 @@ jobs:
         env:
           MONGO_URL: mongodb://localhost:27017
           MONGO_DB: test_db
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-that-is-long-enough
         run: uv run pytest -v
 
   # ============================================

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from app.rag.models import IngestionResult, IngestionStatus, Document
@@ -22,13 +22,13 @@ class IngestionService:
         self,
         processor: DocumentProcessor,
         vector_store: BaseVectorStore,
-        on_event: Callable | None = None,
+        on_event: Callable[..., Awaitable[None]] | None = None,
     ):
         self.processor = processor
         self.store = vector_store
         self._on_event = on_event
 
-    async def _emit(self, event: str, data: dict) -> None:
+    async def _emit(self, event: str, data: dict[str, object]) -> None:
         """Emit a webhook event if callback is configured."""
         if self._on_event:
             try:

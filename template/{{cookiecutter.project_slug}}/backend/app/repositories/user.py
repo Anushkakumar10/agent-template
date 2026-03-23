@@ -104,6 +104,8 @@ async def update(
 async def update_avatar(db: AsyncSession, user_id: UUID, avatar_url: str) -> User:
     """Update a user's avatar URL."""
     user = await db.get(User, user_id)
+    if user is None:
+        raise ValueError(f"User {user_id} not found")
     user.avatar_url = avatar_url
     await db.flush()
     await db.refresh(user)

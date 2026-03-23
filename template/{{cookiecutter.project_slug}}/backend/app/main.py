@@ -109,14 +109,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
 
 {%- if cookiecutter.enable_caching and cookiecutter.enable_redis %}
     from app.core.cache import setup_cache
-    setup_cache(redis_client)
+    setup_cache(redis_client)  # type: ignore[no-untyped-call]
 {%- endif %}
 
 {%- if cookiecutter.enable_rag %}
     from app.core.config import settings
     try:
         embedder = EmbeddingService(settings=settings.rag)
-        embedder.warmup()
+        embedder.warmup()  # type: ignore[no-untyped-call]
         state["embedding_service"] = embedder
     except Exception as e:
         logger.error(f"Embedding service warmup failed: {e}. RAG will not be available.")
@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
     try:
         from app.rag.reranker import RerankService
         rerank_service = RerankService(settings=settings.rag)
-        rerank_service.warmup()
+        rerank_service.warmup()  # type: ignore[no-untyped-call]
         state["rerank_service"] = rerank_service
     except Exception as e:
         logger.warning(f"Reranker warmup failed: {e}. Reranking will be disabled.")
@@ -137,7 +137,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
     if "embedding_service" in state:
         try:
             vector_store = MilvusVectorStore(settings=settings.rag, embedding_service=embedder)
-            await vector_store.client.list_collections()
+            await vector_store.client.list_collections()  # type: ignore[attr-defined]
             state["vector_store"] = vector_store
         except Exception as e:
             logger.error(f"Milvus connection failed: {e}. Vector store will not be available.")
@@ -199,21 +199,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[{% if cookiecutter.enable_red
 {%- if cookiecutter.use_milvus %}
     try:
         if "vector_store" in state:
-            await state["vector_store"].client.close()
+            await state["vector_store"].client.close()  # type: ignore[attr-defined]
     except Exception:
         pass
 {%- endif %}
 {%- if cookiecutter.use_qdrant %}
     try:
         if "vector_store" in state:
-            await state["vector_store"].client.close()
+            await state["vector_store"].client.close()  # type: ignore[attr-defined]
     except Exception:
         pass
 {%- endif %}
 {%- if cookiecutter.use_pgvector %}
     try:
         if "vector_store" in state:
-            await state["vector_store"].engine.dispose()
+            await state["vector_store"].engine.dispose()  # type: ignore[attr-defined]
     except Exception:
         pass
 {%- endif %}

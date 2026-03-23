@@ -117,7 +117,7 @@ class RAGDocumentService:
     async def delete_document(
         self,
         doc_id: str,
-        ingestion_service=None,
+        ingestion_service: object = None,
     ) -> None:
         """Delete a document with cascading cleanup.
 
@@ -162,7 +162,7 @@ class RAGDocumentService:
             sql_delete(RAGDocument).where(RAGDocument.collection_name == collection_name)
         )
         await self.db.commit()
-        return result.rowcount
+        return result.rowcount  # type: ignore[return-value]
 
     async def get_download_info(self, doc_id: str) -> tuple[str, str, str]:
         """Get file download information for a document.
@@ -191,7 +191,7 @@ class RAGDocumentService:
             "md": "text/markdown",
         }
         mime_type = mime_map.get(doc.filetype, "application/octet-stream")
-        return file_path, doc.filename, mime_type
+        return str(file_path), doc.filename, mime_type
 
 
 {%- elif cookiecutter.enable_rag and cookiecutter.use_sqlite %}
@@ -312,7 +312,7 @@ class RAGDocumentService:
     def delete_document(
         self,
         doc_id: str,
-        ingestion_service=None,
+        ingestion_service: object = None,
     ) -> None:
         """Delete a document with cascading cleanup.
 
@@ -372,7 +372,7 @@ class RAGDocumentService:
             "md": "text/markdown",
         }
         mime_type = mime_map.get(doc.filetype, "application/octet-stream")
-        return file_path, doc.filename, mime_type
+        return str(file_path), doc.filename, mime_type
 
 
 {%- else %}

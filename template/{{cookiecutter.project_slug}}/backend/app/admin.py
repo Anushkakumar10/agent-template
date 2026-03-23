@@ -3,6 +3,7 @@
 
 from typing import Any, ClassVar
 
+from fastapi import FastAPI
 from sqlalchemy import String, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
@@ -79,7 +80,7 @@ def get_model_columns(model: type) -> list[str]:
     Returns:
         List of column names.
     """
-    mapper = inspect(model)
+    mapper: Any = inspect(model)
     return [column.key for column in mapper.columns]
 
 
@@ -92,7 +93,7 @@ def get_searchable_columns(model: type) -> list[str]:
     Returns:
         List of searchable column names.
     """
-    mapper = inspect(model)
+    mapper: Any = inspect(model)
     searchable = []
     for column in mapper.columns:
         # Include String columns that are not sensitive
@@ -112,7 +113,7 @@ def get_sortable_columns(model: type) -> list[str]:
     Returns:
         List of sortable column names.
     """
-    mapper = inspect(model)
+    mapper: Any = inspect(model)
     return [column.key for column in mapper.columns]
 
 
@@ -252,7 +253,7 @@ def create_model_admin(
         exec_body,
     )
 
-    return admin_class  # type: ignore[return-value]
+    return admin_class
 
 
 def register_models_auto(
@@ -326,6 +327,9 @@ class AdminAuth(AuthenticationBackend):
         if not email or not password:
             return False
 
+        assert isinstance(email, str)
+        assert isinstance(password, str)
+
         # Get user from database
         from sqlalchemy.orm import Session as DBSession
 
@@ -334,7 +338,7 @@ class AdminAuth(AuthenticationBackend):
 
             if (
                 user
-                and verify_password(str(password), user.hashed_password)
+                and verify_password(password, user.hashed_password)
                 and user.has_role(UserRole.ADMIN)
             ):
                 # Store user info in session
@@ -399,7 +403,7 @@ CUSTOM_MODEL_CONFIGS: dict[type, dict[str, Any]] = {
 }
 
 
-def setup_admin(app) -> Admin:
+def setup_admin(app: FastAPI) -> Admin:
     """Setup SQLAdmin for the FastAPI app with automatic model discovery.
 
     Automatically discovers all SQLAlchemy models from the Base registry

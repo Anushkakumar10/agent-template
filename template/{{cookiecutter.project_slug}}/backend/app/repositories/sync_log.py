@@ -63,7 +63,7 @@ async def update_status(
     skipped: int | None = None,
     failed: int | None = None,
     error_message: str | None = None,
-    completed_at=None,
+    completed_at: object = None,
 ) -> SyncLog | None:
     """Update the status and counters of a sync log."""
     log = await db.get(SyncLog, sync_id)
@@ -150,7 +150,7 @@ def update_status(
     skipped: int | None = None,
     failed: int | None = None,
     error_message: str | None = None,
-    completed_at=None,
+    completed_at: object = None,
 ) -> SyncLog | None:
     """Update the status and counters of a sync log."""
     log = db.get(SyncLog, sync_id)

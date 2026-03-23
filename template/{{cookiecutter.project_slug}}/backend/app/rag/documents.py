@@ -2,6 +2,7 @@
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 {%- if cookiecutter.use_all_pdf_parsers %}
@@ -70,7 +71,7 @@ class BaseDocumentParser(ABC):
         )
 
     @abstractmethod
-    def parse(self, filepath: Path) -> Document:
+    async def parse(self, filepath: Path) -> Document:
         """Parse a file and read its content into a Document object.
         Args:
             filepath: Path to the file to parse.
@@ -188,11 +189,11 @@ class PyMuPDFParser(BaseDocumentParser):
 
     MIN_TEXT_LENGTH = 50  # below this -> likely a scan, try OCR
 
-    def __init__(self, enable_ocr: bool = False, image_describer=None):
+    def __init__(self, enable_ocr: bool = False, image_describer: Any = None):
         self.enable_ocr = enable_ocr
         self._image_describer = image_describer
 
-    def _detect_repeated_content(self, doc) -> set[str]:
+    def _detect_repeated_content(self, doc: Any) -> set[str]:
         """Detect headers/footers -- text appearing on >70% of pages."""
         if len(doc) < 3:
             return set()
@@ -209,7 +210,7 @@ class PyMuPDFParser(BaseDocumentParser):
         threshold = len(doc) * 0.7
         return {t for t, c in text_counts.items() if c >= threshold}
 
-    def _extract_text(self, page, repeated: set[str]) -> str:
+    def _extract_text(self, page: Any, repeated: set[str]) -> str:
         """Extract text blocks, filtering headers/footers."""
         texts = []
         for b in page.get_text("blocks"):
@@ -220,7 +221,7 @@ class PyMuPDFParser(BaseDocumentParser):
                 texts.append(text)
         return "\n\n".join(texts)
 
-    def _extract_tables(self, page) -> str:
+    def _extract_tables(self, page: Any) -> str:
         """Extract tables as markdown."""
         try:
             tables = page.find_tables()
@@ -235,7 +236,7 @@ class PyMuPDFParser(BaseDocumentParser):
         except Exception:
             return ""
 
-    def _ocr_page(self, page, image_describer=None) -> str:
+    def _ocr_page(self, page: Any, image_describer: Any = None) -> str:
         """OCR a scanned page by rendering it as image and sending to LLM vision."""
         if not image_describer:
             return ""
@@ -255,7 +256,7 @@ class PyMuPDFParser(BaseDocumentParser):
             return ""
 
 {%- if cookiecutter.enable_rag_image_description %}
-    def _extract_images(self, doc, page) -> list:
+    def _extract_images(self, doc: Any, page: Any) -> list["DocumentImage"]:
         """Extract images from page for LLM description."""
         images = []
         for img_info in page.get_images(full=True):
@@ -319,7 +320,7 @@ class PyMuPDFParser(BaseDocumentParser):
         doc.close()
 
         # Enrich metadata
-        additional: dict = {}
+        additional: dict[str, object] = {}
         if meta.get("title"):
             additional["pdf_title"] = meta["title"]
         if meta.get("author"):
@@ -455,7 +456,7 @@ class PdfParserFactory:
     """Factory for runtime PDF parser selection via PDF_PARSER env var."""
 
     @staticmethod
-    def create(parser_name: str, settings=None, image_describer=None):
+    def create(parser_name: str, settings: RAGSettings | None = None, image_describer: Any = None) -> BaseDocumentParser:
         if parser_name == "llamaparse":
             if not settings or not settings.pdf_parser.api_key:
                 raise ValueError("LlamaParse requires LLAMAPARSE_API_KEY to be set")
@@ -534,11 +535,11 @@ class PyMuPDFParser(BaseDocumentParser):
 
     MIN_TEXT_LENGTH = 50  # below this → likely a scan, try OCR
 
-    def __init__(self, enable_ocr: bool = False, image_describer=None):
+    def __init__(self, enable_ocr: bool = False, image_describer: Any = None):
         self.enable_ocr = enable_ocr
         self._image_describer = image_describer
 
-    def _detect_repeated_content(self, doc) -> set[str]:
+    def _detect_repeated_content(self, doc: Any) -> set[str]:
         """Detect headers/footers — text appearing on >70% of pages."""
         if len(doc) < 3:
             return set()
@@ -555,7 +556,7 @@ class PyMuPDFParser(BaseDocumentParser):
         threshold = len(doc) * 0.7
         return {t for t, c in text_counts.items() if c >= threshold}
 
-    def _extract_text(self, page, repeated: set[str]) -> str:
+    def _extract_text(self, page: Any, repeated: set[str]) -> str:
         """Extract text blocks, filtering headers/footers."""
         texts = []
         for b in page.get_text("blocks"):
@@ -566,7 +567,7 @@ class PyMuPDFParser(BaseDocumentParser):
                 texts.append(text)
         return "\n\n".join(texts)
 
-    def _extract_tables(self, page) -> str:
+    def _extract_tables(self, page: Any) -> str:
         """Extract tables as markdown."""
         try:
             tables = page.find_tables()
@@ -581,7 +582,7 @@ class PyMuPDFParser(BaseDocumentParser):
         except Exception:
             return ""
 
-    def _ocr_page(self, page, image_describer=None) -> str:
+    def _ocr_page(self, page: Any, image_describer: Any = None) -> str:
         """OCR a scanned page by rendering it as image and sending to LLM vision."""
         if not image_describer:
             return ""
@@ -601,7 +602,7 @@ class PyMuPDFParser(BaseDocumentParser):
             return ""
 
 {%- if cookiecutter.enable_rag_image_description %}
-    def _extract_images(self, doc, page) -> list:
+    def _extract_images(self, doc: Any, page: Any) -> list["DocumentImage"]:
         """Extract images from page for LLM description."""
         images = []
         for img_info in page.get_images(full=True):
@@ -665,7 +666,7 @@ class PyMuPDFParser(BaseDocumentParser):
         doc.close()
 
         # Enrich metadata
-        additional: dict = {}
+        additional: dict[str, object] = {}
         if meta.get("title"):
             additional["pdf_title"] = meta["title"]
         if meta.get("author"):
@@ -869,7 +870,7 @@ class DocumentProcessor:
         {%- endif %}
 
     @staticmethod
-    def _create_splitter(settings: RAGSettings):
+    def _create_splitter(settings: RAGSettings) -> object:
         """Create text splitter based on chunking strategy."""
         from langchain_text_splitters import (
             MarkdownHeaderTextSplitter,
@@ -906,7 +907,7 @@ class DocumentProcessor:
 
 {%- if cookiecutter.enable_rag_image_description %}
     @staticmethod
-    def _init_image_describer(settings: RAGSettings):
+    def _init_image_describer(settings: RAGSettings) -> object:
         """Initialize the image describer using the configured AI framework."""
         from app.core.config import settings as app_settings
 

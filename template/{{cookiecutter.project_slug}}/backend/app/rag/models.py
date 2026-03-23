@@ -60,7 +60,7 @@ class Document(BaseModel):
     chunked_pages: Optional[list[DocumentPageChunk]] = None
     metadata: DocumentMetadata
     
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def num_pages(self) -> int:
         return len(self.pages) 
