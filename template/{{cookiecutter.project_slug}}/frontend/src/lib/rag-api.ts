@@ -38,8 +38,7 @@ export interface RAGSearchRequest {
 
 export interface RAGSearchResult {
   content: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   score: number;
   parent_doc_id: string;
 }

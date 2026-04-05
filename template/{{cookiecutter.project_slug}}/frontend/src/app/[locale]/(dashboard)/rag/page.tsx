@@ -1,7 +1,7 @@
 {%- if cookiecutter.enable_rag and cookiecutter.use_frontend %}
 {% raw %}"use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks";
@@ -95,7 +95,7 @@ export default function RAGPage() {
   const [supportedFormats, setSupportedFormats] = useState<string[]>([".pdf", ".docx", ".txt", ".md"]);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listCollections();
@@ -105,10 +105,10 @@ export default function RAGPage() {
         catch { items.push({ name, info: null }); }
       }
       setCollections(items);
-      if (items.length > 0 && !selected) setSelected(items[0].name);
+      setSelected(prev => (items.length > 0 && !prev) ? items[0].name : prev);
     } catch { toast.error("Failed to load collections"); }
     finally { setLoading(false); }
-  };
+  }, []);
 
   const fetchDocs = async (col: string) => {
     if (!col) { setDocs([]); return; }
@@ -200,7 +200,7 @@ export default function RAGPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.formats) setSupportedFormats(data.formats); })
       .catch(() => {});
-  }, []);
+  }, [fetchCollections]);
   useEffect(() => { if (selected) fetchDocs(selected); }, [selected]);
 {% endraw %}
 {%- if (cookiecutter.use_celery or cookiecutter.use_taskiq or cookiecutter.use_arq) and cookiecutter.enable_redis %}
@@ -225,7 +225,7 @@ export default function RAGPage() {
     });
 
     return () => es.close();
-  }, []);
+  }, [fetchCollections]);
 {%- endif %}
 {% raw %}
   const handleCreate = async () => {
