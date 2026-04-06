@@ -20,17 +20,17 @@
   <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Coverage">
   <a href="https://github.com/anushka-kumar/agent-template/blob/main/SECURITY.md"><img src="https://img.shields.io/badge/security-policy-blueviolet?logo=shieldsdotio&logoColor=white" alt="Security Policy"></a>
   <a href="https://github.com/anushka-kumar/agent-template/stargazers"><img src="https://img.shields.io/github/stars/anushka-kumar/agent-template?style=flat&logo=github&color=yellow" alt="GitHub Stars"></a>
-  <a href="https://x.com/Kacper95682155"><img src="https://img.shields.io/badge/follow-%40Kacper95682155-000000?logo=x&logoColor=white" alt="Follow on X"></a>
+  <a href="https://x.com/Kacper95682155"><img src="https://img.shields.io/badge/X-000000?logo=x&logoColor=white" alt="X"></a>
 </p>
 
 <p align="center">
-  <b>🤖 5 AI Agent Frameworks</b> (PydanticAI, LangChain, LangGraph, CrewAI, DeepAgents)
+  <b>🤖 5 AI Agent Frameworks</b> <i>(PydanticAI, LangChain, LangGraph, CrewAI, DeepAgents)</i>
   <br>
-  <b>📄 RAG Pipeline</b> (Milvus, Qdrant, pgvector, ChromaDB)
+  <b>📄 RAG Pipeline</b> <i>(Milvus, Qdrant, pgvector, ChromaDB)</i>
   <br>
-  <b>⚡ FastAPI + Next.js 15</b> (WebSocket streaming, real-time chat UI)
+  <b>⚡ FastAPI + Next.js 15</b> <i>(WebSocket streaming, real-time chat UI)</i>
   <br>
-  <b>🔒 Enterprise-Ready</b> (JWT, OAuth, admin panel, Celery, Docker, K8s)
+  <b>🔒 Enterprise-Ready</b> <i>(JWT, OAuth, admin panel, Celery, Docker, K8s)</i>
 </p>
 
 <p align="center">
@@ -38,8 +38,12 @@
     <img src="https://img.shields.io/badge/Try%20Web%20Configurator%20%E2%86%92-0066FF?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Web Configurator">
   </a>
   &nbsp;&nbsp;
-  <a href="#-quick-start">
+  <a href="https://pypi.org/project/ak-agent-template/">
     <img src="https://img.shields.io/badge/pip%20install%20%E2%86%92-22C55E?style=for-the-badge&logo=pypi&logoColor=white" alt="Install via pip">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://ak-labs.github.io/agent-template/">
+    <img src="https://img.shields.io/badge/Documentation%20%E2%86%92-6366F1?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Documentation">
   </a>
 </p>
 
@@ -213,29 +217,19 @@ Use `make help` to see all available Makefile shortcuts.
 
 ## 📸 Screenshots
 
-### Landing Page & Dashboard
+### Landing Page & Login
 
-| Landing Page | Dashboard |
+| Landing Page | Login |
 |:---:|:---:|
-| ![Landing Page](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/landingpage.png) | ![Dashboard](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/dashboard.png) |
+| ![Landing Page](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/landingpage.png) | ![Login](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/login.png) |
 
-### Chat Interface
+### Dashboard, Chat & RAG
 
-| Chat with RAG |
-|:---:|
-| ![Chat with RAG](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/chatwithrag.png) |
-
-### Knowledge Base (RAG)
-
-| Documents | Search |
+| Dashboard | Chat with RAG |
 |:---:|:---:|
+| ![Dashboard](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/dashboard.png) | ![Chat with RAG](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/chatwithrag.png) |
+| **Documents** | **Search** |
 | ![RAG Documents](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/ragdocuments.png) | ![RAG Search](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/ragsearch.png) |
-
-### Authentication
-
-| Login |
-|:---:|
-| ![Login](https://raw.githubusercontent.com/anushka-kumar/agent-template/main/assets/login.png) |
 
 ### Observability
 
