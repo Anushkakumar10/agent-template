@@ -843,6 +843,11 @@ class TestConversationServiceExportAll:
             mock_repo.get_conversations_by_user = AsyncMock(return_value=[])
             mock_repo.count_conversations = AsyncMock(return_value=0)
 
+            # Mock db.execute for ratings query - returns empty result
+            mock_result = MagicMock()
+            mock_result.all.return_value = []
+            service.db.execute = AsyncMock(return_value=mock_result)
+
             result = await service.export_all()
 
             assert result == []
@@ -873,6 +878,11 @@ class TestConversationServiceExportAll:
             mock_repo.get_conversation_by_id = AsyncMock(return_value=mock_conv)
             mock_repo.get_messages_by_conversation = AsyncMock(return_value=[mock_msg])
             mock_repo.count_messages = AsyncMock(return_value=1)
+
+            # Mock db.execute for ratings query - returns empty result
+            mock_result = MagicMock()
+            mock_result.all.return_value = []
+            service.db.execute = AsyncMock(return_value=mock_result)
 
             result = await service.export_all()
 
