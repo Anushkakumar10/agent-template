@@ -529,8 +529,9 @@ async def get_current_user_ws(
             await websocket.close(code=4001, reason="User account is disabled")
             raise AuthenticationError(message="User account is disabled")
 
-        # Detach from session to avoid "instance not bound to a Session" errors
-        # when the User object is used after the context manager exits
+        # Eagerly load all columns, then detach from session to avoid
+        # "instance not bound to a Session" errors after the context manager exits
+        await db.refresh(user)
         db.expunge(user)
         return user
 {%- elif cookiecutter.use_mongodb %}
@@ -556,7 +557,9 @@ async def get_current_user_ws(
             await websocket.close(code=4001, reason="User account is disabled")
             raise AuthenticationError(message="User account is disabled")
 
-        # Detach from session for consistency with async behavior
+        # Eagerly load all columns, then detach from session for
+        # consistency with async behavior
+        db.refresh(user)
         db.expunge(user)
         return user
 {%- endif %}

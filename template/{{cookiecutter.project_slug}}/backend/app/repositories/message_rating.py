@@ -6,7 +6,7 @@ from typing import Any
 
 from uuid import UUID
 
-from sqlalchemy import Select, case, func, select
+from sqlalchemy import Select, and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -138,7 +138,7 @@ async def get_rating_summary(
         func.sum(func.case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
         func.sum(func.case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
         func.avg(MessageRating.rating).label("avg_rating"),
-        func.sum(func.case((MessageRating.comment.isnot(None), 1), else_=0)).label("with_comments"),
+        func.sum(func.case((and_(MessageRating.comment.isnot(None), MessageRating.comment != ""), 1), else_=0)).label("with_comments"),
     ).where(MessageRating.created_at >= cutoff_date)
 
     result = await db.execute(counts_query)
@@ -179,7 +179,7 @@ async def get_rating_summary(
 from datetime import datetime, timedelta, UTC
 from typing import Any
 
-from sqlalchemy import case, func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.message_rating import MessageRating
@@ -310,7 +310,7 @@ def get_rating_summary(
         func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
         func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
         func.avg(MessageRating.rating).label("avg_rating"),
-        func.sum(case((MessageRating.comment.isnot(None), 1), else_=0)).label("with_comments"),
+        func.sum(case((and_(MessageRating.comment.isnot(None), MessageRating.comment != ""), 1), else_=0)).label("with_comments"),
     ).where(MessageRating.created_at >= cutoff_date)
 
     result = db.execute(counts_query)
@@ -483,7 +483,10 @@ async def get_rating_summary(
                 },
                 "avg_rating": {"$avg": "$rating"},
                 "with_comments": {
-                    "$sum": {"$cond": [{"$ne": ["$comment", None]}, 1, 0]}
+                    "$sum": {"$cond": [{"$and": [
+                        {"$ne": ["$comment", None]},
+                        {"$ne": ["$comment", ""]}
+                    ]}, 1, 0]}
                 },
             }
         },

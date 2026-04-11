@@ -20,6 +20,7 @@ from typing import Any
 {%- endif %}
 
 from fastapi import APIRouter, Query, status
+from fastapi.responses import JSONResponse
 
 {%- if cookiecutter.use_mongodb %}
 from app.api.deps import ConversationSvc
@@ -64,8 +65,6 @@ async def export_conversations(
 {%- endif %}
 ) -> Any:
     """Export all conversations with messages and tool calls (admin only)."""
-    from fastapi.responses import JSONResponse
-
     export_data = await conversation_service.export_all()
     return JSONResponse(content={"conversations": export_data, "total": len(export_data)},
         headers={"Content-Disposition": 'attachment; filename="conversations_export.json"'})
@@ -277,22 +276,13 @@ async def rate_message(
     Returns:
         200 OK
     """
-    from fastapi.responses import JSONResponse
-
-    rating, is_new = await rating_service.rate_message(
+    rating, _ = await rating_service.rate_message(
         conversation_id=conversation_id,
         message_id=message_id,
         user_id=current_user.id,
         data=data,
     )
-    if is_new:
-        return rating
-    else:
-        # Return 200 OK for updates (override default 201)
-        return JSONResponse(
-            content=rating.model_dump(mode="json"),
-            status_code=status.HTTP_200_OK,
-        )
+    return rating
 
 
 @router.delete(
@@ -333,8 +323,6 @@ def export_conversations(
 {%- endif %}
 ) -> Any:
     """Export all conversations with messages and tool calls (admin only)."""
-    from fastapi.responses import JSONResponse
-
     export_data = conversation_service.export_all()
     return JSONResponse(content={"conversations": export_data, "total": len(export_data)},
         headers={"Content-Disposition": 'attachment; filename="conversations_export.json"'})
@@ -546,22 +534,13 @@ def rate_message(
     Returns:
         200 OK
     """
-    from fastapi.responses import JSONResponse
-
-    rating, is_new = rating_service.rate_message(
+    rating, _ = rating_service.rate_message(
         conversation_id=conversation_id,
         message_id=message_id,
         user_id=str(current_user.id),
         data=data,
     )
-    if is_new:
-        return rating
-    else:
-        # Return 200 OK for updates (override default 201)
-        return JSONResponse(
-            content=rating.model_dump(mode="json"),
-            status_code=status.HTTP_200_OK,
-        )
+    return rating
 
 
 @router.delete(
@@ -800,21 +779,13 @@ async def rate_message(
     Returns:
         200 OK
     """
-    from fastapi.responses import JSONResponse
-
-    rating, is_new = await rating_service.rate_message(
+    rating, _ = await rating_service.rate_message(
         conversation_id=conversation_id,
         message_id=message_id,
         user_id=str(current_user.id),
         data=data,
     )
-    if is_new:
-        return rating
-    else:
-        return JSONResponse(
-            content=rating.model_dump(mode="json"),
-            status_code=status.HTTP_200_OK,
-        )
+    return rating
 
 
 @router.delete(

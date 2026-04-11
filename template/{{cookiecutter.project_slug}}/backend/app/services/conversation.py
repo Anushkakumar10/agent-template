@@ -22,6 +22,7 @@ from app.schemas.conversation import (
     ConversationCreate,
     ConversationUpdate,
     MessageCreate,
+    MessageRead,
     ToolCallCreate,
     ToolCallComplete,
 )
@@ -72,7 +73,7 @@ class ConversationService:
                     "id": str(rating.id),
                     "user_id": str(rating.user_id),
                     "user_email": getattr(user, "email", None),
-                    "user_name": getattr(user, "name", None),
+                    "user_name": user.full_name if user else None,
                     "rating": rating.rating,
                     "comment": rating.comment,
                     "created_at": rating.created_at.isoformat() if rating.created_at else None,
@@ -327,7 +328,6 @@ class ConversationService:
 {%- if cookiecutter.use_jwt %}
         # Enrich messages with rating data if user_id is provided
         if user_id is not None and items:
-            # Get all message IDs
             message_ids = [msg.id for msg in items]
 
             # Fetch user ratings for these messages
@@ -354,13 +354,18 @@ class ConversationService:
                 for row in rating_counts_result.all()
             }
 
-            # Attach rating data to messages
+            # Construct enriched schema objects with rating data
+            enriched: list[MessageRead] = []
             for msg in items:
-                msg.user_rating = user_ratings.get(msg.id)  # type: ignore[attr-defined]
-                msg.rating_count = rating_counts.get(msg.id)  # type: ignore[attr-defined]
-{%- endif %}
-
+                msg_schema = MessageRead.model_validate(msg)
+                msg_schema.user_rating = user_ratings.get(msg.id)
+                msg_schema.rating_count = rating_counts.get(msg.id)
+                enriched.append(msg_schema)
+            return enriched, total  # type: ignore[return-value]
         return items, total
+{%- else %}
+        return items, total
+{%- endif %}
 
     async def add_message(
         self,
@@ -496,6 +501,7 @@ from app.schemas.conversation import (
     ConversationCreate,
     ConversationUpdate,
     MessageCreate,
+    MessageRead,
     ToolCallCreate,
     ToolCallComplete,
 )
@@ -545,7 +551,7 @@ class ConversationService:
                     "id": str(rating.id),
                     "user_id": str(rating.user_id),
                     "user_email": getattr(user, "email", None),
-                    "user_name": getattr(user, "name", None),
+                    "user_name": user.full_name if user else None,
                     "rating": rating.rating,
                     "comment": rating.comment,
                     "created_at": rating.created_at.isoformat() if rating.created_at else None,
@@ -823,13 +829,18 @@ class ConversationService:
                 for row in rating_counts_result.all()
             }
 
-            # Attach rating data to messages
+            # Construct enriched schema objects with rating data
+            enriched: list[MessageRead] = []
             for msg in items:
-                msg.user_rating = user_ratings.get(msg.id)  # type: ignore[attr-defined]
-                msg.rating_count = rating_counts.get(msg.id)  # type: ignore[attr-defined]
-{%- endif %}
-
+                msg_schema = MessageRead.model_validate(msg)
+                msg_schema.user_rating = user_ratings.get(msg.id)
+                msg_schema.rating_count = rating_counts.get(msg.id)
+                enriched.append(msg_schema)
+            return enriched, total  # type: ignore[return-value]
         return items, total
+{%- else %}
+        return items, total
+{%- endif %}
 
     def add_message(
         self,
@@ -960,6 +971,7 @@ from app.schemas.conversation import (
     ConversationCreate,
     ConversationUpdate,
     MessageCreate,
+    MessageRead,
     ToolCallCreate,
     ToolCallComplete,
 )
@@ -1210,13 +1222,18 @@ class ConversationService:
                 for doc in rating_counts
             }
 
-            # Attach rating data to messages
+            # Construct enriched schema objects with rating data
+            enriched: list[MessageRead] = []
             for msg in items:
-                msg.user_rating = user_rating_map.get(msg.id)  # type: ignore[attr-defined]
-                msg.rating_count = rating_count_map.get(msg.id)  # type: ignore[attr-defined]
-{%- endif %}
-
+                msg_schema = MessageRead.model_validate(msg)
+                msg_schema.user_rating = user_rating_map.get(msg.id)
+                msg_schema.rating_count = rating_count_map.get(msg.id)
+                enriched.append(msg_schema)
+            return enriched, total  # type: ignore[return-value]
         return items, total
+{%- else %}
+        return items, total
+{%- endif %}
 
     async def add_message(
         self,
