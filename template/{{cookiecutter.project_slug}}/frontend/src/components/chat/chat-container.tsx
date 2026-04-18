@@ -8,7 +8,7 @@ import { ToolApprovalDialog } from "./tool-approval-dialog";
 import { Bot, ChevronDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui";
 import type { PendingApproval, Decision } from "@/types";
-import { useConversationStore, useChatStore } from "@/stores";
+import { useConversationStore, useChatStore, useAuthStore } from "@/stores";
 import { useConversations } from "@/hooks";
 
 export function ChatContainer() {
@@ -42,7 +42,6 @@ function AuthenticatedChatContainer() {
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Clear messages when conversation changes, but NOT when going from null to a new ID
   // (that happens when a new chat is saved - we want to keep the messages)
@@ -81,9 +80,6 @@ function AuthenticatedChatContainer() {
           role: msg.role,
           content: msg.content,
           timestamp: new Date(msg.created_at),
-{%- if cookiecutter.use_jwt %}
-          conversationId: msg.conversation_id,
-{%- endif %}
           toolCalls: msg.tool_calls?.map((tc) => ({
             id: tc.tool_call_id,
             name: tc.tool_name,
@@ -91,10 +87,6 @@ function AuthenticatedChatContainer() {
             result: tc.result,
             status: tc.status === "failed" ? "error" : tc.status,
           })),
-{%- if cookiecutter.use_jwt %}
-          user_rating: msg.user_rating ?? undefined,
-          rating_count: msg.rating_count ?? undefined,
-{%- endif %}
           fileIds: "files" in msg && Array.isArray((msg as unknown as { files?: unknown[] }).files)
             ? ((msg as unknown as { files: { id: string }[] }).files).map((f) => f.id)
             : undefined,
@@ -109,13 +101,7 @@ function AuthenticatedChatContainer() {
   }, [connect, disconnect]);
 
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    // Only auto-scroll if user is already near the bottom
-    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-    if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
@@ -126,7 +112,6 @@ function AuthenticatedChatContainer() {
       sendMessage={sendMessage}
       onModelChange={setModel}
       messagesEndRef={messagesEndRef}
-      scrollContainerRef={scrollContainerRef}
       pendingApproval={pendingApproval}
       onResumeDecisions={sendResumeDecisions}
     />
@@ -182,7 +167,6 @@ interface ChatUIProps {
   sendMessage: (content: string, fileIds?: string[]) => void;
   onModelChange?: (model: string | null) => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   pendingApproval?: PendingApproval | null;
   onResumeDecisions?: (decisions: Decision[]) => void;
 }
@@ -194,13 +178,12 @@ function ChatUI({
   sendMessage,
   onModelChange,
   messagesEndRef,
-  scrollContainerRef,
   pendingApproval,
   onResumeDecisions,
 }: ChatUIProps) {
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-2 py-4 sm:px-4 sm:py-6 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto px-2 py-4 sm:px-4 sm:py-6 scrollbar-thin">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4">
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-secondary flex items-center justify-center">
