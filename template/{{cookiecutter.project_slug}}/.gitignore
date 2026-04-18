@@ -70,8 +70,10 @@ venv.bak/
 *.swo
 *~
 
-# ty
-.ty_cache/
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # ruff
 .ruff_cache/
@@ -103,5 +105,5 @@ Thumbs.db
 
 # Project specific
 {%- if cookiecutter.use_sqlite %}
-{{ cookiecutter.project_slug }}.db
+data/
 {%- endif %}

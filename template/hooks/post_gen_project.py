@@ -263,8 +263,6 @@ if not use_frontend:
     if os.path.exists(frontend_dir):
         shutil.rmtree(frontend_dir)
         print("Removed frontend/ directory (frontend not enabled)")
-    # Remove frontend-specific Claude rule
-    remove_file(os.path.join(os.getcwd(), ".claude", "rules", "frontend.md"))
 
 
 # Remove .env files if generate_env is false

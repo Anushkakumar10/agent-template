@@ -146,6 +146,27 @@ def get_conversation_service() -> ConversationService:
 
 ConversationSvc = Annotated[ConversationService, Depends(get_conversation_service)]
 {%- endif %}
+{%- if cookiecutter.use_database and cookiecutter.use_jwt %}
+
+# Message rating service
+from app.services.message_rating import MessageRatingService
+{%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
+
+
+def get_rating_service(db: DBSession) -> MessageRatingService:
+    """Create MessageRatingService instance with database session."""
+    return MessageRatingService(db)
+{%- elif cookiecutter.use_mongodb %}
+
+
+def get_rating_service() -> MessageRatingService:
+    """Create MessageRatingService instance."""
+    return MessageRatingService()
+{%- endif %}
+
+
+MessageRatingSvc = Annotated[MessageRatingService, Depends(get_rating_service)]
+{%- endif %}
 
 {%- if cookiecutter.enable_rag and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
 from app.services.rag_document import RAGDocumentService
@@ -186,7 +207,6 @@ FileUploadSvc = Annotated[FileUploadService, Depends(get_file_upload_service)]
 {%- endif %}
 
 {%- if cookiecutter.use_jwt %}
-
 # === Authentication Dependencies ===
 
 from app.core.exceptions import AuthenticationError, AuthorizationError
@@ -195,8 +215,6 @@ from app.db.models.user import User, UserRole
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
 {%- if cookiecutter.use_postgresql %}
-
-
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     user_service: UserSvc,
@@ -506,11 +524,27 @@ async def get_current_user_ws(
     async with get_db_context() as db:
         user_service = UserService(db)
         user = await user_service.get_by_id(UUID(user_id))
+
+        if not user.is_active:
+            await websocket.close(code=4001, reason="User account is disabled")
+            raise AuthenticationError(message="User account is disabled")
+
+        # Eagerly load all columns, then detach from session to avoid
+        # "instance not bound to a Session" errors after the context manager exits
+        await db.refresh(user)
+        db.expunge(user)
+        return user
 {%- elif cookiecutter.use_mongodb %}
 
     db = await get_db_session()
     user_service = UserService(db)
     user = await user_service.get_by_id(user_id)
+
+    if not user.is_active:
+        await websocket.close(code=4001, reason="User account is disabled")
+        raise AuthenticationError(message="User account is disabled")
+
+    return user
 {%- elif cookiecutter.use_sqlite %}
 
     from contextlib import contextmanager
@@ -518,13 +552,17 @@ async def get_current_user_ws(
     with contextmanager(get_db_session)() as db:
         user_service = UserService(db)
         user = user_service.get_by_id(user_id)
+
+        if not user.is_active:
+            await websocket.close(code=4001, reason="User account is disabled")
+            raise AuthenticationError(message="User account is disabled")
+
+        # Eagerly load all columns, then detach from session for
+        # consistency with async behavior
+        db.refresh(user)
+        db.expunge(user)
+        return user
 {%- endif %}
-
-    if not user.is_active:
-        await websocket.close(code=4001, reason="User account is disabled")
-        raise AuthenticationError(message="User account is disabled")
-
-    return user
 {%- endif %}
 
 {%- if cookiecutter.use_api_key %}

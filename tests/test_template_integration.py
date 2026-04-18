@@ -106,32 +106,34 @@ class TestGeneratedTemplateRuff:
         assert result.returncode == 0, f"Ruff failed:\n{result.stdout}\n{result.stderr}"
 
 
-class TestGeneratedTemplateTy:
-    """Test that generated code passes ty type checking."""
+class TestGeneratedTemplateMypy:
+    """Test that generated code passes mypy type checking."""
 
     @pytest.mark.slow
-    def test_minimal_project_passes_ty(self, generated_project_minimal: Path) -> None:
-        """Test minimal project passes ty check."""
+    def test_minimal_project_passes_mypy(self, generated_project_minimal: Path) -> None:
+        """Test minimal project passes mypy check."""
         backend_path = generated_project_minimal / "backend"
+        app_path = backend_path / "app"
         result = subprocess.run(
-            ["uv", "run", "ty", "check"],
+            ["uv", "run", "mypy", str(app_path), "--ignore-missing-imports"],
             capture_output=True,
             text=True,
-            cwd=backend_path,
+            cwd=generated_project_minimal,
         )
-        assert result.returncode == 0, f"ty failed:\n{result.stdout}\n{result.stderr}"
+        assert result.returncode == 0, f"Mypy failed:\n{result.stdout}\n{result.stderr}"
 
     @pytest.mark.slow
-    def test_full_project_passes_ty(self, generated_project_full: Path) -> None:
-        """Test full project passes ty check."""
+    def test_full_project_passes_mypy(self, generated_project_full: Path) -> None:
+        """Test full project passes mypy check."""
         backend_path = generated_project_full / "backend"
+        app_path = backend_path / "app"
         result = subprocess.run(
-            ["uv", "run", "ty", "check"],
+            ["uv", "run", "mypy", str(app_path), "--ignore-missing-imports"],
             capture_output=True,
             text=True,
-            cwd=backend_path,
+            cwd=generated_project_full,
         )
-        assert result.returncode == 0, f"ty failed:\n{result.stdout}\n{result.stderr}"
+        assert result.returncode == 0, f"Mypy failed:\n{result.stdout}\n{result.stderr}"
 
 
 class TestGeneratedTemplateAgentsFolder:
