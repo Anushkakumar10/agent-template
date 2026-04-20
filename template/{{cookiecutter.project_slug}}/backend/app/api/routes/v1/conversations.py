@@ -20,6 +20,7 @@ from typing import Any
 {%- endif %}
 
 from fastapi import APIRouter, Query, status
+from fastapi.responses import JSONResponse
 
 {%- if cookiecutter.use_mongodb %}
 from app.api.deps import ConversationSvc
@@ -28,6 +29,9 @@ from app.api.deps import DBSession, ConversationSvc
 {%- endif %}
 {%- if cookiecutter.use_jwt %}
 from app.api.deps import CurrentAdmin, CurrentUser
+{%- if cookiecutter.use_database %}
+from app.api.deps import MessageRatingSvc
+{%- endif %}
 {%- endif %}
 from app.schemas.conversation import (
     ConversationCreate,
@@ -39,7 +43,16 @@ from app.schemas.conversation import (
     MessageList,
     MessageRead,
     MessageReadSimple,
+{%- if cookiecutter.use_jwt %}
+    ConversationAdminList,
+{%- endif %}
 )
+{%- if cookiecutter.use_jwt %}
+from app.schemas.message_rating import (
+    MessageRatingCreate,
+    MessageRatingRead,
+)
+{%- endif %}
 
 router = APIRouter()
 
@@ -55,11 +68,33 @@ async def export_conversations(
 {%- endif %}
 ) -> Any:
     """Export all conversations with messages and tool calls (admin only)."""
-    from fastapi.responses import JSONResponse
-
     export_data = await conversation_service.export_all()
     return JSONResponse(content={"conversations": export_data, "total": len(export_data)},
         headers={"Content-Disposition": 'attachment; filename="conversations_export.json"'})
+
+
+{%- if cookiecutter.use_jwt %}
+@router.get("/admin-list", response_model=ConversationAdminList)
+async def list_conversations_admin(
+    conversation_service: ConversationSvc,
+    current_user: CurrentAdmin,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    include_archived: bool = Query(True, description="Include archived conversations"),
+    search: str | None = Query(None, max_length=100, description="Search by title or ID prefix"),
+) -> Any:
+    """List all conversations with message counts (admin only).
+
+    Returns paginated conversations without message content.
+    """
+    items, total = await conversation_service.list_conversations_admin(
+        skip=skip,
+        limit=limit,
+        include_archived=include_archived,
+        search=search,
+    )
+    return ConversationAdminList(items=items, total=total)
+{%- endif %}
 
 
 @router.get("", response_model=ConversationList)
@@ -205,7 +240,15 @@ async def list_messages(
 
     Returns messages ordered by creation time (oldest first).
     """
-    items, total = await conversation_service.list_messages(conversation_id, skip=skip, limit=limit, include_tool_calls=True)
+    items, total = await conversation_service.list_messages(
+        conversation_id,
+        skip=skip,
+        limit=limit,
+        include_tool_calls=True,
+{%- if cookiecutter.use_jwt %}
+        user_id=current_user.id,
+{%- endif %}
+    )
     return MessageList(items=items, total=total)  # type: ignore[arg-type]
 
 
@@ -229,6 +272,73 @@ async def add_message(
     return await conversation_service.add_message(conversation_id, data)
 
 
+{%- if cookiecutter.use_jwt %}
+
+
+# Message Rating Endpoints
+
+
+@router.post(
+    "/{conversation_id}/messages/{message_id}/rate",
+    response_model=MessageRatingRead,
+    status_code=status.HTTP_200_OK,
+)
+async def rate_message(
+    conversation_id: UUID,
+    message_id: UUID,
+    data: MessageRatingCreate,
+    rating_service: MessageRatingSvc,
+    current_user: CurrentUser,
+) -> Any:
+    """Rate an assistant message.
+
+    Creates a new rating or updates an existing one.
+    Only assistant messages can be rated.
+
+    Args:
+        conversation_id: The conversation containing the message
+        message_id: The message to rate
+        data: Rating value (1 for like, -1 for dislike) and optional comment
+
+    Returns:
+        200 OK
+    """
+    rating, _ = await rating_service.rate_message(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        user_id=current_user.id,
+        data=data,
+    )
+    return rating
+
+
+@router.delete(
+    "/{conversation_id}/messages/{message_id}/rate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+async def remove_rating(
+    conversation_id: UUID,
+    message_id: UUID,
+    rating_service: MessageRatingSvc,
+    current_user: CurrentUser,
+) -> None:
+    """Remove your rating from a message.
+
+    Args:
+        conversation_id: The conversation containing the message
+        message_id: The message to remove rating from
+    """
+    await rating_service.remove_rating(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        user_id=current_user.id,
+    )
+
+
+{%- endif %}
+
+
 {%- elif cookiecutter.use_sqlite %}
 
 
@@ -240,11 +350,33 @@ def export_conversations(
 {%- endif %}
 ) -> Any:
     """Export all conversations with messages and tool calls (admin only)."""
-    from fastapi.responses import JSONResponse
-
     export_data = conversation_service.export_all()
     return JSONResponse(content={"conversations": export_data, "total": len(export_data)},
         headers={"Content-Disposition": 'attachment; filename="conversations_export.json"'})
+
+
+{%- if cookiecutter.use_jwt %}
+@router.get("/admin-list", response_model=ConversationAdminList)
+def list_conversations_admin(
+    conversation_service: ConversationSvc,
+    current_user: CurrentAdmin,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    include_archived: bool = Query(True, description="Include archived conversations"),
+    search: str | None = Query(None, max_length=100, description="Search by title or ID prefix"),
+) -> Any:
+    """List all conversations with message counts (admin only).
+
+    Returns paginated conversations without message content.
+    """
+    items, total = conversation_service.list_conversations_admin(
+        skip=skip,
+        limit=limit,
+        include_archived=include_archived,
+        search=search,
+    )
+    return ConversationAdminList(items=items, total=total)
+{%- endif %}
 
 
 @router.get("", response_model=ConversationList)
@@ -304,7 +436,12 @@ def get_conversation(
 
     Raises 404 if the conversation does not exist.
     """
-    return conversation_service.get_conversation(conversation_id, include_messages=True)
+    return conversation_service.get_conversation(
+        conversation_id, include_messages=True,
+{%- if cookiecutter.use_jwt %}
+        user_id=str(current_user.id),
+{%- endif %}
+    )
 
 
 @router.patch("/{conversation_id}", response_model=ConversationRead)
@@ -323,7 +460,7 @@ def update_conversation(
     return conversation_service.update_conversation(
         conversation_id, data,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -343,7 +480,7 @@ def delete_conversation(
     conversation_service.delete_conversation(
         conversation_id,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -366,7 +503,7 @@ def archive_conversation(
     return conversation_service.archive_conversation(
         conversation_id,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -385,7 +522,15 @@ def list_messages(
 
     Returns messages ordered by creation time (oldest first).
     """
-    items, total = conversation_service.list_messages(conversation_id, skip=skip, limit=limit, include_tool_calls=True)
+    items, total = conversation_service.list_messages(
+        conversation_id,
+        skip=skip,
+        limit=limit,
+        include_tool_calls=True,
+{%- if cookiecutter.use_jwt %}
+        user_id=str(current_user.id),
+{%- endif %}
+    )
     return MessageList(items=items, total=total)  # type: ignore[arg-type]
 
 
@@ -409,7 +554,100 @@ def add_message(
     return conversation_service.add_message(conversation_id, data)
 
 
+{%- if cookiecutter.use_jwt %}
+
+
+# Message Rating Endpoints
+
+
+@router.post(
+    "/{conversation_id}/messages/{message_id}/rate",
+    response_model=MessageRatingRead,
+    status_code=status.HTTP_200_OK,
+)
+def rate_message(
+    conversation_id: str,
+    message_id: str,
+    data: MessageRatingCreate,
+    rating_service: MessageRatingSvc,
+    current_user: CurrentUser,
+) -> Any:
+    """Rate an assistant message.
+
+    Creates a new rating or updates an existing one.
+    Only assistant messages can be rated.
+
+    Args:
+        conversation_id: The conversation containing the message
+        message_id: The message to rate
+        data: Rating value (1 for like, -1 for dislike) and optional comment
+
+    Returns:
+        200 OK
+    """
+    rating, _ = rating_service.rate_message(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        user_id=str(current_user.id),
+        data=data,
+    )
+    return rating
+
+
+@router.delete(
+    "/{conversation_id}/messages/{message_id}/rate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+def remove_rating(
+    conversation_id: str,
+    message_id: str,
+    rating_service: MessageRatingSvc,
+    current_user: CurrentUser,
+) -> None:
+    """Remove your rating from a message.
+
+    Args:
+        conversation_id: The conversation containing the message
+        message_id: The message to remove rating from
+    """
+    rating_service.remove_rating(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        user_id=str(current_user.id),
+    )
+
+
+{%- endif %}
+
+
 {%- elif cookiecutter.use_mongodb %}
+
+
+{%- if cookiecutter.use_jwt %}
+@router.get("/admin-list", response_model=ConversationAdminList)
+async def list_conversations_admin(
+    conversation_service: ConversationSvc,
+    current_user: CurrentAdmin,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    include_archived: bool = Query(True, description="Include archived conversations"),
+    search: str | None = Query(None, max_length=100, description="Search by title or ID prefix"),
+) -> Any:
+    """List all conversations with message counts (admin only).
+
+    Returns paginated conversations without message content.
+    """
+    items, total = await conversation_service.list_conversations_admin(
+        skip=skip,
+        limit=limit,
+        include_archived=include_archived,
+        search=search,
+    )
+    return ConversationAdminList(items=items, total=total)
+
+
+{%- endif %}
 
 
 @router.get("", response_model=ConversationList)
@@ -472,7 +710,7 @@ async def get_conversation(
     return await conversation_service.get_conversation(
         conversation_id, include_messages=True,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -493,7 +731,7 @@ async def update_conversation(
     return await conversation_service.update_conversation(
         conversation_id, data,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -513,7 +751,7 @@ async def delete_conversation(
     await conversation_service.delete_conversation(
         conversation_id,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -536,7 +774,7 @@ async def archive_conversation(
     return await conversation_service.archive_conversation(
         conversation_id,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -555,7 +793,15 @@ async def list_messages(
 
     Returns messages ordered by creation time (oldest first).
     """
-    items, total = await conversation_service.list_messages(conversation_id, skip=skip, limit=limit, include_tool_calls=True)
+    items, total = await conversation_service.list_messages(
+        conversation_id,
+        skip=skip,
+        limit=limit,
+        include_tool_calls=True,
+{%- if cookiecutter.use_jwt %}
+        user_id=str(current_user.id),
+{%- endif %}
+    )
     return MessageList(items=items, total=total)  # type: ignore[arg-type]
 
 
@@ -577,6 +823,73 @@ async def add_message(
     Raises 404 if the conversation does not exist.
     """
     return await conversation_service.add_message(conversation_id, data)
+
+
+{%- if cookiecutter.use_jwt %}
+
+
+# Message Rating Endpoints
+
+
+@router.post(
+    "/{conversation_id}/messages/{message_id}/rate",
+    response_model=MessageRatingRead,
+    status_code=status.HTTP_200_OK,
+)
+async def rate_message(
+    conversation_id: str,
+    message_id: str,
+    data: MessageRatingCreate,
+    rating_service: MessageRatingSvc,
+    current_user: CurrentUser,
+) -> Any:
+    """Rate an assistant message.
+
+    Creates a new rating or updates an existing one.
+    Only assistant messages can be rated.
+
+    Args:
+        conversation_id: The conversation containing the message
+        message_id: The message to rate
+        data: Rating value (1 for like, -1 for dislike) and optional comment
+
+    Returns:
+        200 OK
+    """
+    rating, _ = await rating_service.rate_message(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        user_id=str(current_user.id),
+        data=data,
+    )
+    return rating
+
+
+@router.delete(
+    "/{conversation_id}/messages/{message_id}/rate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+async def remove_rating(
+    conversation_id: str,
+    message_id: str,
+    rating_service: MessageRatingSvc,
+    current_user: CurrentUser,
+) -> None:
+    """Remove your rating from a message.
+
+    Args:
+        conversation_id: The conversation containing the message
+        message_id: The message to remove rating from
+    """
+    await rating_service.remove_rating(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        user_id=str(current_user.id),
+    )
+
+
+{%- endif %}
 
 
 {%- endif %}
