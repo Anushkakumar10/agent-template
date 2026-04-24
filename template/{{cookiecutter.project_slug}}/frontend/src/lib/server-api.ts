@@ -19,8 +19,6 @@ export class BackendApiError extends Error {
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
-  /** Return raw text instead of parsing as JSON */
-  raw?: boolean;
 }
 
 /**
@@ -31,7 +29,7 @@ export async function backendFetch<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { params, body, raw, ...fetchOptions } = options;
+  const { params, body, ...fetchOptions } = options;
 
   let url = `${BACKEND_URL}${endpoint}`;
 
@@ -71,10 +69,6 @@ export async function backendFetch<T>(
   const text = await response.text();
   if (!text) {
     return null as T;
-  }
-
-  if (raw) {
-    return text as T;
   }
 
   return JSON.parse(text);

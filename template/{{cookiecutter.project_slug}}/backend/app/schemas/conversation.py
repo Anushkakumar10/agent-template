@@ -120,16 +120,6 @@ class MessageRead(MessageBase, TimestampSchema):
     tokens_used: int | None = None
     tool_calls: list[ToolCallRead] = Field(default_factory=list)
     files: list[MessageFileRead] = Field(default_factory=list)
-{%- if cookiecutter.use_jwt %}
-    user_rating: int | None = Field(
-        default=None,
-        description="Current user's rating (1 or -1)",
-    )
-    rating_count: dict[str, int] | None = Field(
-        default=None,
-        description="Aggregate counts {likes: N, dislikes: N}",
-    )
-{%- endif %}
 
 
 class MessageReadSimple(MessageBase, TimestampSchema):
@@ -165,6 +155,13 @@ class ConversationCreate(ConversationBase):
     user_id: str | None = Field(default=None, description="Owner user ID")
 {%- endif %}
 {%- endif %}
+{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
+{%- if cookiecutter.use_postgresql %}
+    project_id: UUID | None = Field(default=None, description="Project this conversation belongs to")
+{%- else %}
+    project_id: str | None = Field(default=None, description="Project this conversation belongs to")
+{%- endif %}
+{%- endif %}
     pass
 
 
@@ -183,10 +180,16 @@ class ConversationRead(ConversationBase, TimestampSchema):
 {%- if cookiecutter.use_jwt %}
     user_id: UUID | None = None
 {%- endif %}
+{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
+    project_id: UUID | None = None
+{%- endif %}
 {%- else %}
     id: str
 {%- if cookiecutter.use_jwt %}
     user_id: str | None = None
+{%- endif %}
+{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
+    project_id: str | None = None
 {%- endif %}
 {%- endif %}
     is_archived: bool = False
@@ -220,12 +223,3 @@ class ConversationWithLatestMessage(ConversationRead):
 
     latest_message: MessageReadSimple | None = None
     message_count: int = 0
-
-
-{%- if cookiecutter.use_jwt %}
-class ConversationAdminList(BaseSchema):
-    """Schema for admin conversation list with message counts."""
-
-    items: list[ConversationWithLatestMessage]
-    total: int
-{%- endif %}

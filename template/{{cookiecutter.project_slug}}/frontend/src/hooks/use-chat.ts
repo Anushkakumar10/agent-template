@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { useWebSocket } from "./use-websocket";
-import { useChatStore, useAuthStore } from "@/stores";
+import { useChatStore } from "@/stores";
 import type { ChatMessage, ToolCall, WSEvent, PendingApproval, Decision } from "@/types";
 import { WS_URL } from "@/lib/constants";
 {%- if cookiecutter.use_database %}
@@ -18,7 +18,7 @@ interface UseChatOptions {
 
 export function useChat(options: UseChatOptions = {}) {
   const { conversationId, onConversationCreated } = options;
-  const { setCurrentConversationId, currentConversationId: currentConversationIdFromStore } = useConversationStore();
+  const { setCurrentConversationId } = useConversationStore();
 {%- else %}
 export function useChat() {
 {%- endif %}
@@ -54,10 +54,6 @@ export function useChat() {
         }
 
         const newMsgId = nanoid();
-{%- if cookiecutter.use_database %}
-        // Use current conversationId from store to avoid closure issues
-        const effectiveConversationId = currentConversationIdFromStore || conversationId || undefined;
-{%- endif %}
         addMessage({
           id: newMsgId,
           role: "assistant",
@@ -66,10 +62,6 @@ export function useChat() {
           isStreaming: true,
           toolCalls: [],
           groupId: currentGroupIdRef.current || undefined,
-{%- if cookiecutter.use_database %}
-          conversationId: effectiveConversationId,
-          isTemporaryId: true,
-{%- endif %}
         });
         setCurrentMessageId(newMsgId);
         return newMsgId;
@@ -81,39 +73,13 @@ export function useChat() {
           // Handle new conversation created by backend
           const { conversation_id } = wsEvent.data as { conversation_id: string };
           setCurrentConversationId(conversation_id);
-          // Update all messages that don't have a conversationId yet
-          const { updateMessagesWhere } = useChatStore.getState();
-          updateMessagesWhere(
-            (msg) => !msg.conversationId,
-            (msg) => ({ ...msg, conversationId: conversation_id })
-          );
           onConversationCreated?.(conversation_id);
           break;
         }
 
         case "message_saved": {
-          // Assistant message was saved to database, update local ID to real database ID
-          const { message_id } = wsEvent.data as { message_id: string };
-          if (currentMessageId) {
-            // Update the current streaming message's ID to the real database ID
-            updateMessage(currentMessageId, (msg) => ({
-              ...msg,
-              id: message_id,
-              isTemporaryId: false,
-            }));
-          } else {
-            // Fallback: find the last assistant message with a temp ID
-            // This handles cases where currentMessageId was already cleared
-            const messages = useChatStore.getState().messages;
-            const lastTemp = [...messages].reverse().find(
-              msg => msg.role === "assistant" && !!msg.isTemporaryId
-            );
-            if (lastTemp) {
-              updateMessage(lastTemp.id, (msg) => ({
-                ...msg, id: message_id, isTemporaryId: false
-              }));
-            }
-          }
+          // Message was saved to database, update local ID if needed
+          // We don't need to do anything special here for now
           break;
         }
 {%- endif %}
@@ -307,7 +273,7 @@ export function useChat() {
             }
           }
           setIsProcessing(false);
-          // Don't clear currentMessageId yet - we need it for message_saved event
+          setCurrentMessageId(null);
           currentGroupIdRef.current = null;
           break;
         }
@@ -357,68 +323,18 @@ export function useChat() {
 
         case "complete": {
           setIsProcessing(false);
-          // Clear currentMessageId after complete (message_saved should have handled ID mapping)
-          setCurrentMessageId(null);
           break;
         }
       }
     },
 {%- if cookiecutter.use_database %}
-    [currentMessageId, addMessage, updateMessage, addToolCall, updateToolCall, setCurrentConversationId, onConversationCreated, currentConversationIdFromStore, conversationId]
+    [currentMessageId, addMessage, updateMessage, addToolCall, updateToolCall, setCurrentConversationId, onConversationCreated]
 {%- else %}
     [currentMessageId, addMessage, updateMessage, addToolCall, updateToolCall]
 {%- endif %}
   );
 
-  // Get access token from auth store (in-memory, fetched after login)
-  const accessToken = useAuthStore((state) => state.accessToken);
-
-  // Build WebSocket URL with authentication token from auth store
-  const wsUrl = useMemo(() => {
-    // First try auth store (in-memory token), fallback to cookie reading
-    // for non-httpOnly scenarios
-    const getAccessToken = (): string | null => {
-      // Check auth store first (primary source for httpOnly cookie workaround)
-      if (accessToken) {
-        return accessToken;
-      }
-
-      // Fallback: try reading from cookies (won't work for httpOnly)
-      const cookies = document.cookie.split(";");
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split("=");
-        if (name === "access_token" && value) {
-          return decodeURIComponent(value);
-        }
-      }
-      return null;
-    };
-
-    const token = getAccessToken();
-    const baseUrl = `${WS_URL}/api/v1/ws/agent`;
-    return token ? `${baseUrl}?token=${token}` : baseUrl;
-  }, [accessToken]);
-
-  // Fetch access token on mount if not available
-  // This handles page refresh where token is cleared from memory
-  // but httpOnly cookie still exists
-  useEffect(() => {
-    const fetchTokenIfMissing = async () => {
-      if (!accessToken) {
-        try {
-          const response = await fetch("/api/auth/token");
-          if (response.ok) {
-            const data = await response.json();
-            useAuthStore.getState().setAccessToken(data.access_token);
-          }
-        } catch {
-          // Token fetch failed - user may not be logged in
-        }
-      }
-    };
-
-    fetchTokenIfMissing();
-  }, [accessToken]);
+  const wsUrl = `${WS_URL}/api/v1/ws/agent`;
 
   const { isConnected, connect, disconnect, sendMessage } = useWebSocket({
     url: wsUrl,
@@ -432,9 +348,6 @@ export function useChat() {
         role: "user",
         content,
         timestamp: new Date(),
-{%- if cookiecutter.use_database %}
-        conversationId: conversationId || undefined,
-{%- endif %}
         fileIds,
       });
       setIsProcessing(true);
@@ -464,25 +377,12 @@ export function useChat() {
     (content: string, fileIds?: string[]) => {
       if (isProcessing) {
         messageQueueRef.current.push({ content, fileIds });
-        addMessage({
-          id: nanoid(),
-          role: "user",
-          content,
-          timestamp: new Date(),
-{%- if cookiecutter.use_database %}
-          conversationId: conversationId || undefined,
-{%- endif %}
-          fileIds
-        });
+        addMessage({ id: nanoid(), role: "user", content, timestamp: new Date(), fileIds });
         return;
       }
       doSend(content, fileIds);
     },
-{%- if cookiecutter.use_database %}
-    [isProcessing, doSend, addMessage, conversationId]
-{%- else %}
     [isProcessing, doSend, addMessage]
-{%- endif %}
   );
 
   // Human-in-the-Loop: send resume message with user decisions
