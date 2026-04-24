@@ -260,7 +260,7 @@ class ConversationShareService:
         permission: str = "view",
     ) -> dict:
         """Share a conversation with a user or generate a public link."""
-        conv = await conversation_repo.get_conversation(conversation_id)
+        conv = await conversation_repo.get_conversation_by_id(conversation_id)
         if not conv:
             raise NotFoundError(message="Conversation not found", details={"conversation_id": conversation_id})
         if conv.user_id != shared_by:
@@ -304,7 +304,7 @@ class ConversationShareService:
 
     async def list_shares(self, conversation_id: str, user_id: str) -> list:
         """List all shares for a conversation. Owner only."""
-        conv = await conversation_repo.get_conversation(conversation_id)
+        conv = await conversation_repo.get_conversation_by_id(conversation_id)
         if not conv:
             raise NotFoundError(message="Conversation not found")
         if conv.user_id != user_id:
@@ -336,7 +336,7 @@ class ConversationShareService:
         share = await conversation_share_repo.get_by_token(token)
         if not share:
             raise NotFoundError(message="Share link not found or expired")
-        conv = await conversation_repo.get_conversation(share.conversation_id)
+        conv = await conversation_repo.get_conversation_by_id(share.conversation_id)
         if not conv:
             raise NotFoundError(message="Conversation not found")
         return {"conversation": conv, "share": share}

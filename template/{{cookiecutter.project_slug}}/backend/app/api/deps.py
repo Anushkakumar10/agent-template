@@ -560,8 +560,7 @@ async def get_current_user_ws(
         user = await user_service.get_by_id(UUID(user_id))
 {%- elif cookiecutter.use_mongodb %}
 
-    db = await get_db_session()
-    user_service = UserService(db)
+    user_service = UserService()
     user = await user_service.get_by_id(user_id)
 {%- elif cookiecutter.use_sqlite %}
 

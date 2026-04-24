@@ -472,7 +472,7 @@ async def get_conversation(
     return await conversation_service.get_conversation(
         conversation_id, include_messages=True,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -493,7 +493,7 @@ async def update_conversation(
     return await conversation_service.update_conversation(
         conversation_id, data,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -513,7 +513,7 @@ async def delete_conversation(
     await conversation_service.delete_conversation(
         conversation_id,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 
@@ -536,7 +536,7 @@ async def archive_conversation(
     return await conversation_service.archive_conversation(
         conversation_id,
 {%- if cookiecutter.use_jwt %}
-        user_id=current_user.id,
+        user_id=str(current_user.id),
 {%- endif %}
     )
 

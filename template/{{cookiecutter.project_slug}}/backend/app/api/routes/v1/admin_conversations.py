@@ -314,7 +314,7 @@ async def admin_list_conversations(
     total = await Conversation.find(query_filter).count()
     conversations = (
         await Conversation.find(query_filter)
-        .sort(-Conversation.updated_at)
+        .sort("-updated_at")
         .skip(skip)
         .limit(limit)
         .to_list()
@@ -367,7 +367,7 @@ async def admin_list_users(
     total = await User.find(query_filter).count()
     users = (
         await User.find(query_filter)
-        .sort(-User.created_at)
+        .sort("-created_at")
         .skip(skip)
         .limit(limit)
         .to_list()

@@ -290,7 +290,7 @@ async def get_shares_for_conversation(conversation_id: str) -> list[Conversation
     """List all shares for a conversation."""
     return await ConversationShare.find(
         ConversationShare.conversation_id == conversation_id
-    ).sort(-ConversationShare.created_at).to_list()
+    ).sort("-created_at").to_list()
 
 
 async def get_conversations_shared_with_user(
@@ -305,7 +305,7 @@ async def get_conversations_shared_with_user(
         return []
     return (
         await Conversation.find({"_id": {"$in": conv_ids}})
-        .sort(-Conversation.updated_at)
+        .sort("-updated_at")
         .skip(skip)
         .limit(limit)
         .to_list()

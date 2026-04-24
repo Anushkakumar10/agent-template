@@ -917,6 +917,17 @@ class ConversationService:
             )
         return True
 
+    async def get_conversation_with_messages(
+        self,
+        conversation_id: str,
+    ) -> Conversation:
+        """Get conversation with messages (admin access).
+
+        Raises:
+            NotFoundError: If conversation does not exist.
+        """
+        return await self.get_conversation(conversation_id, include_messages=True)
+
     # Message Methods
 
     async def get_message(self, message_id: str) -> Message:
@@ -952,7 +963,6 @@ class ConversationService:
             conversation_id,
             skip=skip,
             limit=limit,
-            include_tool_calls=include_tool_calls,
         )
         total = await conversation_repo.count_messages(conversation_id)
         return items, total

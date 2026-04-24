@@ -324,7 +324,7 @@ wheels = [
 
 [[package]]
 name = "ak-agent-template"
-version = "0.3.0"
+version = "0.2.5"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
