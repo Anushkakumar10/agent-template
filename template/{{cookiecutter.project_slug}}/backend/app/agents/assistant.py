@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.capabilities import WebFetch, WebSearch
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
@@ -18,7 +17,7 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 {%- if cookiecutter.use_openai %}
-from pydantic_ai.models.openai import OpenAIResponsesModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 {%- endif %}
 {%- if cookiecutter.use_anthropic %}
@@ -86,7 +85,7 @@ class AssistantAgent:
     def _create_agent(self) -> Agent[Deps, str]:
         """Create and configure the PydanticAI agent."""
 {%- if cookiecutter.use_openai %}
-        model = OpenAIResponsesModel(
+        model = OpenAIChatModel(
             self.model_name,
             provider=OpenAIProvider(api_key=settings.OPENAI_API_KEY),
         )
@@ -113,10 +112,6 @@ class AssistantAgent:
             model=model,
             model_settings=ModelSettings(temperature=self.temperature),
             system_prompt=self.system_prompt,
-            capabilities=[
-                WebSearch(),
-                WebFetch(),
-            ],
         )
 
         self._register_tools(agent)

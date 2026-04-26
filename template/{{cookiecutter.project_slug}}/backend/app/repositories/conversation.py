@@ -11,6 +11,9 @@ from uuid import UUID
 from sqlalchemy import func, select, update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+{%- if cookiecutter.use_jwt %}
+from sqlalchemy import String
+{%- endif %}
 
 from app.db.models.conversation import Conversation, Message, ToolCall
 
@@ -59,6 +62,59 @@ async def get_conversations_by_user(
     return list(result.scalars().all())
 
 
+{%- if cookiecutter.use_jwt %}
+async def get_all_conversations_with_count(
+    db: AsyncSession,
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    include_archived: bool = False,
+    search: str | None = None,
+) -> tuple[list[tuple[Conversation, int]], int]:
+    """Get all conversations with message counts for admin (paginated).
+
+    Returns list of (conversation, message_count) tuples and total count.
+    """
+    message_count_subq = (
+        select(func.count(Message.id))
+        .where(Message.conversation_id == Conversation.id)
+        .correlate(Conversation)
+        .scalar_subquery()
+    )
+
+    query = select(Conversation, message_count_subq.label("message_count"))
+
+    if not include_archived:
+        query = query.where(Conversation.is_archived == False)  # noqa: E712
+    if search:
+        safe_search = search.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        query = query.where(
+            (Conversation.title.ilike(f"%{safe_search}%", escape="\\"))
+            | Conversation.id.cast(String).ilike(f"{safe_search}%", escape="\\")
+        )
+
+    query = query.order_by(
+        func.coalesce(Conversation.updated_at, Conversation.created_at).desc()
+    ).offset(skip).limit(limit)
+    result = await db.execute(query)
+    rows = result.all()
+
+    # Total count (same filters, no pagination)
+    count_query = select(func.count(Conversation.id))
+    if not include_archived:
+        count_query = count_query.where(Conversation.is_archived == False)  # noqa: E712
+    if search:
+        safe_search = search.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        count_query = count_query.where(
+            (Conversation.title.ilike(f"%{safe_search}%", escape="\\"))
+            | Conversation.id.cast(String).ilike(f"{safe_search}%", escape="\\")
+        )
+    total: int = (await db.execute(count_query)).scalar() or 0
+
+    return [tuple(row) for row in rows], total
+{%- endif %}
+
+
 async def count_conversations(
     db: AsyncSession,
 {%- if cookiecutter.use_jwt %}
@@ -85,18 +141,12 @@ async def create_conversation(
 {%- if cookiecutter.use_jwt %}
     user_id: UUID | None = None,
 {%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: UUID | None = None,
-{%- endif %}
     title: str | None = None,
 ) -> Conversation:
     """Create a new conversation."""
     conversation = Conversation(
 {%- if cookiecutter.use_jwt %}
         user_id=user_id,
-{%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-        project_id=project_id,
 {%- endif %}
         title=title,
     )
@@ -166,10 +216,6 @@ async def get_messages_by_conversation(
     query = select(Message).where(Message.conversation_id == conversation_id)
     if include_tool_calls:
         query = query.options(selectinload(Message.tool_calls))
-{%- if cookiecutter.use_jwt %}
-    from app.db.models.chat_file import ChatFile
-    query = query.options(selectinload(Message.files))
-{%- endif %}
     query = query.order_by(Message.created_at.asc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return list(result.scalars().all())
@@ -304,6 +350,9 @@ from typing import Any
 
 from sqlalchemy import func, select, update as sql_update
 from sqlalchemy.orm import Session, selectinload
+{%- if cookiecutter.use_jwt %}
+from sqlalchemy import String
+{%- endif %}
 
 from app.db.models.conversation import Conversation, Message, ToolCall
 
@@ -352,6 +401,59 @@ def get_conversations_by_user(
     return list(result.scalars().all())
 
 
+{%- if cookiecutter.use_jwt %}
+def get_all_conversations_with_count(
+    db: Session,
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    include_archived: bool = False,
+    search: str | None = None,
+) -> tuple[list[tuple[Conversation, int]], int]:
+    """Get all conversations with message counts for admin (paginated).
+
+    Returns list of (conversation, message_count) tuples and total count.
+    """
+    message_count_subq = (
+        select(func.count(Message.id))
+        .where(Message.conversation_id == Conversation.id)
+        .correlate(Conversation)
+        .scalar_subquery()
+    )
+
+    query = select(Conversation, message_count_subq.label("message_count"))
+
+    if not include_archived:
+        query = query.where(Conversation.is_archived == False)  # noqa: E712
+    if search:
+        safe_search = search.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        query = query.where(
+            (Conversation.title.ilike(f"%{safe_search}%", escape="\\"))
+            | Conversation.id.cast(String).ilike(f"{safe_search}%", escape="\\")
+        )
+
+    query = query.order_by(
+        func.coalesce(Conversation.updated_at, Conversation.created_at).desc()
+    ).offset(skip).limit(limit)
+    result = db.execute(query)
+    rows = result.all()
+
+    # Total count (same filters, no pagination)
+    count_query = select(func.count(Conversation.id))
+    if not include_archived:
+        count_query = count_query.where(Conversation.is_archived == False)  # noqa: E712
+    if search:
+        safe_search = search.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        count_query = count_query.where(
+            (Conversation.title.ilike(f"%{safe_search}%", escape="\\"))
+            | Conversation.id.cast(String).ilike(f"{safe_search}%", escape="\\")
+        )
+    total: int = db.execute(count_query).scalar() or 0
+
+    return [tuple(row) for row in rows], total
+{%- endif %}
+
+
 def count_conversations(
     db: Session,
 {%- if cookiecutter.use_jwt %}
@@ -378,18 +480,12 @@ def create_conversation(
 {%- if cookiecutter.use_jwt %}
     user_id: str | None = None,
 {%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: str | None = None,
-{%- endif %}
     title: str | None = None,
 ) -> Conversation:
     """Create a new conversation."""
     conversation = Conversation(
 {%- if cookiecutter.use_jwt %}
         user_id=user_id,
-{%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-        project_id=project_id,
 {%- endif %}
         title=title,
     )
@@ -459,10 +555,6 @@ def get_messages_by_conversation(
     query = select(Message).where(Message.conversation_id == conversation_id)
     if include_tool_calls:
         query = query.options(selectinload(Message.tool_calls))
-{%- if cookiecutter.use_jwt %}
-    from app.db.models.chat_file import ChatFile
-    query = query.options(selectinload(Message.files))
-{%- endif %}
     query = query.order_by(Message.created_at.asc()).offset(skip).limit(limit)
     result = db.execute(query)
     return list(result.scalars().all())
@@ -608,6 +700,7 @@ Contains database operations for Conversation, Message, and ToolCall entities.
 """
 
 from datetime import UTC, datetime
+import re
 from typing import Any
 
 from app.db.models.conversation import Conversation, Message, ToolCall
@@ -648,6 +741,84 @@ async def get_conversations_by_user(
     return await Conversation.find(query_filter).sort("-created_at").skip(skip).limit(limit).to_list()
 
 
+{%- if cookiecutter.use_jwt %}
+async def get_all_conversations_with_count(
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    include_archived: bool = False,
+    search: str | None = None,
+) -> tuple[list[tuple[Conversation, int]], int]:
+    """Get all conversations with message counts for admin (paginated).
+
+    Returns list of (conversation, message_count) tuples and total count.
+    """
+    pipeline: list[dict[str, Any]] = []
+
+    # Match stage
+    match_filter: dict[str, Any] = {}
+    if not include_archived:
+        match_filter["is_archived"] = False
+    if search:
+        # Add a string version of _id for prefix matching
+        safe_search = re.escape(search)
+        pipeline.append({"$addFields": {"_id_str": {"$toString": "$_id"}}})
+        match_filter["$or"] = [
+            {"title": {"$regex": safe_search, "$options": "i"}},
+            {"_id_str": {"$regex": f"^{safe_search}", "$options": "i"}},
+        ]
+    if match_filter:
+        pipeline.append({"$match": match_filter})
+
+    # Lookup message counts
+    pipeline.extend([
+        {
+            "$lookup": {
+                "from": "messages",
+                "localField": "_id",
+                "foreignField": "conversation_id",
+                "as": "msgs",
+            }
+        },
+        {"$addFields": {"message_count": {"$size": "$msgs"}}},
+        {"$project": {"msgs": 0}},
+        {"$sort": {"updated_at": -1, "created_at": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+    ])
+
+    # Get conversations with counts
+    conversations_raw = await Conversation.aggregate(pipeline).to_list()
+
+    # Total count (use aggregation for consistent ID search via $toString)
+    count_pipeline: list[dict[str, Any]] = []
+    count_match: dict[str, Any] = {}
+    if not include_archived:
+        count_match["is_archived"] = False
+    if count_match:
+        count_pipeline.append({"$match": count_match})
+    if search:
+        safe_search = re.escape(search)
+        count_pipeline.append({"$addFields": {"_id_str": {"$toString": "$_id"}}})
+        count_pipeline.append({"$match": {"$or": [
+            {"title": {"$regex": safe_search, "$options": "i"}},
+            {"_id_str": {"$regex": f"^{safe_search}", "$options": "i"}},
+        ]}})
+    count_pipeline.append({"$count": "total"})
+    count_result = await Conversation.aggregate(count_pipeline).to_list()
+    total = count_result[0]["total"] if count_result else 0
+
+    # Build result tuples: (conversation_obj, message_count)
+    results: list[tuple[Conversation, int]] = []
+    for doc in conversations_raw:
+        conv = await Conversation.get(str(doc["_id"]))
+        if conv:
+            results.append((conv, doc.get("message_count", 0)))
+
+    return results, total
+{%- endif %}
+
+
 async def count_conversations(
 {%- if cookiecutter.use_jwt %}
     user_id: str | None = None,
@@ -672,18 +843,12 @@ async def create_conversation(
 {%- if cookiecutter.use_jwt %}
     user_id: str | None = None,
 {%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: str | None = None,
-{%- endif %}
     title: str | None = None,
 ) -> Conversation:
     """Create a new conversation."""
     conversation = Conversation(
 {%- if cookiecutter.use_jwt %}
         user_id=user_id,
-{%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-        project_id=project_id,
 {%- endif %}
         title=title,
     )

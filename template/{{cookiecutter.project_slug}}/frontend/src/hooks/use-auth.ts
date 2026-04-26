@@ -13,14 +13,19 @@ export function useAuth() {
   const { user, isAuthenticated, isLoading, setUser, setLoading, logout } =
     useAuthStore();
 
-  // Check auth status on mount — always fetch fresh user data
+  // Check auth status on mount — always fetch fresh user data.
+  // /auth/me returns the access_token in the body so we can use it for
+  // WebSocket auth (cookie is httpOnly, not readable from JS).
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const userData = await apiClient.get<User>("/auth/me");
-        setUser(userData);
+        const data = await apiClient.get<User & { access_token?: string }>("/auth/me");
+        const { access_token, ...userData } = data;
+        setUser(userData as User);
+        useAuthStore.getState().setAccessToken(access_token ?? null);
       } catch {
         setUser(null);
+        useAuthStore.getState().setAccessToken(null);
       }
     };
 
@@ -31,11 +36,13 @@ export function useAuth() {
     async (credentials: LoginRequest) => {
       setLoading(true);
       try {
-        const response = await apiClient.post<{ user: User; message: string }>(
-          "/auth/login",
-          credentials
-        );
+        const response = await apiClient.post<{
+          user: User;
+          access_token: string;
+          message: string;
+        }>("/auth/login", credentials);
         setUser(response.user);
+        useAuthStore.getState().setAccessToken(response.access_token);
         router.push(response.user.role === "admin" ? ROUTES.DASHBOARD : ROUTES.CHAT);
         return response;
       } catch (error) {
@@ -72,7 +79,10 @@ export function useAuth() {
 
   const refreshToken = useCallback(async () => {
     try {
-      await apiClient.post("/auth/refresh");
+      const refreshResponse = await apiClient.post<{ access_token: string; message: string }>(
+        "/auth/refresh",
+      );
+      useAuthStore.getState().setAccessToken(refreshResponse.access_token);
       // Re-fetch user after token refresh
       const userData = await apiClient.get<User>("/auth/me");
       setUser(userData);

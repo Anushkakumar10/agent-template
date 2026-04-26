@@ -145,58 +145,27 @@ def get_conversation_service() -> ConversationService:
 
 
 ConversationSvc = Annotated[ConversationService, Depends(get_conversation_service)]
+{%- endif %}
+{%- if cookiecutter.use_database and cookiecutter.use_jwt %}
 
-from app.services.conversation_share import ConversationShareService
-
-
+# Message rating service
+from app.services.message_rating import MessageRatingService
 {%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
-def get_conversation_share_service(db: DBSession) -> ConversationShareService:
-    """Create ConversationShareService instance with database session."""
-    return ConversationShareService(db)
+
+
+def get_rating_service(db: DBSession) -> MessageRatingService:
+    """Create MessageRatingService instance with database session."""
+    return MessageRatingService(db)
 {%- elif cookiecutter.use_mongodb %}
-def get_conversation_share_service() -> ConversationShareService:
-    """Create ConversationShareService instance."""
-    return ConversationShareService()
+
+
+def get_rating_service() -> MessageRatingService:
+    """Create MessageRatingService instance."""
+    return MessageRatingService()
 {%- endif %}
 
 
-ConversationShareSvc = Annotated[ConversationShareService, Depends(get_conversation_share_service)]
-{%- endif %}
-
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-from app.services.project import ProjectService
-
-
-{%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
-def get_project_service(db: DBSession) -> ProjectService:
-    """Create ProjectService instance with database session."""
-    return ProjectService(db)
-{%- elif cookiecutter.use_mongodb %}
-def get_project_service() -> ProjectService:
-    """Create ProjectService instance."""
-    return ProjectService()
-{%- endif %}
-
-
-ProjectSvc = Annotated[ProjectService, Depends(get_project_service)]
-{%- endif %}
-
-{%- if cookiecutter.use_telegram or cookiecutter.use_slack %}
-from app.services.channel_bot import ChannelBotService
-
-
-{%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
-def get_channel_bot_service(db: DBSession) -> ChannelBotService:
-    """Create ChannelBotService instance with database session."""
-    return ChannelBotService(db)
-{%- elif cookiecutter.use_mongodb %}
-def get_channel_bot_service() -> ChannelBotService:
-    """Create ChannelBotService instance."""
-    return ChannelBotService()
-{%- endif %}
-
-
-ChannelBotSvc = Annotated[ChannelBotService, Depends(get_channel_bot_service)]
+MessageRatingSvc = Annotated[MessageRatingService, Depends(get_rating_service)]
 {%- endif %}
 
 {%- if cookiecutter.enable_rag and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
@@ -238,7 +207,6 @@ FileUploadSvc = Annotated[FileUploadService, Depends(get_file_upload_service)]
 {%- endif %}
 
 {%- if cookiecutter.use_jwt %}
-
 # === Authentication Dependencies ===
 
 from app.core.exceptions import AuthenticationError, AuthorizationError
@@ -247,8 +215,6 @@ from app.db.models.user import User, UserRole
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
 {%- if cookiecutter.use_postgresql %}
-
-
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     user_service: UserSvc,
@@ -510,19 +476,44 @@ CurrentAdmin = Annotated[User, Depends(RoleChecker(UserRole.ADMIN))]
 
 
 # WebSocket authentication dependency
-from fastapi import WebSocket, Query, Cookie
+from fastapi import WebSocket, Cookie
+
+
+_WS_TOKEN_PROTOCOL_PREFIX = "access_token."
+
+
+def _extract_ws_auth(websocket: WebSocket) -> tuple[str | None, str | None]:
+    """Parse Sec-WebSocket-Protocol header for an auth token + app subprotocol.
+
+    Clients pass the token as a subprotocol of the form
+    ``access_token.<JWT>`` alongside an optional application subprotocol
+    (e.g. ``chat``). Returns (token, app_subprotocol) — either may be None.
+    """
+    raw = websocket.headers.get("sec-websocket-protocol") or ""
+    token: str | None = None
+    app_subprotocol: str | None = None
+    for proto in (p.strip() for p in raw.split(",") if p.strip()):
+        if proto.startswith(_WS_TOKEN_PROTOCOL_PREFIX):
+            token = proto[len(_WS_TOKEN_PROTOCOL_PREFIX):]
+        elif app_subprotocol is None:
+            app_subprotocol = proto
+    return token, app_subprotocol
 
 
 async def get_current_user_ws(
     websocket: WebSocket,
-    token: str | None = Query(None, alias="token"),
     access_token: str | None = Cookie(None),
 ) -> User:
-    """Get current user from WebSocket JWT token.
+    """Authenticate a WebSocket connection.
 
-    Token can be passed either as:
-    - Query parameter: ws://...?token=<jwt>
-    - Cookie: access_token cookie (set by HTTP login)
+    Token sources, checked in order:
+    1. ``Sec-WebSocket-Protocol`` header, in the form ``access_token.<JWT>``.
+       The chosen application subprotocol (e.g. ``chat``) is echoed back on
+       ``accept()`` via ``websocket.state.accept_subprotocol``.
+    2. Same-origin ``access_token`` cookie (fallback for same-origin clients).
+
+    Tokens in query strings are NOT accepted — they leak into logs and
+    Referer headers.
 
     Raises:
         AuthenticationError: If token is invalid or user not found.
@@ -531,8 +522,10 @@ async def get_current_user_ws(
 
     from app.core.security import verify_token
 
-    # Try query parameter first, then cookie
-    auth_token = token or access_token
+    subprotocol_token, app_subprotocol = _extract_ws_auth(websocket)
+    websocket.state.accept_subprotocol = app_subprotocol
+
+    auth_token = subprotocol_token or access_token
 
     if not auth_token:
         await websocket.close(code=4001, reason="Missing authentication token")
@@ -558,10 +551,27 @@ async def get_current_user_ws(
     async with get_db_context() as db:
         user_service = UserService(db)
         user = await user_service.get_by_id(UUID(user_id))
+
+        if not user.is_active:
+            await websocket.close(code=4001, reason="User account is disabled")
+            raise AuthenticationError(message="User account is disabled")
+
+        # Eagerly load all columns, then detach from session to avoid
+        # "instance not bound to a Session" errors after the context manager exits
+        await db.refresh(user)
+        db.expunge(user)
+        return user
 {%- elif cookiecutter.use_mongodb %}
 
-    user_service = UserService()
+    db = await get_db_session()
+    user_service = UserService(db)
     user = await user_service.get_by_id(user_id)
+
+    if not user.is_active:
+        await websocket.close(code=4001, reason="User account is disabled")
+        raise AuthenticationError(message="User account is disabled")
+
+    return user
 {%- elif cookiecutter.use_sqlite %}
 
     from contextlib import contextmanager
@@ -569,13 +579,17 @@ async def get_current_user_ws(
     with contextmanager(get_db_session)() as db:
         user_service = UserService(db)
         user = user_service.get_by_id(user_id)
+
+        if not user.is_active:
+            await websocket.close(code=4001, reason="User account is disabled")
+            raise AuthenticationError(message="User account is disabled")
+
+        # Eagerly load all columns, then detach from session for
+        # consistency with async behavior
+        db.refresh(user)
+        db.expunge(user)
+        return user
 {%- endif %}
-
-    if not user.is_active:
-        await websocket.close(code=4001, reason="User account is disabled")
-        raise AuthenticationError(message="User account is disabled")
-
-    return user
 {%- endif %}
 
 {%- if cookiecutter.use_api_key %}

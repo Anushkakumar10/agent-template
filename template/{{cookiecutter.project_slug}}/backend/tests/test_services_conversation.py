@@ -128,16 +128,14 @@ class TestConversationServiceGetConversation:
 
     @pytest.mark.anyio
     async def test_get_conversation_wrong_user_raises(self, service: ConversationService):
-        """get_conversation raises NotFoundError when user_id doesn't match and no share exists."""
+        """get_conversation raises NotFoundError when user_id doesn't match."""
         conv_id = uuid4()
         owner_id = uuid4()
         other_user_id = uuid4()
         mock_conv = MockConversation(id=conv_id, user_id=owner_id)
 
-        with patch("app.services.conversation.conversation_repo") as mock_repo, \
-             patch("app.services.conversation.conversation_share_repo") as mock_share_repo:
+        with patch("app.services.conversation.conversation_repo") as mock_repo:
             mock_repo.get_conversation_by_id = AsyncMock(return_value=mock_conv)
-            mock_share_repo.get_share = AsyncMock(return_value=None)
 
             with pytest.raises(NotFoundError):
                 await service.get_conversation(conv_id, user_id=other_user_id)
@@ -325,10 +323,8 @@ class TestConversationServiceUpdate:
         mock_update = MagicMock()
         mock_update.model_dump.return_value = {"title": "New Title"}
 
-        with patch("app.services.conversation.conversation_repo") as mock_repo, \
-             patch("app.services.conversation.conversation_share_repo") as mock_share_repo:
+        with patch("app.services.conversation.conversation_repo") as mock_repo:
             mock_repo.get_conversation_by_id = AsyncMock(return_value=mock_conv)
-            mock_share_repo.get_share = AsyncMock(return_value=None)
 
             with pytest.raises(NotFoundError):
                 await service.update_conversation(conv_id, mock_update, user_id=other_id)
@@ -396,10 +392,8 @@ class TestConversationServiceArchive:
         other_id = uuid4()
         mock_conv = MockConversation(id=conv_id, user_id=owner_id)
 
-        with patch("app.services.conversation.conversation_repo") as mock_repo, \
-             patch("app.services.conversation.conversation_share_repo") as mock_share_repo:
+        with patch("app.services.conversation.conversation_repo") as mock_repo:
             mock_repo.get_conversation_by_id = AsyncMock(return_value=mock_conv)
-            mock_share_repo.get_share = AsyncMock(return_value=None)
 
             with pytest.raises(NotFoundError):
                 await service.archive_conversation(conv_id, user_id=other_id)
@@ -466,10 +460,8 @@ class TestConversationServiceDelete:
         other_id = uuid4()
         mock_conv = MockConversation(id=conv_id, user_id=owner_id)
 
-        with patch("app.services.conversation.conversation_repo") as mock_repo, \
-             patch("app.services.conversation.conversation_share_repo") as mock_share_repo:
+        with patch("app.services.conversation.conversation_repo") as mock_repo:
             mock_repo.get_conversation_by_id = AsyncMock(return_value=mock_conv)
-            mock_share_repo.get_share = AsyncMock(return_value=None)
 
             with pytest.raises(NotFoundError):
                 await service.delete_conversation(conv_id, user_id=other_id)
@@ -816,7 +808,7 @@ class TestConversationServiceLinkFiles:
 
     @pytest.mark.anyio
     async def test_link_files_calls_db(self, service: ConversationService):
-        """link_files_to_message executes update and flushes."""
+        """link_files_to_message executes update and commits."""
         msg_id = uuid4()
         file_ids = [str(uuid4()), str(uuid4())]
 
@@ -828,7 +820,7 @@ class TestConversationServiceLinkFiles:
             await service.link_files_to_message(msg_id, file_ids)
 
             service.db.execute.assert_called_once()
-            service.db.flush.assert_called_once()
+            service.db.commit.assert_called_once()
 
 
 class TestConversationServiceExportAll:
@@ -850,6 +842,11 @@ class TestConversationServiceExportAll:
         with patch("app.services.conversation.conversation_repo") as mock_repo:
             mock_repo.get_conversations_by_user = AsyncMock(return_value=[])
             mock_repo.count_conversations = AsyncMock(return_value=0)
+
+            # Mock db.execute: returns empty conversations result
+            conv_result = MagicMock()
+            conv_result.scalars.return_value.all.return_value = []
+            service.db.execute = AsyncMock(return_value=conv_result)
 
             result = await service.export_all()
 
@@ -881,6 +878,13 @@ class TestConversationServiceExportAll:
             mock_repo.get_conversation_by_id = AsyncMock(return_value=mock_conv)
             mock_repo.get_messages_by_conversation = AsyncMock(return_value=[mock_msg])
             mock_repo.count_messages = AsyncMock(return_value=1)
+
+            # Mock db.execute: first call returns conversations, second returns ratings
+            conv_result = MagicMock()
+            conv_result.scalars.return_value.all.return_value = [mock_conv]
+            ratings_result = MagicMock()
+            ratings_result.all.return_value = []
+            service.db.execute = AsyncMock(side_effect=[conv_result, ratings_result])
 
             result = await service.export_all()
 

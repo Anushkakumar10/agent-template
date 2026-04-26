@@ -170,7 +170,6 @@ class TestRAGWithAIFrameworks:
             AIFrameworkType.LANGGRAPH,
             # Skip CrewAI - template has pre-existing bug with user_input
             AIFrameworkType.DEEPAGENTS,
-            AIFrameworkType.PYDANTIC_DEEP,
         ],
     )
     def test_rag_with_ai_framework(self, tmp_path, framework) -> None:

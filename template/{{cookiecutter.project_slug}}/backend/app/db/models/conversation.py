@@ -21,7 +21,6 @@ class Conversation(TimestampMixin, SQLModel, table=True):
     Attributes:
         id: Unique conversation identifier
         user_id: Optional user who owns this conversation (if auth enabled)
-        project_id: Optional project this conversation belongs to (if pydantic_deep)
         title: Auto-generated or user-defined title
         is_archived: Whether the conversation is archived
         messages: List of messages in this conversation
@@ -39,17 +38,6 @@ class Conversation(TimestampMixin, SQLModel, table=True):
         sa_column=Column(
             PG_UUID(as_uuid=True),
             ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=True,
-            index=True,
-        ),
-    )
-{%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: uuid.UUID | None = Field(
-        default=None,
-        sa_column=Column(
-            PG_UUID(as_uuid=True),
-            ForeignKey("projects.id", ondelete="CASCADE"),
             nullable=True,
             index=True,
         ),
@@ -186,7 +174,6 @@ class Conversation(Base, TimestampMixin):
     Attributes:
         id: Unique conversation identifier
         user_id: Optional user who owns this conversation (if auth enabled)
-        project_id: Optional project this conversation belongs to (if pydantic_deep)
         title: Auto-generated or user-defined title
         is_archived: Whether the conversation is archived
         messages: List of messages in this conversation
@@ -201,14 +188,6 @@ class Conversation(Base, TimestampMixin):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
-    )
-{%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
@@ -360,17 +339,6 @@ class Conversation(TimestampMixin, SQLModel, table=True):
         ),
     )
 {%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: str | None = Field(
-        default=None,
-        sa_column=Column(
-            String(36),
-            ForeignKey("projects.id", ondelete="CASCADE"),
-            nullable=True,
-            index=True,
-        ),
-    )
-{%- endif %}
     title: str | None = Field(default=None, max_length=255)
     is_archived: bool = Field(default=False)
 
@@ -484,14 +452,6 @@ class Conversation(Base, TimestampMixin):
     user_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
-    )
-{%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: Mapped[str | None] = mapped_column(
-        String(36),
-        ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
@@ -629,9 +589,6 @@ class Conversation(Document):
 {%- if cookiecutter.use_jwt %}
     user_id: Optional[str] = None
 {%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-    project_id: Optional[str] = None
-{%- endif %}
     title: Optional[str] = None
     is_archived: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -640,7 +597,7 @@ class Conversation(Document):
     class Settings:
         name = "conversations"
 {%- if cookiecutter.use_jwt %}
-        indexes = ["user_id"{%- if cookiecutter.use_pydantic_deep %}, "project_id"{%- endif %}]
+        indexes = ["user_id"]
 {%- endif %}
 
 

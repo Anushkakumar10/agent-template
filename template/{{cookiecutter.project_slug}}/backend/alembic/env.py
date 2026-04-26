@@ -3,6 +3,7 @@
 # ruff: noqa: I001 - Imports structured for Jinja2 template conditionals
 
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -19,6 +20,22 @@ from app.db.base import Base
 {%- if cookiecutter.use_jwt %}
 from app.db.models.user import User  # noqa: F401
 {%- endif %}
+from app.db.models.conversation import Conversation, Message, ToolCall  # noqa: F401
+{%- if cookiecutter.use_jwt %}
+from app.db.models.message_rating import MessageRating  # noqa: F401
+{%- endif %}
+{%- if cookiecutter.enable_session_management and cookiecutter.use_jwt %}
+from app.db.models.session import Session  # noqa: F401
+{%- endif %}
+{%- if cookiecutter.enable_webhooks %}
+from app.db.models.webhook import Webhook, WebhookDelivery  # noqa: F401
+{%- endif %}
+from app.db.models.chat_file import ChatFile  # noqa: F401
+{%- if cookiecutter.enable_rag %}
+from app.db.models.rag_document import RAGDocument  # noqa: F401
+from app.db.models.sync_log import SyncLog  # noqa: F401
+from app.db.models.sync_source import SyncSource  # noqa: F401
+{%- endif %}
 
 config = context.config
 
@@ -29,6 +46,13 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 {%- else %}
 target_metadata = Base.metadata
+{%- endif %}
+
+
+# Ensure SQLite data directory exists before connecting
+{%- if cookiecutter.use_sqlite %}
+db_path = Path(settings.SQLITE_PATH)
+db_path.parent.mkdir(parents=True, exist_ok=True)
 {%- endif %}
 
 

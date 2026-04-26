@@ -20,6 +20,10 @@ from app.db.models.webhook import Webhook, WebhookDelivery
 {%- endif %}
 {%- set _ = models.append("ChatFile") %}
 from app.db.models.chat_file import ChatFile
+{%- if cookiecutter.use_jwt %}
+{%- set _ = models.append("MessageRating") %}
+from app.db.models.message_rating import MessageRating
+{%- endif %}
 {%- if cookiecutter.enable_rag %}
 {%- set _ = models.append("RAGDocument") %}
 from app.db.models.rag_document import RAGDocument
@@ -27,20 +31,6 @@ from app.db.models.rag_document import RAGDocument
 from app.db.models.sync_log import SyncLog
 {%- set _ = models.append("SyncSource") %}
 from app.db.models.sync_source import SyncSource
-{%- endif %}
-{%- if cookiecutter.use_jwt %}
-{%- set _ = models.append("ConversationShare") %}
-from app.db.models.conversation_share import ConversationShare
-{%- endif %}
-{%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
-{%- set _ = models.extend(["Project", "ProjectMember"]) %}
-from app.db.models.project import Project, ProjectMember
-{%- endif %}
-{%- if cookiecutter.use_telegram or cookiecutter.use_slack %}
-{%- set _ = models.extend(["ChannelBot", "ChannelIdentity", "ChannelSession"]) %}
-from app.db.models.channel_bot import ChannelBot
-from app.db.models.channel_identity import ChannelIdentity
-from app.db.models.channel_session import ChannelSession
 {%- endif %}
 {%- if models %}
 
