@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All `self.db.execute/commit/add` removed from services; sessions auto-commit via `get_db_session`/`get_db_context`/`get_worker_db_context`
 - **Repositories expanded with the queries services now need** — `conversation.admin_list_with_users()` + `export_chunk()` (3 backends); `user.list_query()` + `admin_list_with_counts()` + `delete_non_admins()` + `has_any()` (3 backends); `chat_file.get_many()` + `link_to_message()`; `message_rating.get_user_ratings_for_messages()` + `get_rating_counts_for_messages()` + `get_ratings_with_users_for_messages()`; `webhook.create_delivery()` + `save_delivery()`; `sync_log.create(sync_source_id=...)`; `rag_document.delete_by_collection()`
 
+### Security
+
+- **Generator dependency floors raised** — `pyproject.toml` runtime/dev/docs floors bumped to currently-used versions: `click>=8.3.0`, `cookiecutter>=2.7.0`, `rich>=15.0.0`, `questionary>=2.1.0`, `pydantic>=2.13.0`, `pydantic-settings>=2.13.0`, `email-validator>=2.3.0`, `pytest>=9.0.0`, `pytest-cov>=7.0.0`, `ruff>=0.14.0`, `ty>=0.0.31`, `pre-commit>=4.0.0`, `mkdocs>=1.6.1`, `mkdocs-material>=9.7.0`, `pymdown-extensions>=10.20`. Brings in upstream security/bug fixes
+- **`pip-audit` CI: CVE-2026-3219 (pip 26.0.1) added to ignore list** — Vulnerability in `pip` itself with no fix version published yet; documented in the workflow alongside the other ignored CVEs
+
 ### Added
 
 - **Config validator: CrewAI + Logfire combination rejected** — Raises `ValueError` at config time; documents an upstream OpenTelemetry/logfire ≥ 4.30 conflict with CrewAI

@@ -44,27 +44,27 @@ classifiers = [
 ]
 
 dependencies = [
-    "click>=8.1.0",
-    "cookiecutter>=2.6.0",
-    "rich>=13.0.0",
-    "questionary>=2.0.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "email-validator>=2.0.0",
+    "click>=8.3.0",
+    "cookiecutter>=2.7.0",
+    "rich>=15.0.0",
+    "questionary>=2.1.0",
+    "pydantic>=2.13.0",
+    "pydantic-settings>=2.13.0",
+    "email-validator>=2.3.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-cov>=4.0.0",
-    "ruff>=0.8.0",
-    "ty>=0.0.29",
-    "pre-commit>=3.0.0",
+    "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.0",
+    "ty>=0.0.31",
+    "pre-commit>=4.0.0",
 ]
 docs = [
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.5.0",
-    "pymdown-extensions>=10.0.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.0",
+    "pymdown-extensions>=10.20",
 ]
 
 [project.scripts]
@@ -168,7 +168,7 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
-    "ty>=0.0.29",
-    "pytest-cov>=7.0.0",
-    "sqlalchemy>=2.0.40",
+    "ty>=0.0.31",
+    "pytest-cov>=7.1.0",
+    "sqlalchemy>=2.0.49",
 ]
