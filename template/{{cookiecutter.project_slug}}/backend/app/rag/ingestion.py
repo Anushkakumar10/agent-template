@@ -28,6 +28,30 @@ class IngestionService:
         self.store = vector_store
         self._on_event = on_event
 
+    @classmethod
+    def from_settings(
+        cls,
+        on_event: Callable[..., Awaitable[None]] | None = None,
+    ) -> "IngestionService":
+        """Build an IngestionService using the application's RAG settings."""
+        from app.core.config import settings
+        from app.rag.embeddings import EmbeddingService
+{%- if cookiecutter.use_milvus %}
+        from app.rag.vectorstore import MilvusVectorStore as VectorStore
+{%- elif cookiecutter.use_qdrant %}
+        from app.rag.vectorstore import QdrantVectorStore as VectorStore
+{%- elif cookiecutter.use_chromadb %}
+        from app.rag.vectorstore import ChromaVectorStore as VectorStore
+{%- elif cookiecutter.use_pgvector %}
+        from app.rag.vectorstore import PgVectorStore as VectorStore
+{%- endif %}
+
+        rag_settings = settings.rag
+        embed_service = EmbeddingService(settings=rag_settings)
+        vector_store = VectorStore(settings=rag_settings, embedding_service=embed_service)
+        processor = DocumentProcessor(settings=rag_settings)
+        return cls(processor=processor, vector_store=vector_store, on_event=on_event)
+
     async def _emit(self, event: str, data: dict[str, object]) -> None:
         """Emit a webhook event if callback is configured."""
         if self._on_event:

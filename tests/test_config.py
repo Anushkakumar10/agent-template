@@ -576,6 +576,7 @@ class TestOptionCombinationValidation:
             project_name="test",
             ai_framework=AIFrameworkType.CREWAI,
             background_tasks=BackgroundTaskType.NONE,
+            enable_logfire=False,  # CrewAI is incompatible with current logfire
         )
         context = config.to_cookiecutter_context()
 
@@ -583,6 +584,19 @@ class TestOptionCombinationValidation:
         assert context["use_pydantic_ai"] is False
         assert context["use_langchain"] is False
         assert context["use_langgraph"] is False
+
+    def test_crewai_with_logfire_raises_validation_error(self) -> None:
+        """Test that CrewAI + Logfire combination is rejected."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError) as exc_info:
+            ProjectConfig(
+                project_name="test",
+                ai_framework=AIFrameworkType.CREWAI,
+                background_tasks=BackgroundTaskType.NONE,
+                enable_logfire=True,
+            )
+        assert "incompatible with Logfire" in str(exc_info.value)
 
     def test_openrouter_with_deepagents_raises_validation_error(self) -> None:
         """Test that OpenRouter + DeepAgents combination is rejected."""

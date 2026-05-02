@@ -328,7 +328,7 @@ async def ingest_file(
         from app.services.rag_document import RAGDocumentService
 
         try:
-            svc = IngestionService()
+            svc = IngestionService.from_settings()
             result = await svc.ingest_file(filepath=Path(fpath), collection_name=collection, replace=do_replace, source_path=source)
             async with get_db_context() as bg_db:
                 bg_doc_svc = RAGDocumentService(bg_db)
@@ -555,7 +555,7 @@ async def trigger_local_sync(
         from app.rag.ingestion import IngestionService
         from app.services.rag_sync import RAGSyncService
 
-        svc = IngestionService()
+        svc = IngestionService.from_settings()
         ingested = skipped = failed = total = 0
 
         try:
@@ -783,25 +783,32 @@ async def trigger_sync_source(
 {%- else %}
     async def _run_source_sync_bg(src_id: str, log_id: str) -> None:
         """Execute sync via FastAPI BackgroundTasks."""
-        from app.db.session import get_db_context
-        from app.services.sync_source import SyncSourceService
-        from app.rag.connectors import CONNECTOR_REGISTRY
-        from app.rag.ingestion import IngestionService
         import tempfile
         from pathlib import Path
 
+        from app.db.session import get_db_context
+        from app.rag.connectors import CONNECTOR_REGISTRY
+        from app.rag.ingestion import IngestionService
+        from app.services.rag_sync import RAGSyncService
+        from app.services.sync_source import SyncSourceService
+
         async with get_db_context() as bg_db:
-            svc = SyncSourceService(bg_db)
+            source_svc = SyncSourceService(bg_db)
+            sync_svc = RAGSyncService(bg_db)
             try:
-                source = await svc.get_source(src_id)
+                source = await source_svc.get_source(src_id)
                 connector_cls = CONNECTOR_REGISTRY.get(source.connector_type)
                 if not connector_cls:
-                    await svc.complete_sync(log_id, status="error", error_message=f"Unknown connector: {source.connector_type}")
+                    await sync_svc.complete_sync(
+                        log_id,
+                        status="error",
+                        error_message=f"Unknown connector: {source.connector_type}",
+                    )
                     return
                 connector = connector_cls()
                 config = source.config if isinstance(source.config, dict) else {}
                 files = await connector.list_files(config)
-                ingestion = IngestionService()
+                ingestion = IngestionService.from_settings()
                 ingested = failed = 0
                 with tempfile.TemporaryDirectory() as tmp_dir:
                     for f in files:
@@ -815,11 +822,16 @@ async def trigger_sync_source(
                         except Exception as e:
                             logger.warning(f"Sync file failed {f.name}: {e}")
                             failed += 1
-                await svc.complete_sync(log_id, status="done" if not failed else "error",
-                    total_files=len(files), ingested=ingested, failed=failed)
+                await sync_svc.complete_sync(
+                    log_id,
+                    status="done" if not failed else "error",
+                    total_files=len(files),
+                    ingested=ingested,
+                    failed=failed,
+                )
             except Exception as e:
                 logger.error(f"Source sync failed: {e}")
-                await svc.complete_sync(log_id, status="error", error_message=str(e))
+                await sync_svc.complete_sync(log_id, status="error", error_message=str(e))
 
     background_tasks.add_task(_run_source_sync_bg, source_id, str(sync_log.id))
 {%- endif %}

@@ -40,6 +40,7 @@ async def create(
     collection_name: str,
     mode: str,
     status: str = "running",
+    sync_source_id: UUID | None = None,
 ) -> SyncLog:
     """Create a new sync log record."""
     log = SyncLog(
@@ -47,6 +48,7 @@ async def create(
         collection_name=collection_name,
         mode=mode,
         status=status,
+        sync_source_id=sync_source_id,
     )
     db.add(log)
     await db.flush()
@@ -129,6 +131,7 @@ def create(
     collection_name: str,
     mode: str,
     status: str = "running",
+    sync_source_id: str | None = None,
 ) -> SyncLog:
     """Create a new sync log record."""
     log = SyncLog(
@@ -136,6 +139,7 @@ def create(
         collection_name=collection_name,
         mode=mode,
         status=status,
+        sync_source_id=sync_source_id,
     )
     db.add(log)
     db.flush()

@@ -85,6 +85,66 @@ async def get_ratings_for_message(
     return list(result.scalars().all())
 
 
+async def get_user_ratings_for_messages(
+    db: AsyncSession,
+    *,
+    message_ids: list[UUID],
+    user_id: UUID,
+) -> dict[UUID, int]:
+    """Return mapping of message_id → rating value for a single user."""
+    if not message_ids:
+        return {}
+    query = select(MessageRating).where(
+        MessageRating.message_id.in_(message_ids),
+        MessageRating.user_id == user_id,
+    )
+    result = await db.execute(query)
+    return {rating.message_id: rating.rating for rating in result.scalars().all()}
+
+
+async def get_rating_counts_for_messages(
+    db: AsyncSession,
+    *,
+    message_ids: list[UUID],
+) -> dict[UUID, dict[str, int]]:
+    """Return mapping of message_id → {likes, dislikes} counts."""
+    if not message_ids:
+        return {}
+    query = (
+        select(
+            MessageRating.message_id,
+            func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
+            func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
+        )
+        .where(MessageRating.message_id.in_(message_ids))
+        .group_by(MessageRating.message_id)
+    )
+    result = await db.execute(query)
+    return {
+        row.message_id: {"likes": row.likes or 0, "dislikes": row.dislikes or 0}
+        for row in result.all()
+    }
+
+
+async def get_ratings_with_users_for_messages(
+    db: AsyncSession,
+    *,
+    message_ids: list[UUID],
+) -> list[tuple[MessageRating, Any]]:
+    """Return ratings joined with users for the given message IDs (admin export)."""
+    if not message_ids:
+        return []
+    from app.db.models.user import User
+
+    query = (
+        select(MessageRating, User)
+        .join(User, MessageRating.user_id == User.id)
+        .where(MessageRating.message_id.in_(message_ids))
+    )
+    result = await db.execute(query)
+    return [(rating, user) for rating, user in result.all()]
+
+
 async def list_ratings(
     db: AsyncSession,
     *,
@@ -255,6 +315,66 @@ def get_ratings_for_message(
     )
     result = db.execute(query)
     return list(result.scalars().all())
+
+
+def get_user_ratings_for_messages(
+    db: Session,
+    *,
+    message_ids: list[str],
+    user_id: str,
+) -> dict[str, int]:
+    """Return mapping of message_id → rating value for a single user."""
+    if not message_ids:
+        return {}
+    query = select(MessageRating).where(
+        MessageRating.message_id.in_(message_ids),
+        MessageRating.user_id == user_id,
+    )
+    result = db.execute(query)
+    return {rating.message_id: rating.rating for rating in result.scalars().all()}
+
+
+def get_rating_counts_for_messages(
+    db: Session,
+    *,
+    message_ids: list[str],
+) -> dict[str, dict[str, int]]:
+    """Return mapping of message_id → {likes, dislikes} counts."""
+    if not message_ids:
+        return {}
+    query = (
+        select(
+            MessageRating.message_id,
+            func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
+            func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
+        )
+        .where(MessageRating.message_id.in_(message_ids))
+        .group_by(MessageRating.message_id)
+    )
+    result = db.execute(query)
+    return {
+        row.message_id: {"likes": row.likes or 0, "dislikes": row.dislikes or 0}
+        for row in result.all()
+    }
+
+
+def get_ratings_with_users_for_messages(
+    db: Session,
+    *,
+    message_ids: list[str],
+) -> list[tuple[MessageRating, Any]]:
+    """Return ratings joined with users for the given message IDs (admin export)."""
+    if not message_ids:
+        return []
+    from app.db.models.user import User
+
+    query = (
+        select(MessageRating, User)
+        .join(User, MessageRating.user_id == User.id)
+        .where(MessageRating.message_id.in_(message_ids))
+    )
+    result = db.execute(query)
+    return [(rating, user) for rating, user in result.all()]
 
 
 def list_ratings(

@@ -64,7 +64,7 @@ class SyncSourceService:
         if not is_valid:
             raise ValueError(f"Invalid config: {error}")
 
-        source = await sync_source_repo.create(
+        return await sync_source_repo.create(
             self.db,
             name=data.name,
             connector_type=data.connector_type,
@@ -73,9 +73,6 @@ class SyncSourceService:
             sync_mode=data.sync_mode,
             schedule_minutes=data.schedule_minutes,
         )
-        await self.db.commit()
-        await self.db.refresh(source)
-        return source
 
     async def update_source(
         self, source_id: str, data: SyncSourceUpdate
@@ -91,8 +88,6 @@ class SyncSourceService:
             self.db, UUID(source_id), **updates
         )
         assert source is not None  # verified above via get_source
-        await self.db.commit()
-        await self.db.refresh(source)
         return source
 
     async def delete_source(self, source_id: str) -> None:
@@ -103,7 +98,6 @@ class SyncSourceService:
         """
         await self.get_source(source_id)  # verify exists
         await sync_source_repo.delete(self.db, UUID(source_id))
-        await self.db.commit()
 
     async def trigger_sync(self, source_id: str) -> SyncLog:
         """Trigger a manual sync for a source. Returns the created SyncLog.
@@ -115,16 +109,13 @@ class SyncSourceService:
 
         from app.repositories import sync_log as sync_log_repo
 
-        log = await sync_log_repo.create(
+        return await sync_log_repo.create(
             self.db,
             source=source.connector_type,
             collection_name=source.collection_name,
             mode=source.sync_mode,
+            sync_source_id=source.id,
         )
-        log.sync_source_id = source.id
-        await self.db.commit()
-        await self.db.refresh(log)
-        return log
 
     async def update_after_sync(
         self,
@@ -140,7 +131,6 @@ class SyncSourceService:
             last_sync_status=status,
             last_error=error,
         )
-        await self.db.commit()
 
 
 {%- elif cookiecutter.use_sqlite %}
@@ -218,7 +208,7 @@ class SyncSourceService:
         if not is_valid:
             raise ValueError(f"Invalid config: {error}")
 
-        source = sync_source_repo.create(
+        return sync_source_repo.create(
             self.db,
             name=data.name,
             connector_type=data.connector_type,
@@ -227,9 +217,6 @@ class SyncSourceService:
             sync_mode=data.sync_mode,
             schedule_minutes=data.schedule_minutes,
         )
-        self.db.commit()
-        self.db.refresh(source)
-        return source
 
     def update_source(
         self, source_id: str, data: SyncSourceUpdate
@@ -243,8 +230,6 @@ class SyncSourceService:
         updates = data.model_dump(exclude_unset=True)
         source = sync_source_repo.update(self.db, source_id, **updates)
         assert source is not None  # verified above via get_source
-        self.db.commit()
-        self.db.refresh(source)
         return source
 
     def delete_source(self, source_id: str) -> None:
@@ -255,7 +240,6 @@ class SyncSourceService:
         """
         self.get_source(source_id)  # verify exists
         sync_source_repo.delete(self.db, source_id)
-        self.db.commit()
 
     def trigger_sync(self, source_id: str) -> SyncLog:
         """Trigger a manual sync for a source. Returns the created SyncLog.
@@ -267,16 +251,13 @@ class SyncSourceService:
 
         from app.repositories import sync_log as sync_log_repo
 
-        log = sync_log_repo.create(
+        return sync_log_repo.create(
             self.db,
             source=source.connector_type,
             collection_name=source.collection_name,
             mode=source.sync_mode,
+            sync_source_id=source.id,
         )
-        log.sync_source_id = source.id
-        self.db.commit()
-        self.db.refresh(log)
-        return log
 
     def update_after_sync(
         self,
@@ -292,7 +273,6 @@ class SyncSourceService:
             last_sync_status=status,
             last_error=error,
         )
-        self.db.commit()
 
 
 {%- endif %}

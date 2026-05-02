@@ -10,10 +10,64 @@ Commands:
 """
 
 import asyncio
+{%- if cookiecutter.use_postgresql or cookiecutter.use_mongodb %}
+from contextlib import asynccontextmanager
+{%- else %}
+from contextlib import contextmanager
+{%- endif %}
+from typing import Any
 
 import click
 
-from app.commands import command, error, info, success, warning
+from app.commands import command, error, info, success
+from app.services.channel_bot import ChannelBotService
+
+
+{%- if cookiecutter.use_postgresql %}
+
+
+@asynccontextmanager
+async def _channel_service():
+    """Open a DB session and yield a ChannelBotService bound to it."""
+    from app.db.session import get_db_context
+
+    async with get_db_context() as db:
+        yield ChannelBotService(db)
+
+
+def _coerce_bot_id(bot_id: str) -> Any:
+    from uuid import UUID
+
+    return UUID(bot_id)
+{%- elif cookiecutter.use_sqlite %}
+
+
+def _channel_service():
+    """Open a DB session and yield a ChannelBotService bound to it."""
+    from app.db.session import get_db_session
+
+    @contextmanager
+    def _ctx():
+        with contextmanager(get_db_session)() as db:
+            yield ChannelBotService(db)
+
+    return _ctx()
+
+
+def _coerce_bot_id(bot_id: str) -> Any:
+    return bot_id
+{%- elif cookiecutter.use_mongodb %}
+
+
+@asynccontextmanager
+async def _channel_service():
+    """Yield a ChannelBotService (MongoDB does not need a session context)."""
+    yield ChannelBotService()
+
+
+def _coerce_bot_id(bot_id: str) -> Any:
+    return bot_id
+{%- endif %}
 
 
 # channel-list-bots
@@ -25,38 +79,12 @@ def channel_list_bots(platform: str | None) -> None:
     """List all channel bots stored in the database."""
 
     async def _run() -> None:
-{%- if cookiecutter.use_postgresql %}
-        from app.db.session import get_db_context
-        from app.repositories import channel_bot_repo
-
-        async with get_db_context() as db:
-            bots = (
-                await channel_bot_repo.get_by_platform(db, platform)
-                if platform
-                else await channel_bot_repo.list_all(db)
-            )
-{%- elif cookiecutter.use_sqlite %}
-        from contextlib import contextmanager
-
-        from app.db.session import get_db_session
-        from app.repositories import channel_bot_repo
-
-        with contextmanager(get_db_session)() as db:
-            bots = (
-                channel_bot_repo.get_by_platform(db, platform)
-                if platform
-                else channel_bot_repo.list_all(db)
-            )
-{%- elif cookiecutter.use_mongodb %}
-        from app.repositories import channel_bot_repo
-
-        bots = (
-            await channel_bot_repo.get_by_platform(platform)
-            if platform
-            else await channel_bot_repo.list_all()
-        )
+{%- if cookiecutter.use_sqlite %}
+        with _channel_service() as svc:
+            bots = svc.list_by_platform(platform)
 {%- else %}
-        bots = []
+        async with _channel_service() as svc:
+            bots = await svc.list_by_platform(platform)
 {%- endif %}
 
         if not bots:
@@ -87,56 +115,27 @@ def channel_list_bots(platform: str | None) -> None:
 )
 def channel_add_bot(platform: str, name: str, token: str, mode: str) -> None:
     """Encrypt the bot token and register the bot in the database."""
-    from app.core.channel_crypto import encrypt_token
+    from app.schemas.channel_bot import AccessPolicy, ChannelBotCreate
 
     async def _run() -> None:
-        encrypted = encrypt_token(token)
-        access_policy = {"mode": mode}
-
-{%- if cookiecutter.use_postgresql %}
-        from app.db.session import get_db_context
-        from app.repositories import channel_bot_repo
-
-        async with get_db_context() as db:
-            bot = await channel_bot_repo.create(
-                db,
-                platform=platform,
-                name=name,
-                token_encrypted=encrypted,
-                access_policy=access_policy,
-            )
-{%- elif cookiecutter.use_sqlite %}
-        from contextlib import contextmanager
-
-        from app.db.session import get_db_session
-        from app.repositories import channel_bot_repo
-
-        with contextmanager(get_db_session)() as db:
-            bot = channel_bot_repo.create(
-                db,
-                platform=platform,
-                name=name,
-                token_encrypted=encrypted,
-                access_policy=access_policy,
-            )
-{%- elif cookiecutter.use_mongodb %}
-        from app.repositories import channel_bot_repo
-
-        bot = await channel_bot_repo.create(
+        data = ChannelBotCreate(
             platform=platform,
             name=name,
-            token_encrypted=encrypted,
-            access_policy=access_policy,
+            token=token,
+            access_policy=AccessPolicy(mode=mode),
         )
+{%- if cookiecutter.use_sqlite %}
+        with _channel_service() as svc:
+            bot = svc.create(data)
 {%- else %}
-        bot = None
+        async with _channel_service() as svc:
+            bot = await svc.create(data)
 {%- endif %}
 
-        if bot:
-            success(f"Bot registered successfully! ID: {bot.id}")
-            info(f"  Platform : {platform}")
-            info(f"  Name     : {name}")
-            info(f"  Mode     : {mode}")
+        success(f"Bot registered successfully! ID: {bot.id}")
+        info(f"  Platform : {platform}")
+        info(f"  Name     : {name}")
+        info(f"  Mode     : {mode}")
 
     asyncio.run(_run())
 
@@ -152,38 +151,26 @@ def channel_webhook_register(bot_id: str) -> None:
 
     async def _run() -> None:
         from app.channels import get_adapter
-        from app.core.channel_crypto import decrypt_token
 
-{%- if cookiecutter.use_postgresql %}
-        from uuid import UUID
-
-        from app.db.session import get_db_context
-        from app.repositories import channel_bot_repo
-
-        async with get_db_context() as db:
-            bot = await channel_bot_repo.get_by_id(db, UUID(bot_id))
-{%- elif cookiecutter.use_sqlite %}
-        from contextlib import contextmanager
-
-        from app.db.session import get_db_session
-        from app.repositories import channel_bot_repo
-
-        with contextmanager(get_db_session)() as db:
-            bot = channel_bot_repo.get_by_id(db, bot_id)
-{%- elif cookiecutter.use_mongodb %}
-        from app.repositories import channel_bot_repo
-
-        bot = await channel_bot_repo.get_by_id(bot_id)
+{%- if cookiecutter.use_sqlite %}
+        with _channel_service() as svc:
+            try:
+                bot = svc.get(_coerce_bot_id(bot_id))
+            except Exception:
+                error(f"Bot not found: {bot_id}")
+                return
+            token = svc.get_decrypted_token(bot)
 {%- else %}
-        bot = None
+        async with _channel_service() as svc:
+            try:
+                bot = await svc.get(_coerce_bot_id(bot_id))
+            except Exception:
+                error(f"Bot not found: {bot_id}")
+                return
+            token = svc.get_decrypted_token(bot)
 {%- endif %}
 
-        if not bot:
-            error(f"Bot not found: {bot_id}")
-            return
-
         adapter = get_adapter("telegram")
-        token = decrypt_token(bot.token_encrypted)
         webhook_url = (
             f"{settings.TELEGRAM_WEBHOOK_BASE_URL}/api/v1/channels/telegram/{bot_id}/webhook"
         )
@@ -208,39 +195,26 @@ def channel_webhook_delete(bot_id: str) -> None:
 
     async def _run() -> None:
         from app.channels import get_adapter
-        from app.core.channel_crypto import decrypt_token
 
-{%- if cookiecutter.use_postgresql %}
-        from uuid import UUID
-
-        from app.db.session import get_db_context
-        from app.repositories import channel_bot_repo
-
-        async with get_db_context() as db:
-            bot = await channel_bot_repo.get_by_id(db, UUID(bot_id))
-{%- elif cookiecutter.use_sqlite %}
-        from contextlib import contextmanager
-
-        from app.db.session import get_db_session
-        from app.repositories import channel_bot_repo
-
-        with contextmanager(get_db_session)() as db:
-            bot = channel_bot_repo.get_by_id(db, bot_id)
-{%- elif cookiecutter.use_mongodb %}
-        from app.repositories import channel_bot_repo
-
-        bot = await channel_bot_repo.get_by_id(bot_id)
+{%- if cookiecutter.use_sqlite %}
+        with _channel_service() as svc:
+            try:
+                bot = svc.get(_coerce_bot_id(bot_id))
+            except Exception:
+                error(f"Bot not found: {bot_id}")
+                return
+            token = svc.get_decrypted_token(bot)
 {%- else %}
-        bot = None
+        async with _channel_service() as svc:
+            try:
+                bot = await svc.get(_coerce_bot_id(bot_id))
+            except Exception:
+                error(f"Bot not found: {bot_id}")
+                return
+            token = svc.get_decrypted_token(bot)
 {%- endif %}
 
-        if not bot:
-            error(f"Bot not found: {bot_id}")
-            return
-
         adapter = get_adapter("telegram")
-        token = decrypt_token(bot.token_encrypted)
-
         ok = await adapter.delete_webhook(token)
         if ok:
             success("Webhook removed. Bot is now in polling mode.")
@@ -263,39 +237,26 @@ def channel_test_message(bot_id: str, chat_id: str, text: str) -> None:
     async def _run() -> None:
         from app.channels import get_adapter
         from app.channels.base import OutgoingMessage
-        from app.core.channel_crypto import decrypt_token
 
-{%- if cookiecutter.use_postgresql %}
-        from uuid import UUID
-
-        from app.db.session import get_db_context
-        from app.repositories import channel_bot_repo
-
-        async with get_db_context() as db:
-            bot = await channel_bot_repo.get_by_id(db, UUID(bot_id))
-{%- elif cookiecutter.use_sqlite %}
-        from contextlib import contextmanager
-
-        from app.db.session import get_db_session
-        from app.repositories import channel_bot_repo
-
-        with contextmanager(get_db_session)() as db:
-            bot = channel_bot_repo.get_by_id(db, bot_id)
-{%- elif cookiecutter.use_mongodb %}
-        from app.repositories import channel_bot_repo
-
-        bot = await channel_bot_repo.get_by_id(bot_id)
+{%- if cookiecutter.use_sqlite %}
+        with _channel_service() as svc:
+            try:
+                bot = svc.get(_coerce_bot_id(bot_id))
+            except Exception:
+                error(f"Bot not found: {bot_id}")
+                return
+            token = svc.get_decrypted_token(bot)
 {%- else %}
-        bot = None
+        async with _channel_service() as svc:
+            try:
+                bot = await svc.get(_coerce_bot_id(bot_id))
+            except Exception:
+                error(f"Bot not found: {bot_id}")
+                return
+            token = svc.get_decrypted_token(bot)
 {%- endif %}
 
-        if not bot:
-            error(f"Bot not found: {bot_id}")
-            return
-
         adapter = get_adapter("telegram")
-        token = decrypt_token(bot.token_encrypted)
-
         msg = OutgoingMessage(platform_chat_id=chat_id, text=text)
         info(f"Sending test message to chat {chat_id} via bot {bot.name}...")
 

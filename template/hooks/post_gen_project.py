@@ -47,6 +47,7 @@ enable_web_search = "{{ cookiecutter.enable_web_search }}" == "True"
 use_pydantic_deep = "{{ cookiecutter.use_pydantic_deep }}" == "True"
 use_telegram = "{{ cookiecutter.use_telegram }}" == "True"
 use_slack = "{{ cookiecutter.use_slack }}" == "True"
+enable_docker = "{{ cookiecutter.enable_docker }}" == "True"
 
 
 def remove_file(path: str) -> None:
@@ -158,6 +159,18 @@ if not enable_rag:
     remove_file(os.path.join(backend_app, "worker", "tasks", "rag_ingestion.py"))
     # Remove RAG agent tool
     remove_file(os.path.join(backend_app, "agents", "tools", "rag_tool.py"))
+    # Remove RAG document repository/service/model stubs
+    remove_file(os.path.join(backend_app, "repositories", "rag_document.py"))
+    remove_file(os.path.join(backend_app, "services", "rag_document.py"))
+    remove_file(os.path.join(backend_app, "services", "rag_sync.py"))
+    remove_file(os.path.join(backend_app, "db", "models", "rag_document.py"))
+    # Remove sync source/log artifacts (they only exist for RAG)
+    remove_file(os.path.join(backend_app, "db", "models", "sync_source.py"))
+    remove_file(os.path.join(backend_app, "db", "models", "sync_log.py"))
+    remove_file(os.path.join(backend_app, "schemas", "sync_source.py"))
+    remove_file(os.path.join(backend_app, "repositories", "sync_source.py"))
+    remove_file(os.path.join(backend_app, "repositories", "sync_log.py"))
+    remove_file(os.path.join(backend_app, "services", "sync_source.py"))
     # Remove frontend RAG files
     if use_frontend:
         frontend_src = os.path.join(os.getcwd(), "frontend", "src")
@@ -179,6 +192,62 @@ else:
     if not enable_google_drive_ingestion and not enable_s3_ingestion:
         remove_dir(os.path.join(backend_app, "rag", "sources"))
         remove_dir(os.path.join(backend_app, "rag", "connectors"))
+
+# --- Messaging channels (Slack / Telegram) ---
+# Per-channel adapters & webhook routes
+if not use_telegram:
+    remove_file(os.path.join(backend_app, "channels", "telegram.py"))
+    remove_file(os.path.join(backend_app, "api", "routes", "v1", "telegram_webhook.py"))
+if not use_slack:
+    remove_file(os.path.join(backend_app, "channels", "slack.py"))
+    remove_file(os.path.join(backend_app, "api", "routes", "v1", "slack_webhook.py"))
+
+# Shared channel infrastructure — only present when at least one channel is enabled
+if not use_telegram and not use_slack:
+    remove_dir(os.path.join(backend_app, "channels"))
+    remove_file(os.path.join(backend_app, "api", "routes", "v1", "channels.py"))
+    remove_file(os.path.join(backend_app, "core", "channel_crypto.py"))
+    remove_file(os.path.join(backend_app, "commands", "channel.py"))
+    remove_file(os.path.join(backend_app, "services", "channel_bot.py"))
+    remove_file(os.path.join(backend_app, "services", "agent_invocation.py"))
+    remove_file(os.path.join(backend_app, "repositories", "channel_bot.py"))
+    remove_file(os.path.join(backend_app, "repositories", "channel_identity.py"))
+    remove_file(os.path.join(backend_app, "repositories", "channel_session.py"))
+    remove_file(os.path.join(backend_app, "schemas", "channel_bot.py"))
+    remove_file(os.path.join(backend_app, "db", "models", "channel_bot.py"))
+    remove_file(os.path.join(backend_app, "db", "models", "channel_identity.py"))
+    remove_file(os.path.join(backend_app, "db", "models", "channel_session.py"))
+
+# --- DeepAgents project files (only when use_pydantic_deep is enabled) ---
+if not use_pydantic_deep:
+    remove_file(os.path.join(backend_app, "api", "routes", "v1", "projects.py"))
+    remove_file(os.path.join(backend_app, "db", "models", "project.py"))
+    remove_file(os.path.join(backend_app, "schemas", "project.py"))
+    remove_file(os.path.join(backend_app, "services", "project.py"))
+    remove_file(os.path.join(backend_app, "repositories", "project.py"))
+
+# --- Test stubs that depend on disabled features ---
+backend_tests = os.path.join(os.getcwd(), "backend", "tests")
+if not enable_redis:
+    remove_file(os.path.join(backend_tests, "test_clients.py"))
+if not (use_postgresql and use_sqlalchemy):
+    remove_file(os.path.join(backend_tests, "test_services_conversation.py"))
+if not use_celery:
+    remove_file(os.path.join(backend_tests, "test_worker.py"))
+if not (enable_admin_panel and use_postgresql):
+    remove_file(os.path.join(backend_tests, "test_admin.py"))
+
+# --- Empty docker-compose placeholders ---
+if not enable_docker:
+    project_root = os.getcwd()
+    for compose_file in (
+        "docker-compose.yml",
+        "docker-compose.dev.yml",
+        "docker-compose.prod.yml",
+        "docker-compose.frontend.yml",
+        ".env.prod.example",
+    ):
+        remove_file(os.path.join(project_root, compose_file))
 
 # --- Cleanup stub files (files with only docstring, no code) ---
 core_dir = os.path.join(backend_app, "core")

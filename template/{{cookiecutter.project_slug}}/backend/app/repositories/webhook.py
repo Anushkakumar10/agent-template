@@ -129,6 +129,30 @@ async def get_deliveries(
     return list(result.scalars().all()), total
 
 
+async def create_delivery(
+    db: AsyncSession,
+    *,
+    webhook_id: UUID,
+    event_type: str,
+    payload: str,
+) -> WebhookDelivery:
+    """Create a new webhook delivery attempt record."""
+    delivery = WebhookDelivery(
+        webhook_id=webhook_id,
+        event_type=event_type,
+        payload=payload,
+    )
+    db.add(delivery)
+    await db.flush()
+    return delivery
+
+
+async def save_delivery(db: AsyncSession, delivery: WebhookDelivery) -> WebhookDelivery:
+    """Persist mutations made to a delivery record."""
+    await db.flush()
+    return delivery
+
+
 {%- elif cookiecutter.use_sqlite %}
 """Webhook repository (SQLite sync)."""
 
@@ -253,6 +277,30 @@ def get_deliveries(
     query = query.offset(skip).limit(limit)
     result = db.execute(query)
     return list(result.scalars().all()), total
+
+
+def create_delivery(
+    db: DBSession,
+    *,
+    webhook_id: str,
+    event_type: str,
+    payload: str,
+) -> WebhookDelivery:
+    """Create a new webhook delivery attempt record."""
+    delivery = WebhookDelivery(
+        webhook_id=webhook_id,
+        event_type=event_type,
+        payload=payload,
+    )
+    db.add(delivery)
+    db.flush()
+    return delivery
+
+
+def save_delivery(db: DBSession, delivery: WebhookDelivery) -> WebhookDelivery:
+    """Persist mutations made to a delivery record."""
+    db.flush()
+    return delivery
 
 
 {%- elif cookiecutter.use_mongodb %}

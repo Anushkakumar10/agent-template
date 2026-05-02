@@ -5,12 +5,10 @@ from collections.abc import AsyncGenerator
 
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError, ValidationError
-from app.db.models.conversation import Message
 from app.repositories import conversation as conversation_repo
 from app.repositories import message_rating as rating_repo
 from app.schemas.message_rating import (
@@ -34,12 +32,10 @@ class MessageRatingService:
         Raises:
             NotFoundError: If message doesn't exist
         """
-        query = select(Message.role).where(Message.id == message_id)
-        result = await self.db.execute(query)
-        role = result.scalar_one_or_none()
-        if not role:
+        message = await conversation_repo.get_message_by_id(self.db, message_id)
+        if not message:
             raise NotFoundError(message="Message not found", details={"message_id": str(message_id)})
-        return role
+        return message.role
 
     async def _validate_message_in_conversation(
         self, message_id: UUID, conversation_id: UUID
@@ -49,12 +45,10 @@ class MessageRatingService:
         Raises:
             NotFoundError: If message doesn't exist or belongs to a different conversation
         """
-        query = select(Message.conversation_id).where(Message.id == message_id)
-        result = await self.db.execute(query)
-        message_conv_id = result.scalar_one_or_none()
-        if not message_conv_id:
+        message = await conversation_repo.get_message_by_id(self.db, message_id)
+        if not message:
             raise NotFoundError(message="Message not found", details={"message_id": str(message_id)})
-        if message_conv_id != conversation_id:
+        if message.conversation_id != conversation_id:
             raise NotFoundError(
                 message="Message not found in this conversation",
                 details={"message_id": str(message_id), "conversation_id": str(conversation_id)},
@@ -296,12 +290,10 @@ class MessageRatingService:
 
 from collections.abc import Generator
 
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError, ValidationError
-from app.db.models.conversation import Message
 from app.repositories import conversation as conversation_repo
 from app.repositories import message_rating as rating_repo
 from app.schemas.message_rating import (
@@ -325,12 +317,10 @@ class MessageRatingService:
         Raises:
             NotFoundError: If message doesn't exist
         """
-        query = select(Message.role).where(Message.id == message_id)
-        result = self.db.execute(query)
-        role = result.scalar_one_or_none()
-        if not role:
+        message = conversation_repo.get_message_by_id(self.db, message_id)
+        if not message:
             raise NotFoundError(message="Message not found", details={"message_id": message_id})
-        return role
+        return message.role
 
     def _validate_message_in_conversation(
         self, message_id: str, conversation_id: str
@@ -340,12 +330,10 @@ class MessageRatingService:
         Raises:
             NotFoundError: If message doesn't exist or belongs to a different conversation
         """
-        query = select(Message.conversation_id).where(Message.id == message_id)
-        result = self.db.execute(query)
-        message_conv_id = result.scalar_one_or_none()
-        if not message_conv_id:
+        message = conversation_repo.get_message_by_id(self.db, message_id)
+        if not message:
             raise NotFoundError(message="Message not found", details={"message_id": message_id})
-        if message_conv_id != conversation_id:
+        if message.conversation_id != conversation_id:
             raise NotFoundError(
                 message="Message not found in this conversation",
                 details={"message_id": message_id, "conversation_id": conversation_id},

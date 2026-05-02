@@ -45,7 +45,7 @@ async def list_bots(
     limit: int = Query(50, ge=1, le=100, description="Max items to return"),
 ) -> Any:
     """List all registered channel bots."""
-    items, total = await service.list(skip=skip, limit=limit)
+    items, total = await service.list_all(skip=skip, limit=limit)
     return ChannelBotList(items=items, total=total)
 
 
@@ -176,7 +176,7 @@ def list_bots(
     limit: int = Query(50, ge=1, le=100, description="Max items to return"),
 ) -> Any:
     """List all registered channel bots."""
-    items, total = service.list(skip=skip, limit=limit)
+    items, total = service.list_all(skip=skip, limit=limit)
     return ChannelBotList(items=items, total=total)
 
 
@@ -307,7 +307,7 @@ async def list_bots(
     limit: int = Query(50, ge=1, le=100, description="Max items to return"),
 ) -> Any:
     """List all registered channel bots."""
-    items, total = await service.list(skip=skip, limit=limit)
+    items, total = await service.list_all(skip=skip, limit=limit)
     return ChannelBotList(items=items, total=total)
 
 

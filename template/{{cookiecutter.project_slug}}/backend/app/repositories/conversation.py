@@ -115,6 +115,76 @@ async def get_all_conversations_with_count(
 {%- endif %}
 
 
+{%- if cookiecutter.use_jwt %}
+
+
+async def export_chunk(
+    db: AsyncSession,
+    *,
+    last_created_at: datetime | None,
+    last_id: UUID | None,
+    limit: int,
+) -> list[Conversation]:
+    """Keyset-paginated chunk for admin export of all conversations."""
+    from sqlalchemy import tuple_
+
+    query = (
+        select(Conversation)
+        .order_by(Conversation.created_at.desc(), Conversation.id.desc())
+        .limit(limit)
+    )
+    if last_created_at is not None and last_id is not None:
+        query = query.where(
+            tuple_(Conversation.created_at, Conversation.id) < (last_created_at, last_id)
+        )
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+async def admin_list_with_users(
+    db: AsyncSession,
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    search: str | None = None,
+    user_id: UUID | None = None,
+    include_archived: bool = False,
+) -> tuple[list[tuple[Conversation, int, str | None]], int]:
+    """Admin: list conversations across all users with message counts and owner email.
+
+    Returns list of (conversation, message_count, user_email) tuples and total count.
+    """
+    from app.db.models.user import User
+
+    query = (
+        select(
+            Conversation,
+            func.count(Message.id).label("message_count"),
+            User.email.label("user_email"),
+        )
+        .outerjoin(Message, Message.conversation_id == Conversation.id)
+        .outerjoin(User, User.id == Conversation.user_id)
+        .group_by(Conversation.id, User.email)
+    )
+    count_query = select(func.count()).select_from(Conversation)
+
+    if search:
+        query = query.where(Conversation.title.ilike(f"%{search}%"))
+        count_query = count_query.where(Conversation.title.ilike(f"%{search}%"))
+    if user_id is not None:
+        query = query.where(Conversation.user_id == user_id)
+        count_query = count_query.where(Conversation.user_id == user_id)
+    if not include_archived:
+        query = query.where(Conversation.is_archived.is_(False))
+        count_query = count_query.where(Conversation.is_archived.is_(False))
+
+    query = query.order_by(Conversation.updated_at.desc()).offset(skip).limit(limit)
+    total = await db.scalar(count_query) or 0
+    rows = (await db.execute(query)).all()
+    return [(conv, msg_count, email) for conv, msg_count, email in rows], total
+{%- endif %}
+
+
 async def count_conversations(
     db: AsyncSession,
 {%- if cookiecutter.use_jwt %}
@@ -461,6 +531,72 @@ def get_all_conversations_with_count(
     total: int = db.execute(count_query).scalar() or 0
 
     return [tuple(row) for row in rows], total
+
+
+def export_chunk(
+    db: Session,
+    *,
+    last_created_at: datetime | None,
+    last_id: str | None,
+    limit: int,
+) -> list[Conversation]:
+    """Keyset-paginated chunk for admin export of all conversations."""
+    from sqlalchemy import tuple_
+
+    query = (
+        select(Conversation)
+        .order_by(Conversation.created_at.desc(), Conversation.id.desc())
+        .limit(limit)
+    )
+    if last_created_at is not None and last_id is not None:
+        query = query.where(
+            tuple_(Conversation.created_at, Conversation.id) < (last_created_at, last_id)
+        )
+    result = db.execute(query)
+    return list(result.scalars().all())
+
+
+def admin_list_with_users(
+    db: Session,
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    search: str | None = None,
+    user_id: str | None = None,
+    include_archived: bool = False,
+) -> tuple[list[tuple[Conversation, int, str | None]], int]:
+    """Admin: list conversations across all users with message counts and owner email.
+
+    Returns list of (conversation, message_count, user_email) tuples and total count.
+    """
+    from app.db.models.user import User
+
+    query = (
+        select(
+            Conversation,
+            func.count(Message.id).label("message_count"),
+            User.email.label("user_email"),
+        )
+        .outerjoin(Message, Message.conversation_id == Conversation.id)
+        .outerjoin(User, User.id == Conversation.user_id)
+        .group_by(Conversation.id, User.email)
+    )
+    count_query = select(func.count()).select_from(Conversation)
+
+    if search:
+        query = query.where(Conversation.title.ilike(f"%{search}%"))
+        count_query = count_query.where(Conversation.title.ilike(f"%{search}%"))
+    if user_id is not None:
+        query = query.where(Conversation.user_id == user_id)
+        count_query = count_query.where(Conversation.user_id == user_id)
+    if not include_archived:
+        query = query.where(Conversation.is_archived.is_(False))
+        count_query = count_query.where(Conversation.is_archived.is_(False))
+
+    query = query.order_by(Conversation.updated_at.desc()).offset(skip).limit(limit)
+    total = db.scalar(count_query) or 0
+    rows = db.execute(query).all()
+    return [(conv, msg_count, email) for conv, msg_count, email in rows], total
 {%- endif %}
 
 
@@ -835,6 +971,48 @@ async def get_all_conversations_with_count(
         if conv:
             results.append((conv, doc.get("message_count", 0)))
 
+    return results, total
+
+
+async def admin_list_with_users(
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    search: str | None = None,
+    user_id: str | None = None,
+    include_archived: bool = False,
+) -> tuple[list[tuple[Conversation, int, str | None]], int]:
+    """Admin: list conversations with message counts and owner email.
+
+    Returns list of (conversation, message_count, user_email) tuples and total count.
+    """
+    from app.db.models.user import User
+
+    query_filter: dict[str, Any] = {}
+    if search:
+        query_filter["title"] = {"$regex": re.escape(search), "$options": "i"}
+    if user_id:
+        query_filter["user_id"] = user_id
+    if not include_archived:
+        query_filter["is_archived"] = False
+
+    total = await Conversation.find(query_filter).count()
+    conversations = (
+        await Conversation.find(query_filter)
+        .sort("-updated_at")
+        .skip(skip)
+        .limit(limit)
+        .to_list()
+    )
+
+    results: list[tuple[Conversation, int, str | None]] = []
+    for conv in conversations:
+        msg_count = await Message.find(Message.conversation_id == str(conv.id)).count()
+        user_email: str | None = None
+        if conv.user_id:
+            user = await User.get(conv.user_id)
+            user_email = user.email if user else None
+        results.append((conv, msg_count, user_email))
     return results, total
 {%- endif %}
 

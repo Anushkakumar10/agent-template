@@ -14,9 +14,6 @@ import random
 import string
 
 import click
-{% if cookiecutter.use_jwt and (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
-from sqlalchemy import delete, select
-{% endif %}
 
 from app.commands import command, info, success, warning
 
@@ -89,44 +86,33 @@ def seed(
 {%- if not cookiecutter.use_jwt %}
     info("No entities configured to seed. Enable JWT users to use this command.")
 {%- elif cookiecutter.use_postgresql %}
-    from app.db.session import async_session_maker
-{%- if cookiecutter.use_jwt %}
-    from app.db.models.user import User
-    from app.core.security import get_password_hash
-{%- endif %}
+    from app.db.session import get_db_context
+    from app.services.user import UserService
+    from app.schemas.user import UserCreate
 
     async def _seed() -> None:
-        async with async_session_maker() as session:
+        async with get_db_context() as db:
+            user_svc = UserService(db)
             created_counts = {}
 
-{%- if cookiecutter.use_jwt %}
-            # Seed users
             if users:
                 if clear:
                     info("Clearing existing users (except admins)...")
-                    await session.execute(delete(User).where(User.role != "admin"))
-                    await session.commit()
+                    await user_svc.delete_non_admins()
 
-                # Check how many users already exist
-                result = await session.execute(select(User).limit(1))
-                existing = result.scalars().first()
-
-                if existing and not clear:
+                if await user_svc.has_any() and not clear:
                     info("Users already exist. Use --clear to replace them.")
                 else:
                     info(f"Creating {count} sample users...")
                     for _ in range(count):
-                        user = User(
-                            email=random_email(),
-                            hashed_password=get_password_hash("password123"),
-                            full_name=random_name(),
-                            is_active=True,
-                            role="user",
+                        await user_svc.register(
+                            UserCreate(
+                                email=random_email(),
+                                password="password123",
+                                full_name=random_name(),
+                            )
                         )
-                        session.add(user)
-                    await session.commit()
                     created_counts["users"] = count
-{%- endif %}
 
             if created_counts:
                 summary = ", ".join(f"{v} {k}" for k, v in created_counts.items())
@@ -136,43 +122,34 @@ def seed(
 
     asyncio.run(_seed())
 {%- elif cookiecutter.use_sqlite %}
-    from app.db.session import SessionLocal
-{%- if cookiecutter.use_jwt %}
-    from app.db.models.user import User
-    from app.core.security import get_password_hash
-{%- endif %}
+    from contextlib import contextmanager
 
-    with SessionLocal() as session:
+    from app.db.session import get_db_session
+    from app.services.user import UserService
+    from app.schemas.user import UserCreate
+
+    with contextmanager(get_db_session)() as db:
+        user_svc = UserService(db)
         created_counts = {}
 
-{%- if cookiecutter.use_jwt %}
-        # Seed users
         if users:
             if clear:
                 info("Clearing existing users (except admins)...")
-                session.execute(delete(User).where(User.role != "admin"))
-                session.commit()
+                user_svc.delete_non_admins()
 
-            # Check how many users already exist
-            result = session.execute(select(User).limit(1))
-            existing = result.scalars().first()
-
-            if existing and not clear:
+            if user_svc.has_any() and not clear:
                 info("Users already exist. Use --clear to replace them.")
             else:
                 info(f"Creating {count} sample users...")
                 for _ in range(count):
-                    user = User(
-                        email=random_email(),
-                        hashed_password=get_password_hash("password123"),
-                        full_name=random_name(),
-                        is_active=True,
-                        role="user",
+                    user_svc.register(
+                        UserCreate(
+                            email=random_email(),
+                            password="password123",
+                            full_name=random_name(),
+                        )
                     )
-                    session.add(user)
-                session.commit()
                 created_counts["users"] = count
-{%- endif %}
 
         if created_counts:
             summary = ", ".join(f"{v} {k}" for k, v in created_counts.items())
@@ -180,59 +157,47 @@ def seed(
         else:
             info("No records created.")
 {%- elif cookiecutter.use_mongodb %}
-{%- if cookiecutter.use_jwt %}
-    from app.db.models.user import User
-    from app.core.security import get_password_hash
-{%- endif %}
     from beanie import init_beanie
     from motor.motor_asyncio import AsyncIOMotorClient
+
     from app.core.config import settings
+    from app.db.models.user import User
+    from app.schemas.user import UserCreate
+    from app.services.user import UserService
 
     async def _seed() -> None:
         client = AsyncIOMotorClient(settings.MONGO_URL)
         await init_beanie(
             database=client[settings.MONGO_DB],
-            document_models=[
-{%- if cookiecutter.use_jwt %}
-                User,
-{%- endif %}
-            ],
+            document_models=[User],
         )
+        user_svc = UserService()
         created_counts = {}
 
-{%- if cookiecutter.use_jwt %}
-        # Seed users
         if users:
             if clear:
                 info("Clearing existing users (except admins)...")
-                await User.find(User.role != "admin").delete()
+                await user_svc.delete_non_admins()
 
-            # Check how many users already exist
-            existing = await User.find_one()
-
-            if existing and not clear:
+            if await user_svc.has_any() and not clear:
                 info("Users already exist. Use --clear to replace them.")
             else:
                 info(f"Creating {count} sample users...")
                 for _ in range(count):
-                    user = User(
-                        email=random_email(),
-                        hashed_password=get_password_hash("password123"),
-                        full_name=random_name(),
-                        is_active=True,
-                        role="user",
+                    await user_svc.register(
+                        UserCreate(
+                            email=random_email(),
+                            password="password123",
+                            full_name=random_name(),
+                        )
                     )
-                    await user.insert()
                 created_counts["users"] = count
-{%- endif %}
 
         if created_counts:
             summary = ", ".join(f"{v} {k}" for k, v in created_counts.items())
             success(f"Created: {summary}")
         else:
             info("No records created.")
-
-        client.close()
 
     asyncio.run(_seed())
 {%- endif %}

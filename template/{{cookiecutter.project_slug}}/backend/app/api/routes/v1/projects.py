@@ -35,7 +35,7 @@ async def list_projects(
     include_archived: bool = Query(False, description="Include archived projects"),
 ) -> Any:
     """List all projects accessible to the current user (owned + member)."""
-    items, total = await service.list(
+    items, total = await service.list_for_user(
 {%- if cookiecutter.use_postgresql %}
         user.id,
 {%- else %}

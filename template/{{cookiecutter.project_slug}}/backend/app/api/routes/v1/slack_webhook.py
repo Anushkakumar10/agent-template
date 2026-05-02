@@ -18,11 +18,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
+from app.api.deps import ChannelBotSvc
+
 logger = logging.getLogger(__name__)
 
-_background_tasks: set[asyncio.Task[None]] = set()
-
 router = APIRouter()
+
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 @router.post("/{bot_id}/events", status_code=200)
@@ -33,6 +35,7 @@ async def slack_events(
     bot_id: str,
 {%- endif %}
     request: Request,
+    bot_service: ChannelBotSvc,
 ) -> Any:
     """Receive Slack Events API callbacks.
 
@@ -61,27 +64,12 @@ async def slack_events(
         return {"challenge": payload.get("challenge", "")}
 
     # --- Load bot and check active ---
-{%- if cookiecutter.use_postgresql %}
-    from app.db.session import get_db_context
-    from app.repositories import channel_bot_repo
-
-    async with get_db_context() as db:
-        bot = await channel_bot_repo.get_by_id(db, bot_id)
-{%- elif cookiecutter.use_sqlite %}
-    from contextlib import contextmanager
-
-    from app.db.session import get_db_session
-    from app.repositories import channel_bot_repo
-
-    with contextmanager(get_db_session)() as db:
-        bot = channel_bot_repo.get_by_id(db, str(bot_id))
-{%- elif cookiecutter.use_mongodb %}
-    from app.repositories import channel_bot_repo
-
-    bot = await channel_bot_repo.get_by_id(str(bot_id))
+{%- if cookiecutter.use_sqlite %}
+    bot = bot_service.find_active(bot_id)
+{%- else %}
+    bot = await bot_service.find_active(bot_id)
 {%- endif %}
-
-    if not bot or not bot.is_active:
+    if bot is None:
         return Response(status_code=200)
 
     # --- Parse event ---
@@ -104,13 +92,13 @@ async def _process_slack_event(incoming: Any) -> None:
     """Process the Slack event asynchronously in the background."""
     from app.channels.router import ChannelMessageRouter
 
-    router = ChannelMessageRouter()
+    channel_router = ChannelMessageRouter()
     try:
 {%- if cookiecutter.use_postgresql %}
         from app.db.session import get_db_context
 
         async with get_db_context() as db:
-            await router.route(incoming, db)
+            await channel_router.route(incoming, db)
 {%- elif cookiecutter.use_sqlite %}
         from contextlib import contextmanager
 
@@ -119,9 +107,9 @@ async def _process_slack_event(incoming: Any) -> None:
         # NOTE: Holding a sync SQLite session across an `await` boundary is not
         # ideal — see channels/slack.py for details.
         with contextmanager(get_db_session)() as db:
-            await router.route(incoming, db)
+            await channel_router.route(incoming, db)
 {%- elif cookiecutter.use_mongodb %}
-        await router.route(incoming, None)
+        await channel_router.route(incoming, None)
 {%- endif %}
     except Exception:
         logger.exception("Error processing Slack event")

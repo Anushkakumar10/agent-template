@@ -8,11 +8,11 @@ and their associated log entries.
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.db.models.sync_log import SyncLog
+from app.repositories import sync_log_repo
 
 
 class RAGSyncService:
@@ -27,12 +27,7 @@ class RAGSyncService:
         limit: int = 20,
     ) -> list[SyncLog]:
         """List sync operation logs, optionally filtered by collection."""
-        query = select(SyncLog)
-        if collection_name:
-            query = query.where(SyncLog.collection_name == collection_name)
-        query = query.order_by(SyncLog.created_at.desc()).limit(limit)
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+        return await sync_log_repo.get_all(self.db, collection_name=collection_name, limit=limit)
 
     async def get_sync_log(self, sync_id: str) -> SyncLog:
         """Get a sync log by ID.
@@ -40,7 +35,7 @@ class RAGSyncService:
         Raises:
             NotFoundError: If sync log does not exist.
         """
-        log = await self.db.get(SyncLog, UUID(sync_id))
+        log = await sync_log_repo.get_by_id(self.db, UUID(sync_id))
         if not log:
             raise NotFoundError(
                 message="Sync log not found",
@@ -56,17 +51,12 @@ class RAGSyncService:
         mode: str,
     ) -> SyncLog:
         """Create a new sync log entry."""
-        log = SyncLog(
+        return await sync_log_repo.create(
+            self.db,
             source=source,
             collection_name=collection_name,
-            status="running",
             mode=mode,
         )
-        self.db.add(log)
-        await self.db.flush()
-        await self.db.commit()
-        await self.db.refresh(log)
-        return log
 
     async def complete_sync(
         self,
@@ -82,15 +72,18 @@ class RAGSyncService:
     ) -> None:
         """Mark a sync operation as completed (done or error)."""
         log = await self.get_sync_log(sync_id)
-        log.status = status
-        log.total_files = total_files
-        log.ingested = ingested
-        log.updated = updated
-        log.skipped = skipped
-        log.failed = failed
-        log.error_message = error_message
-        log.completed_at = datetime.now(UTC)
-        await self.db.commit()
+        await sync_log_repo.update_status(
+            self.db,
+            log.id,
+            status=status,
+            total_files=total_files,
+            ingested=ingested,
+            updated=updated,
+            skipped=skipped,
+            failed=failed,
+            error_message=error_message,
+            completed_at=datetime.now(UTC),
+        )
 
     async def cancel_sync(self, sync_id: str) -> SyncLog:
         """Cancel a running sync operation.
@@ -102,11 +95,14 @@ class RAGSyncService:
         log = await self.get_sync_log(sync_id)
         if log.status != "running":
             raise ValueError("Sync is not running")
-        log.status = "cancelled"
-        log.completed_at = datetime.now(UTC)
-        await self.db.commit()
-        await self.db.refresh(log)
-        return log
+        cancelled = await sync_log_repo.update_status(
+            self.db,
+            log.id,
+            status="cancelled",
+            completed_at=datetime.now(UTC),
+        )
+        assert cancelled is not None
+        return cancelled
 
 
 {%- elif cookiecutter.enable_rag and cookiecutter.use_sqlite %}
@@ -118,11 +114,11 @@ and their associated log entries.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
 from app.db.models.sync_log import SyncLog
+from app.repositories import sync_log_repo
 
 
 class RAGSyncService:
@@ -137,12 +133,7 @@ class RAGSyncService:
         limit: int = 20,
     ) -> list[SyncLog]:
         """List sync operation logs, optionally filtered by collection."""
-        query = select(SyncLog)
-        if collection_name:
-            query = query.where(SyncLog.collection_name == collection_name)
-        query = query.order_by(SyncLog.created_at.desc()).limit(limit)
-        result = self.db.execute(query)
-        return list(result.scalars().all())
+        return sync_log_repo.get_all(self.db, collection_name=collection_name, limit=limit)
 
     def get_sync_log(self, sync_id: str) -> SyncLog:
         """Get a sync log by ID.
@@ -150,7 +141,7 @@ class RAGSyncService:
         Raises:
             NotFoundError: If sync log does not exist.
         """
-        log = self.db.get(SyncLog, sync_id)
+        log = sync_log_repo.get_by_id(self.db, sync_id)
         if not log:
             raise NotFoundError(
                 message="Sync log not found",
@@ -166,17 +157,12 @@ class RAGSyncService:
         mode: str,
     ) -> SyncLog:
         """Create a new sync log entry."""
-        log = SyncLog(
+        return sync_log_repo.create(
+            self.db,
             source=source,
             collection_name=collection_name,
-            status="running",
             mode=mode,
         )
-        self.db.add(log)
-        self.db.flush()
-        self.db.commit()
-        self.db.refresh(log)
-        return log
 
     def complete_sync(
         self,
@@ -192,15 +178,18 @@ class RAGSyncService:
     ) -> None:
         """Mark a sync operation as completed (done or error)."""
         log = self.get_sync_log(sync_id)
-        log.status = status
-        log.total_files = total_files
-        log.ingested = ingested
-        log.updated = updated
-        log.skipped = skipped
-        log.failed = failed
-        log.error_message = error_message
-        log.completed_at = datetime.now(UTC)
-        self.db.commit()
+        sync_log_repo.update_status(
+            self.db,
+            log.id,
+            status=status,
+            total_files=total_files,
+            ingested=ingested,
+            updated=updated,
+            skipped=skipped,
+            failed=failed,
+            error_message=error_message,
+            completed_at=datetime.now(UTC),
+        )
 
     def cancel_sync(self, sync_id: str) -> SyncLog:
         """Cancel a running sync operation.
@@ -212,11 +201,14 @@ class RAGSyncService:
         log = self.get_sync_log(sync_id)
         if log.status != "running":
             raise ValueError("Sync is not running")
-        log.status = "cancelled"
-        log.completed_at = datetime.now(UTC)
-        self.db.commit()
-        self.db.refresh(log)
-        return log
+        cancelled = sync_log_repo.update_status(
+            self.db,
+            log.id,
+            status="cancelled",
+            completed_at=datetime.now(UTC),
+        )
+        assert cancelled is not None
+        return cancelled
 
 
 {%- else %}

@@ -9,17 +9,19 @@ import asyncio
 import logging
 from typing import Any
 
-_background_tasks: set[asyncio.Task[None]] = set()
-
 {%- if cookiecutter.use_postgresql %}
 from uuid import UUID
 {%- endif %}
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
+from app.api.deps import ChannelBotSvc
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 {%- if cookiecutter.use_postgresql %}
@@ -29,6 +31,7 @@ router = APIRouter()
 async def telegram_webhook(
     bot_id: UUID,
     request: Request,
+    bot_service: ChannelBotSvc,
 ) -> Response:
     """Receive Telegram webhook updates.
 
@@ -42,22 +45,14 @@ async def telegram_webhook(
     headers: dict[str, str] = dict(request.headers)
     payload: dict[str, Any] = await request.json()
 
-    # Load bot to verify signature and check active status
-    from app.db.session import get_db_context
-    from app.repositories import channel_bot_repo
-
-    async with get_db_context() as db:
-        bot = await channel_bot_repo.get_by_id(db, bot_id)
-
-    if not bot or not bot.is_active:
+    bot = await bot_service.find_active(bot_id)
+    if bot is None:
         # Return 200 silently — Telegram should not know about inactive bots
         return Response(status_code=200)
 
-    if bot.webhook_secret:
-        if not adapter.verify_webhook_signature(headers, bot.webhook_secret):
-            raise HTTPException(status_code=403, detail="Invalid webhook signature")
+    if bot.webhook_secret and not adapter.verify_webhook_signature(headers, bot.webhook_secret):
+        raise HTTPException(status_code=403, detail="Invalid webhook signature")
 
-    # Parse the incoming message
     incoming = adapter.parse_incoming(payload, str(bot_id))
     if incoming is None:
         return Response(status_code=200)  # ignore non-text updates
@@ -76,6 +71,7 @@ async def telegram_webhook(
 async def telegram_webhook(
     bot_id: str,
     request: Request,
+    bot_service: ChannelBotSvc,
 ) -> Response:
     """Receive Telegram webhook updates."""
     from app.channels import get_adapter
@@ -85,21 +81,12 @@ async def telegram_webhook(
     headers: dict[str, str] = dict(request.headers)
     payload: dict[str, Any] = await request.json()
 
-    # Load bot using sync session
-    from contextlib import contextmanager
-
-    from app.db.session import get_db_session
-    from app.repositories import channel_bot_repo
-
-    with contextmanager(get_db_session)() as db:
-        bot = channel_bot_repo.get_by_id(db, bot_id)
-
-    if not bot or not bot.is_active:
+    bot = bot_service.find_active(bot_id)
+    if bot is None:
         return Response(status_code=200)
 
-    if bot.webhook_secret:
-        if not adapter.verify_webhook_signature(headers, bot.webhook_secret):
-            raise HTTPException(status_code=403, detail="Invalid webhook signature")
+    if bot.webhook_secret and not adapter.verify_webhook_signature(headers, bot.webhook_secret):
+        raise HTTPException(status_code=403, detail="Invalid webhook signature")
 
     incoming = adapter.parse_incoming(payload, str(bot_id))
     if incoming is None:
@@ -118,6 +105,7 @@ async def telegram_webhook(
 async def telegram_webhook(
     bot_id: str,
     request: Request,
+    bot_service: ChannelBotSvc,
 ) -> Response:
     """Receive Telegram webhook updates."""
     from app.channels import get_adapter
@@ -127,16 +115,12 @@ async def telegram_webhook(
     headers: dict[str, str] = dict(request.headers)
     payload: dict[str, Any] = await request.json()
 
-    from app.repositories import channel_bot_repo
-
-    bot = await channel_bot_repo.get_by_id(bot_id)
-
-    if not bot or not bot.is_active:
+    bot = await bot_service.find_active(bot_id)
+    if bot is None:
         return Response(status_code=200)
 
-    if bot.webhook_secret:
-        if not adapter.verify_webhook_signature(headers, bot.webhook_secret):
-            raise HTTPException(status_code=403, detail="Invalid webhook signature")
+    if bot.webhook_secret and not adapter.verify_webhook_signature(headers, bot.webhook_secret):
+        raise HTTPException(status_code=403, detail="Invalid webhook signature")
 
     incoming = adapter.parse_incoming(payload, str(bot_id))
     if incoming is None:
@@ -155,13 +139,13 @@ async def _process_webhook_update(incoming: Any) -> None:
     """Process the webhook update asynchronously in the background."""
     from app.channels.router import ChannelMessageRouter
 
-    router = ChannelMessageRouter()
+    channel_router = ChannelMessageRouter()
     try:
 {%- if cookiecutter.use_postgresql %}
         from app.db.session import get_db_context
 
         async with get_db_context() as db:
-            await router.route(incoming, db)
+            await channel_router.route(incoming, db)
 {%- elif cookiecutter.use_sqlite %}
         from contextlib import contextmanager
 
@@ -170,11 +154,11 @@ async def _process_webhook_update(incoming: Any) -> None:
         # NOTE: Holding a sync SQLite session across an `await` boundary is not
         # ideal — see channels/telegram.py for details.
         with contextmanager(get_db_session)() as db:
-            await router.route(incoming, db)
+            await channel_router.route(incoming, db)
 {%- elif cookiecutter.use_mongodb %}
-        await router.route(incoming, None)
+        await channel_router.route(incoming, None)
 {%- else %}
-        await router.route(incoming, None)
+        await channel_router.route(incoming, None)
 {%- endif %}
     except Exception:
         logger.exception("Error processing Telegram webhook update")

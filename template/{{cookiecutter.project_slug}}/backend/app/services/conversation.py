@@ -6,7 +6,7 @@ Contains business logic for conversation, message, and tool call operations.
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +33,11 @@ from app.schemas.conversation import (
     ConversationWithLatestMessage,
 {%- endif %}
 )
+{%- if cookiecutter.use_jwt %}
+
+if TYPE_CHECKING:
+    from app.schemas.conversation_share import AdminConversationList
+{%- endif %}
 
 
 logger = logging.getLogger(__name__)
@@ -59,25 +64,22 @@ class ConversationService:
         duplicating conversations when data changes during export.
         """
         import json
+{%- if cookiecutter.use_jwt %}
 
-        from sqlalchemy import tuple_
+        from app.repositories import message_rating_repo
+{%- endif %}
 
         export_data: list[dict[str, Any]] = []
         last_created_at: datetime | None = None
         last_id: UUID | None = None
 
         while True:
-            query = select(Conversation).order_by(
-                Conversation.created_at.desc(), Conversation.id.desc()
-            ).limit(self.EXPORT_CHUNK_SIZE)
-
-            if last_created_at is not None and last_id is not None:
-                query = query.where(
-                    tuple_(Conversation.created_at, Conversation.id) < (last_created_at, last_id)
-                )
-
-            result = await self.db.execute(query)
-            items = list(result.scalars().all())
+            items = await conversation_repo.export_chunk(
+                self.db,
+                last_created_at=last_created_at,
+                last_id=last_id,
+                limit=self.EXPORT_CHUNK_SIZE,
+            )
             if not items:
                 break
 
@@ -93,30 +95,23 @@ class ConversationService:
 {%- if cookiecutter.use_jwt %}
             # Fetch ratings for this chunk of messages
             message_ratings_map: dict[str, list[dict[str, Any]]] = {}
-            if all_message_ids:
-                ratings_query = (
-                    select(MessageRating, User)
-                    .join(User, MessageRating.user_id == User.id)
-                    .where(MessageRating.message_id.in_(all_message_ids))
-                )
-                ratings_result = await self.db.execute(ratings_query)
-                ratings = ratings_result.all()
-
-                # Map message_id to list of ratings
-                for rating, user in ratings:
-                    msg_id = str(rating.message_id)
-                    if msg_id not in message_ratings_map:
-                        message_ratings_map[msg_id] = []
-                    message_ratings_map[msg_id].append({
-                        "id": str(rating.id),
-                        "user_id": str(rating.user_id),
-                        "user_email": getattr(user, "email", None),
-                        "user_name": user.full_name if user else None,
-                        "rating": rating.rating,
-                        "comment": rating.comment,
-                        "created_at": rating.created_at.isoformat() if rating.created_at else None,
-                        "updated_at": rating.updated_at.isoformat() if rating.updated_at else None,
-                    })
+            ratings = await message_rating_repo.get_ratings_with_users_for_messages(
+                self.db, message_ids=all_message_ids
+            )
+            for rating, user in ratings:
+                msg_id = str(rating.message_id)
+                if msg_id not in message_ratings_map:
+                    message_ratings_map[msg_id] = []
+                message_ratings_map[msg_id].append({
+                    "id": str(rating.id),
+                    "user_id": str(rating.user_id),
+                    "user_email": getattr(user, "email", None),
+                    "user_name": user.full_name if user else None,
+                    "rating": rating.rating,
+                    "comment": rating.comment,
+                    "created_at": rating.created_at.isoformat() if rating.created_at else None,
+                    "updated_at": rating.updated_at.isoformat() if rating.updated_at else None,
+                })
 {%- endif %}
 
             # Build export data for this chunk
@@ -265,6 +260,44 @@ class ConversationService:
             items.append(ConversationWithLatestMessage.model_validate(conv_dict))
 
         return items, total
+
+    async def admin_list_with_users(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        search: str | None = None,
+        user_id: UUID | None = None,
+        include_archived: bool = False,
+    ) -> "AdminConversationList":
+        """Admin: list conversations with owner email and message counts."""
+        from app.schemas.conversation_share import AdminConversationList, AdminConversationRead
+
+        rows, total = await conversation_repo.admin_list_with_users(
+            self.db,
+            skip=skip,
+            limit=limit,
+            search=search,
+            user_id=user_id,
+            include_archived=include_archived,
+        )
+        items = [
+            AdminConversationRead(
+                id=conv.id,
+                user_id=conv.user_id,
+{%- if cookiecutter.use_pydantic_deep %}
+                project_id=getattr(conv, "project_id", None),
+{%- endif %}
+                title=conv.title,
+                is_archived=conv.is_archived,
+                message_count=msg_count,
+                user_email=email,
+                created_at=conv.created_at,
+                updated_at=conv.updated_at,
+            )
+            for conv, msg_count, email in rows
+        ]
+        return AdminConversationList(items=items, total=total)
 {%- endif %}
 
     async def create_conversation(
@@ -363,6 +396,17 @@ class ConversationService:
             )
         return True
 
+    async def get_conversation_with_messages(
+        self,
+        conversation_id: UUID,
+    ) -> Conversation:
+        """Get conversation with messages (admin access).
+
+        Raises:
+            NotFoundError: If conversation does not exist.
+        """
+        return await self.get_conversation(conversation_id, include_messages=True)
+
     # Message Methods
 
     async def get_message(self, message_id: UUID) -> Message:
@@ -413,31 +457,15 @@ class ConversationService:
 
         # Enrich messages with rating data if user_id is provided
         if user_id is not None and items:
+            from app.repositories import message_rating_repo
+
             message_ids = [msg.id for msg in items]
-
-            # Fetch user ratings for these messages
-            user_ratings_query = select(MessageRating).where(
-                MessageRating.message_id.in_(message_ids),
-                MessageRating.user_id == user_id,
+            user_ratings = await message_rating_repo.get_user_ratings_for_messages(
+                self.db, message_ids=message_ids, user_id=user_id
             )
-            user_ratings_result = await self.db.execute(user_ratings_query)
-            user_ratings = {
-                rating.message_id: rating.rating
-                for rating in user_ratings_result.scalars().all()
-            }
-
-            # Fetch aggregate rating counts for these messages
-            rating_counts_query = select(
-                MessageRating.message_id,
-                func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
-                func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
-            ).where(MessageRating.message_id.in_(message_ids)).group_by(MessageRating.message_id)
-
-            rating_counts_result = await self.db.execute(rating_counts_query)
-            rating_counts = {
-                row.message_id: {"likes": row.likes or 0, "dislikes": row.dislikes or 0}
-                for row in rating_counts_result.all()
-            }
+            rating_counts = await message_rating_repo.get_rating_counts_for_messages(
+                self.db, message_ids=message_ids
+            )
 
             # Construct enriched schema objects with rating data
             enriched: list[Message | MessageRead] = []
@@ -568,15 +596,19 @@ class ConversationService:
 
     async def link_files_to_message(self, message_id: UUID, file_ids: list[str]) -> None:
         """Link uploaded chat files to a message."""
-        if not file_ids:
-            return
-        from app.db.models.chat_file import ChatFile
-        from sqlalchemy import update as sa_update
-        file_uuids = [UUID(fid) for fid in file_ids]
-        await self.db.execute(
-            sa_update(ChatFile).where(ChatFile.id.in_(file_uuids)).values(message_id=message_id)
+        from app.repositories import chat_file_repo
+
+        await chat_file_repo.link_to_message(
+            self.db,
+            message_id=message_id,
+            file_ids=[UUID(fid) for fid in file_ids],
         )
-        await self.db.flush()
+
+    async def list_attached_files(self, file_ids: list[str]) -> list[Any]:
+        """Batch-load chat files referenced as message attachments."""
+        from app.repositories import chat_file_repo
+
+        return await chat_file_repo.get_many(self.db, [UUID(fid) for fid in file_ids])
 
 
 {%- elif cookiecutter.use_sqlite %}
@@ -586,7 +618,7 @@ Contains business logic for conversation, message, and tool call operations.
 """
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, case
@@ -612,6 +644,11 @@ from app.schemas.conversation import (
     ConversationWithLatestMessage,
 {%- endif %}
 )
+{%- if cookiecutter.use_jwt %}
+
+if TYPE_CHECKING:
+    from app.schemas.conversation_share import AdminConversationList
+{%- endif %}
 
 
 class ConversationService:
@@ -632,24 +669,22 @@ class ConversationService:
         duplicating conversations when data changes during export.
         """
         import json as _json
+{%- if cookiecutter.use_jwt %}
 
-        from sqlalchemy import tuple_
+        from app.repositories import message_rating_repo
+{%- endif %}
 
         export_data: list[dict[str, Any]] = []
         last_created_at: datetime | None = None
         last_id: str | None = None
 
         while True:
-            query = select(Conversation).order_by(
-                Conversation.created_at.desc(), Conversation.id.desc()
-            ).limit(self.EXPORT_CHUNK_SIZE)
-
-            if last_created_at is not None and last_id is not None:
-                query = query.where(
-                    tuple_(Conversation.created_at, Conversation.id) < (last_created_at, last_id)
-                )
-
-            items = list(self.db.execute(query).scalars().all())
+            items = conversation_repo.export_chunk(
+                self.db,
+                last_created_at=last_created_at,
+                last_id=last_id,
+                limit=self.EXPORT_CHUNK_SIZE,
+            )
             if not items:
                 break
 
@@ -665,29 +700,23 @@ class ConversationService:
 {%- if cookiecutter.use_jwt %}
             # Fetch ratings for this chunk of messages
             message_ratings_map: dict[str, list[dict[str, Any]]] = {}
-            if all_message_ids:
-                ratings_query = (
-                    select(MessageRating, User)
-                    .join(User, MessageRating.user_id == User.id)
-                    .where(MessageRating.message_id.in_(all_message_ids))
-                )
-                ratings_result = self.db.execute(ratings_query).all()
-
-                # Map message_id to list of ratings
-                for rating, user in ratings_result:
-                    msg_id = str(rating.message_id)
-                    if msg_id not in message_ratings_map:
-                        message_ratings_map[msg_id] = []
-                    message_ratings_map[msg_id].append({
-                        "id": str(rating.id),
-                        "user_id": str(rating.user_id),
-                        "user_email": getattr(user, "email", None),
-                        "user_name": user.full_name if user else None,
-                        "rating": rating.rating,
-                        "comment": rating.comment,
-                        "created_at": rating.created_at.isoformat() if rating.created_at else None,
-                        "updated_at": rating.updated_at.isoformat() if rating.updated_at else None,
-                    })
+            ratings = message_rating_repo.get_ratings_with_users_for_messages(
+                self.db, message_ids=all_message_ids
+            )
+            for rating, user in ratings:
+                msg_id = str(rating.message_id)
+                if msg_id not in message_ratings_map:
+                    message_ratings_map[msg_id] = []
+                message_ratings_map[msg_id].append({
+                    "id": str(rating.id),
+                    "user_id": str(rating.user_id),
+                    "user_email": getattr(user, "email", None),
+                    "user_name": user.full_name if user else None,
+                    "rating": rating.rating,
+                    "comment": rating.comment,
+                    "created_at": rating.created_at.isoformat() if rating.created_at else None,
+                    "updated_at": rating.updated_at.isoformat() if rating.updated_at else None,
+                })
 {%- endif %}
 
             # Build export data for this chunk
@@ -831,6 +860,44 @@ class ConversationService:
             items.append(ConversationWithLatestMessage.model_validate(conv_dict))
 
         return items, total
+
+    def admin_list_with_users(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        search: str | None = None,
+        user_id: str | None = None,
+        include_archived: bool = False,
+    ) -> "AdminConversationList":
+        """Admin: list conversations with owner email and message counts."""
+        from app.schemas.conversation_share import AdminConversationList, AdminConversationRead
+
+        rows, total = conversation_repo.admin_list_with_users(
+            self.db,
+            skip=skip,
+            limit=limit,
+            search=search,
+            user_id=user_id,
+            include_archived=include_archived,
+        )
+        items = [
+            AdminConversationRead(
+                id=conv.id,
+                user_id=conv.user_id,
+{%- if cookiecutter.use_pydantic_deep %}
+                project_id=getattr(conv, "project_id", None),
+{%- endif %}
+                title=conv.title,
+                is_archived=conv.is_archived,
+                message_count=msg_count,
+                user_email=email,
+                created_at=conv.created_at,
+                updated_at=conv.updated_at,
+            )
+            for conv, msg_count, email in rows
+        ]
+        return AdminConversationList(items=items, total=total)
 {%- endif %}
 
     def create_conversation(
@@ -922,6 +989,17 @@ class ConversationService:
             )
         return True
 
+    def get_conversation_with_messages(
+        self,
+        conversation_id: str,
+    ) -> Conversation:
+        """Get conversation with messages (admin access).
+
+        Raises:
+            NotFoundError: If conversation does not exist.
+        """
+        return self.get_conversation(conversation_id, include_messages=True)
+
     # Message Methods
 
     def get_message(self, message_id: str) -> Message:
@@ -972,32 +1050,15 @@ class ConversationService:
 
         # Enrich messages with rating data if user_id is provided
         if user_id is not None and items:
-            # Get all message IDs
+            from app.repositories import message_rating_repo
+
             message_ids = [msg.id for msg in items]
-
-            # Fetch user ratings for these messages
-            user_ratings_query = select(MessageRating).where(
-                MessageRating.message_id.in_(message_ids),
-                MessageRating.user_id == user_id,
+            user_ratings = message_rating_repo.get_user_ratings_for_messages(
+                self.db, message_ids=message_ids, user_id=user_id
             )
-            user_ratings_result = self.db.execute(user_ratings_query)
-            user_ratings = {
-                rating.message_id: rating.rating
-                for rating in user_ratings_result.scalars().all()
-            }
-
-            # Fetch aggregate rating counts for these messages
-            rating_counts_query = select(
-                MessageRating.message_id,
-                func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
-                func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
-            ).where(MessageRating.message_id.in_(message_ids)).group_by(MessageRating.message_id)
-
-            rating_counts_result = self.db.execute(rating_counts_query)
-            rating_counts = {
-                row.message_id: {"likes": row.likes or 0, "dislikes": row.dislikes or 0}
-                for row in rating_counts_result.all()
-            }
+            rating_counts = message_rating_repo.get_rating_counts_for_messages(
+                self.db, message_ids=message_ids
+            )
 
             # Construct enriched schema objects with rating data
             enriched: list[Message | MessageRead] = []
@@ -1128,14 +1189,15 @@ class ConversationService:
 
     def link_files_to_message(self, message_id: str, file_ids: list[str]) -> None:
         """Link uploaded chat files to a message."""
-        if not file_ids:
-            return
-        from app.db.models.chat_file import ChatFile
-        from sqlalchemy import update as sa_update
-        self.db.execute(
-            sa_update(ChatFile).where(ChatFile.id.in_(file_ids)).values(message_id=message_id)
-        )
-        self.db.commit()
+        from app.repositories import chat_file_repo
+
+        chat_file_repo.link_to_message(self.db, message_id=message_id, file_ids=file_ids)
+
+    def list_attached_files(self, file_ids: list[str]) -> list[Any]:
+        """Batch-load chat files referenced as message attachments."""
+        from app.repositories import chat_file_repo
+
+        return chat_file_repo.get_many(self.db, file_ids)
 
 
 {%- elif cookiecutter.use_mongodb %}
@@ -1145,7 +1207,7 @@ Contains business logic for conversation, message, and tool call operations.
 """
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.core.exceptions import NotFoundError
 from app.db.models.conversation import Conversation, Message, ToolCall
@@ -1164,6 +1226,11 @@ from app.schemas.conversation import (
     ConversationWithLatestMessage,
 {%- endif %}
 )
+{%- if cookiecutter.use_jwt %}
+
+if TYPE_CHECKING:
+    from app.schemas.conversation_share import AdminConversationList
+{%- endif %}
 
 
 class ConversationService:
@@ -1266,6 +1333,43 @@ class ConversationService:
             items.append(ConversationWithLatestMessage.model_validate(conv_dict))
 
         return items, total
+
+    async def admin_list_with_users(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        search: str | None = None,
+        user_id: str | None = None,
+        include_archived: bool = False,
+    ) -> "AdminConversationList":
+        """Admin: list conversations with owner email and message counts."""
+        from app.schemas.conversation_share import AdminConversationList, AdminConversationRead
+
+        rows, total = await conversation_repo.admin_list_with_users(
+            skip=skip,
+            limit=limit,
+            search=search,
+            user_id=user_id,
+            include_archived=include_archived,
+        )
+        items = [
+            AdminConversationRead(
+                id=str(conv.id),
+                user_id=conv.user_id,
+{%- if cookiecutter.use_pydantic_deep %}
+                project_id=getattr(conv, "project_id", None),
+{%- endif %}
+                title=conv.title,
+                is_archived=conv.is_archived,
+                message_count=msg_count,
+                user_email=email,
+                created_at=conv.created_at,
+                updated_at=conv.updated_at,
+            )
+            for conv, msg_count, email in rows
+        ]
+        return AdminConversationList(items=items, total=total)
 {%- endif %}
 
     async def create_conversation(

@@ -11,12 +11,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, UploadFile, File, status
 {%- if cookiecutter.enable_pagination %}
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import select
 {%- endif %}
 
 from app.api.deps import (
-    DBSession,
     RoleChecker,
     UserSvc,
     get_current_user,
@@ -103,11 +100,11 @@ async def get_avatar(user_id: UUID, user_service: UserSvc) -> Any:
 
 @router.get("", response_model=Page[UserRead])
 async def read_users(
-    db: DBSession,
+    user_service: UserSvc,
     current_user: Annotated[User, Depends(RoleChecker(UserRole.ADMIN))],
 ) -> Any:
     """Get all users (admin only)."""
-    return await paginate(db, select(User))
+    return await user_service.list_paginated()
 
 
 {%- else %}
@@ -297,11 +294,11 @@ def update_current_user(
 
 @router.get("", response_model=Page[UserRead])
 def read_users(
-    db: DBSession,
+    user_service: UserSvc,
     current_user: Annotated[User, Depends(RoleChecker(UserRole.ADMIN))],
 ) -> Any:
     """Get all users (admin only)."""
-    return paginate(db, select(User))
+    return user_service.list_paginated()
 
 
 {%- else %}

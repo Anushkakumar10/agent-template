@@ -48,6 +48,11 @@ async def get_multi(
     return list(result.scalars().all())
 
 
+def list_query() -> Any:
+    """Return the SQL Select for listing users (used by paginate)."""
+    return select(User)
+
+
 async def create(
     db: AsyncSession,
     *,
@@ -121,6 +126,53 @@ async def delete(db: AsyncSession, user_id: UUID) -> User | None:
     return user
 
 
+async def delete_non_admins(db: AsyncSession) -> int:
+    """Bulk-delete users without the admin role. Returns affected row count."""
+    from sqlalchemy import delete as sql_delete
+
+    result = await db.execute(sql_delete(User).where(User.role != "admin"))
+    await db.flush()
+    return result.rowcount  # type: ignore[no-any-return, attr-defined]
+
+
+async def has_any(db: AsyncSession) -> bool:
+    """Return True if at least one user exists."""
+    result = await db.execute(select(User).limit(1))
+    return result.scalars().first() is not None
+
+
+async def admin_list_with_counts(
+    db: AsyncSession,
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    search: str | None = None,
+) -> tuple[list[tuple[User, int]], int]:
+    """Admin: list users with their conversation counts.
+
+    Returns list of (user, conversation_count) tuples and total count.
+    """
+    from sqlalchemy import func
+    from app.db.models.conversation import Conversation
+
+    query = (
+        select(User, func.count(Conversation.id).label("conversation_count"))
+        .outerjoin(Conversation, Conversation.user_id == User.id)
+        .group_by(User.id)
+    )
+    count_query = select(func.count()).select_from(User)
+
+    if search:
+        condition = User.email.ilike(f"%{search}%") | User.full_name.ilike(f"%{search}%")
+        query = query.where(condition)
+        count_query = count_query.where(condition)
+
+    query = query.order_by(User.created_at.desc()).offset(skip).limit(limit)
+    total = await db.scalar(count_query) or 0
+    rows = (await db.execute(query)).all()
+    return [(user, count) for user, count in rows], total
+
+
 {%- elif cookiecutter.use_jwt and cookiecutter.use_sqlite %}
 """User repository (SQLite sync).
 
@@ -168,6 +220,11 @@ def get_multi(
     """Get multiple users with pagination."""
     result = db.execute(select(User).offset(skip).limit(limit))
     return list(result.scalars().all())
+
+
+def list_query() -> Any:
+    """Return the SQL Select for listing users (used by paginate)."""
+    return select(User)
 
 
 def create(
@@ -230,6 +287,53 @@ def delete(db: Session, user_id: str) -> User | None:
         db.delete(user)
         db.flush()
     return user
+
+
+def delete_non_admins(db: Session) -> int:
+    """Bulk-delete users without the admin role. Returns affected row count."""
+    from sqlalchemy import delete as sql_delete
+
+    result = db.execute(sql_delete(User).where(User.role != "admin"))
+    db.flush()
+    return result.rowcount  # type: ignore[no-any-return, attr-defined]
+
+
+def has_any(db: Session) -> bool:
+    """Return True if at least one user exists."""
+    result = db.execute(select(User).limit(1))
+    return result.scalars().first() is not None
+
+
+def admin_list_with_counts(
+    db: Session,
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    search: str | None = None,
+) -> tuple[list[tuple[User, int]], int]:
+    """Admin: list users with their conversation counts.
+
+    Returns list of (user, conversation_count) tuples and total count.
+    """
+    from sqlalchemy import func
+    from app.db.models.conversation import Conversation
+
+    query = (
+        select(User, func.count(Conversation.id).label("conversation_count"))
+        .outerjoin(Conversation, Conversation.user_id == User.id)
+        .group_by(User.id)
+    )
+    count_query = select(func.count()).select_from(User)
+
+    if search:
+        condition = User.email.ilike(f"%{search}%") | User.full_name.ilike(f"%{search}%")
+        query = query.where(condition)
+        count_query = count_query.where(condition)
+
+    query = query.order_by(User.created_at.desc()).offset(skip).limit(limit)
+    total = db.scalar(count_query) or 0
+    rows = db.execute(query).all()
+    return [(user, count) for user, count in rows], total
 
 
 {%- elif cookiecutter.use_jwt and cookiecutter.use_mongodb %}
@@ -325,6 +429,54 @@ async def delete(user_id: str) -> User | None:
     if user:
         await user.delete()
     return user
+
+
+async def delete_non_admins() -> int:
+    """Bulk-delete users without the admin role. Returns affected row count."""
+    result = await User.find(User.role != "admin").delete()
+    return getattr(result, "deleted_count", 0) or 0
+
+
+async def has_any() -> bool:
+    """Return True if at least one user exists."""
+    return await User.find_one() is not None
+
+
+async def admin_list_with_counts(
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    search: str | None = None,
+) -> tuple[list[tuple[User, int]], int]:
+    """Admin: list users with their conversation counts.
+
+    Returns list of (user, conversation_count) tuples and total count.
+    """
+    import re
+    from app.db.models.conversation import Conversation
+
+    query_filter: dict[str, Any] = {}
+    if search:
+        escaped = re.escape(search)
+        query_filter["$or"] = [
+            {"email": {"$regex": escaped, "$options": "i"}},
+            {"full_name": {"$regex": escaped, "$options": "i"}},
+        ]
+
+    total = await User.find(query_filter).count()
+    users = (
+        await User.find(query_filter)
+        .sort("-created_at")
+        .skip(skip)
+        .limit(limit)
+        .to_list()
+    )
+
+    results: list[tuple[User, int]] = []
+    for user in users:
+        conv_count = await Conversation.find(Conversation.user_id == str(user.id)).count()
+        results.append((user, conv_count))
+    return results, total
 
 
 {%- else %}

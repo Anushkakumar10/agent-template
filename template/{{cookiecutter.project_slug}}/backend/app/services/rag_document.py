@@ -10,11 +10,11 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.db.models.rag_document import RAGDocument
+from app.repositories import rag_document_repo
 
 
 logger = logging.getLogger(__name__)
@@ -31,12 +31,7 @@ class RAGDocumentService:
         collection_name: str | None = None,
     ) -> list[RAGDocument]:
         """List tracked RAG documents, optionally filtered by collection."""
-        query = select(RAGDocument)
-        if collection_name:
-            query = query.where(RAGDocument.collection_name == collection_name)
-        query = query.order_by(RAGDocument.created_at.desc())
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+        return await rag_document_repo.get_all(self.db, collection_name)
 
     async def get_document(self, doc_id: str) -> RAGDocument:
         """Get a RAG document by ID.
@@ -44,7 +39,7 @@ class RAGDocumentService:
         Raises:
             NotFoundError: If document does not exist.
         """
-        doc = await self.db.get(RAGDocument, UUID(doc_id))
+        doc = await rag_document_repo.get_by_id(self.db, UUID(doc_id))
         if not doc:
             raise NotFoundError(
                 message="Document not found",
@@ -62,19 +57,14 @@ class RAGDocumentService:
         storage_path: str | None = None,
     ) -> RAGDocument:
         """Create a new RAG document tracking record."""
-        doc = RAGDocument(
+        return await rag_document_repo.create(
+            self.db,
             collection_name=collection_name,
             filename=filename,
             filesize=filesize,
             filetype=filetype,
-            storage_path=storage_path,
-            status="processing",
+            storage_path=storage_path or "",
         )
-        self.db.add(doc)
-        await self.db.flush()
-        await self.db.commit()
-        await self.db.refresh(doc)
-        return doc
 
     async def complete_ingestion(
         self,
@@ -84,19 +74,25 @@ class RAGDocumentService:
     ) -> None:
         """Mark a document as successfully ingested."""
         doc = await self.get_document(doc_id)
-        doc.status = "done"
-        doc.vector_document_id = vector_document_id
-        doc.chunk_count = chunk_count
-        doc.completed_at = datetime.now(UTC)
-        await self.db.commit()
+        await rag_document_repo.update_status(
+            self.db,
+            doc.id,
+            status="done",
+            vector_document_id=vector_document_id,
+            chunk_count=chunk_count,
+            completed_at=datetime.now(UTC),
+        )
 
     async def fail_ingestion(self, doc_id: str, error_message: str) -> None:
         """Mark a document ingestion as failed."""
         doc = await self.get_document(doc_id)
-        doc.status = "error"
-        doc.error_message = error_message
-        doc.completed_at = datetime.now(UTC)
-        await self.db.commit()
+        await rag_document_repo.update_status(
+            self.db,
+            doc.id,
+            status="error",
+            error_message=error_message,
+            completed_at=datetime.now(UTC),
+        )
 
     async def retry_ingestion(self, doc_id: str) -> RAGDocument:
         """Reset a failed document for re-ingestion.
@@ -108,12 +104,15 @@ class RAGDocumentService:
         doc = await self.get_document(doc_id)
         if doc.status != "error":
             raise ValueError("Only failed documents can be retried")
-        doc.status = "processing"
-        doc.error_message = None
-        doc.completed_at = None
-        await self.db.commit()
-        await self.db.refresh(doc)
-        return doc
+        updated = await rag_document_repo.update_status(
+            self.db,
+            doc.id,
+            status="processing",
+            error_message="",
+            completed_at=None,
+        )
+        assert updated is not None  # we just looked it up
+        return updated
 
     async def delete_document(
         self,
@@ -148,8 +147,7 @@ class RAGDocumentService:
                 logger.warning(f"Failed to delete file: {e}")
 
         # Cascade: DB record
-        await self.db.delete(doc)
-        await self.db.commit()
+        await rag_document_repo.delete(self.db, doc.id)
 
     async def delete_by_collection(self, collection_name: str) -> int:
         """Delete all RAG document records for a collection.
@@ -157,13 +155,7 @@ class RAGDocumentService:
         Returns:
             Number of deleted records.
         """
-        from sqlalchemy import delete as sql_delete
-
-        result = await self.db.execute(
-            sql_delete(RAGDocument).where(RAGDocument.collection_name == collection_name)
-        )
-        await self.db.commit()
-        return result.rowcount  # type: ignore[no-any-return, attr-defined]
+        return await rag_document_repo.delete_by_collection(self.db, collection_name)
 
     async def get_download_info(self, doc_id: str) -> tuple[str, str, str]:
         """Get file download information for a document.
@@ -206,11 +198,11 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
 from app.db.models.rag_document import RAGDocument
+from app.repositories import rag_document_repo
 
 
 logger = logging.getLogger(__name__)
@@ -227,12 +219,7 @@ class RAGDocumentService:
         collection_name: str | None = None,
     ) -> list[RAGDocument]:
         """List tracked RAG documents, optionally filtered by collection."""
-        query = select(RAGDocument)
-        if collection_name:
-            query = query.where(RAGDocument.collection_name == collection_name)
-        query = query.order_by(RAGDocument.created_at.desc())
-        result = self.db.execute(query)
-        return list(result.scalars().all())
+        return rag_document_repo.get_all(self.db, collection_name)
 
     def get_document(self, doc_id: str) -> RAGDocument:
         """Get a RAG document by ID.
@@ -240,7 +227,7 @@ class RAGDocumentService:
         Raises:
             NotFoundError: If document does not exist.
         """
-        doc = self.db.get(RAGDocument, doc_id)
+        doc = rag_document_repo.get_by_id(self.db, doc_id)
         if not doc:
             raise NotFoundError(
                 message="Document not found",
@@ -258,19 +245,14 @@ class RAGDocumentService:
         storage_path: str | None = None,
     ) -> RAGDocument:
         """Create a new RAG document tracking record."""
-        doc = RAGDocument(
+        return rag_document_repo.create(
+            self.db,
             collection_name=collection_name,
             filename=filename,
             filesize=filesize,
             filetype=filetype,
-            storage_path=storage_path,
-            status="processing",
+            storage_path=storage_path or "",
         )
-        self.db.add(doc)
-        self.db.flush()
-        self.db.commit()
-        self.db.refresh(doc)
-        return doc
 
     def complete_ingestion(
         self,
@@ -280,19 +262,25 @@ class RAGDocumentService:
     ) -> None:
         """Mark a document as successfully ingested."""
         doc = self.get_document(doc_id)
-        doc.status = "done"
-        doc.vector_document_id = vector_document_id
-        doc.chunk_count = chunk_count
-        doc.completed_at = datetime.now(UTC)
-        self.db.commit()
+        rag_document_repo.update_status(
+            self.db,
+            doc.id,
+            status="done",
+            vector_document_id=vector_document_id,
+            chunk_count=chunk_count,
+            completed_at=datetime.now(UTC),
+        )
 
     def fail_ingestion(self, doc_id: str, error_message: str) -> None:
         """Mark a document ingestion as failed."""
         doc = self.get_document(doc_id)
-        doc.status = "error"
-        doc.error_message = error_message
-        doc.completed_at = datetime.now(UTC)
-        self.db.commit()
+        rag_document_repo.update_status(
+            self.db,
+            doc.id,
+            status="error",
+            error_message=error_message,
+            completed_at=datetime.now(UTC),
+        )
 
     def retry_ingestion(self, doc_id: str) -> RAGDocument:
         """Reset a failed document for re-ingestion.
@@ -304,12 +292,15 @@ class RAGDocumentService:
         doc = self.get_document(doc_id)
         if doc.status != "error":
             raise ValueError("Only failed documents can be retried")
-        doc.status = "processing"
-        doc.error_message = None
-        doc.completed_at = None
-        self.db.commit()
-        self.db.refresh(doc)
-        return doc
+        updated = rag_document_repo.update_status(
+            self.db,
+            doc.id,
+            status="processing",
+            error_message="",
+            completed_at=None,
+        )
+        assert updated is not None
+        return updated
 
     def delete_document(
         self,
@@ -344,8 +335,15 @@ class RAGDocumentService:
                 logger.warning(f"Failed to delete file: {e}")
 
         # Cascade: DB record
-        self.db.delete(doc)
-        self.db.commit()
+        rag_document_repo.delete(self.db, doc.id)
+
+    def delete_by_collection(self, collection_name: str) -> int:
+        """Delete all RAG document records for a collection.
+
+        Returns:
+            Number of deleted records.
+        """
+        return rag_document_repo.delete_by_collection(self.db, collection_name)
 
     def get_download_info(self, doc_id: str) -> tuple[str, str, str]:
         """Get file download information for a document.

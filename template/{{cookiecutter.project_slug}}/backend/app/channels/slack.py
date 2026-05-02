@@ -10,6 +10,7 @@ Supports:
 """
 
 import asyncio
+import contextlib
 import hashlib
 import hmac
 import logging
@@ -71,10 +72,8 @@ class SlackAdapter(ChannelAdapter):
         task = self._socket_tasks.pop(bot_id, None)
         if task and not task.done():
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
         logger.info("Stopped Slack Socket Mode for bot %s", bot_id)
 
     async def _socket_supervisor(self, bot_id: str, bot_token: str) -> None:

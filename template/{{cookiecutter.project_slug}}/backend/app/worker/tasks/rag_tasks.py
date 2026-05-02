@@ -170,11 +170,9 @@ async def check_scheduled_syncs(ctx: dict) -> None:
 
 
 async def _run_ingestion(rag_document_id: str, collection_name: str, filepath: str, source_path: str, replace: bool) -> dict[str, Any]:
-    from datetime import UTC, datetime
-    from uuid import UUID
     from app.core.config import settings
     from app.db.session import get_worker_db_context
-    from app.db.models.rag_document import RAGDocument
+    from app.services.rag_document import RAGDocumentService
     from app.rag.documents import DocumentProcessor
     from app.rag.embeddings import EmbeddingService
     from app.rag.ingestion import IngestionService
@@ -198,12 +196,7 @@ async def _run_ingestion(rag_document_id: str, collection_name: str, filepath: s
     try:
         result = await ingestion_service.ingest_file(filepath=file_path, collection_name=collection_name, replace=replace, source_path=source_path)
         async with get_worker_db_context() as db:
-            rag_doc = await db.get(RAGDocument, UUID(rag_document_id))
-            if rag_doc:
-                rag_doc.status = "done"
-                rag_doc.vector_document_id = result.document_id
-                rag_doc.completed_at = datetime.now(UTC)
-                await db.commit()
+            await RAGDocumentService(db).complete_ingestion(rag_document_id, vector_document_id=result.document_id)
         await _notify_ws(rag_document_id, "done", source_path)
         logger.info(f"Ingestion complete: {source_path}")
         return {"status": "done", "document_id": result.document_id, "filename": source_path}
@@ -214,12 +207,10 @@ async def _run_ingestion(rag_document_id: str, collection_name: str, filepath: s
 
 async def _run_sync(sync_log_id: str, source: str, collection_name: str, mode: str, path: str) -> dict[str, Any]:
     import hashlib
-    from datetime import UTC, datetime
-    from uuid import UUID
     from app.core.config import settings
     from app.db.session import get_worker_db_context
-    from app.db.models.sync_log import SyncLog
-    from app.db.models.rag_document import RAGDocument
+    from app.services.rag_document import RAGDocumentService
+    from app.services.rag_sync import RAGSyncService
     from app.rag.documents import DocumentProcessor
     from app.rag.embeddings import EmbeddingService
     from app.rag.ingestion import IngestionService
@@ -257,8 +248,8 @@ async def _run_sync(sync_log_id: str, source: str, collection_name: str, mode: s
     for filepath in files:
         # Check if sync was cancelled
         async with get_worker_db_context() as db:
-            sync_log_check = await db.get(SyncLog, UUID(sync_log_id))
-            if sync_log_check and sync_log_check.status == "cancelled":
+            sync_log_check = await RAGSyncService(db).get_sync_log(sync_log_id)
+            if sync_log_check.status == "cancelled":
                 logger.info(f"Sync {sync_log_id} cancelled by user")
                 return {"status": "cancelled", "ingested": ingested, "updated": updated, "skipped": skipped, "failed": failed}
 
@@ -293,11 +284,15 @@ async def _run_sync(sync_log_id: str, source: str, collection_name: str, mode: s
                 else:
                     ingested += 1
                 async with get_worker_db_context() as db:
-                    rag_doc = RAGDocument(collection_name=collection_name, filename=filepath.name,
-                        filesize=filepath.stat().st_size, filetype=filepath.suffix.lstrip(".").lower(),
-                        status="done", vector_document_id=result.document_id, completed_at=datetime.now(UTC))
-                    db.add(rag_doc)
-                    await db.commit()
+                    doc = await RAGDocumentService(db).create_document(
+                        collection_name=collection_name,
+                        filename=filepath.name,
+                        filesize=filepath.stat().st_size,
+                        filetype=filepath.suffix.lstrip(".").lower(),
+                    )
+                    await RAGDocumentService(db).complete_ingestion(
+                        str(doc.id), vector_document_id=result.document_id
+                    )
             else:
                 failed += 1
         except Exception as e:
@@ -305,16 +300,15 @@ async def _run_sync(sync_log_id: str, source: str, collection_name: str, mode: s
             failed += 1
 
     async with get_worker_db_context() as db:
-        sync_log = await db.get(SyncLog, UUID(sync_log_id))
-        if sync_log:
-            sync_log.status = "done" if failed == 0 else "error"
-            sync_log.total_files = len(files)
-            sync_log.ingested = ingested
-            sync_log.updated = updated
-            sync_log.skipped = skipped
-            sync_log.failed = failed
-            sync_log.completed_at = datetime.now(UTC)
-            await db.commit()
+        await RAGSyncService(db).complete_sync(
+            sync_log_id,
+            status="done" if failed == 0 else "error",
+            total_files=len(files),
+            ingested=ingested,
+            updated=updated,
+            skipped=skipped,
+            failed=failed,
+        )
 
     return {"status": "done", "ingested": ingested, "updated": updated, "skipped": skipped, "failed": failed}
 
@@ -322,19 +316,17 @@ async def _run_sync(sync_log_id: str, source: str, collection_name: str, mode: s
 
 
 async def _update_status(rag_document_id: str, status: str, error_message: str | None = None) -> None:
-    from datetime import UTC, datetime
-    from uuid import UUID
     from app.db.session import get_worker_db_context
-    from app.db.models.rag_document import RAGDocument
+    from app.services.rag_document import RAGDocumentService
     try:
         async with get_worker_db_context() as db:
-            rag_doc = await db.get(RAGDocument, UUID(rag_document_id))
-            if rag_doc:
-                rag_doc.status = status
-                rag_doc.error_message = error_message
-                if status in ("done", "error"):
-                    rag_doc.completed_at = datetime.now(UTC)
-                await db.commit()
+            doc_svc = RAGDocumentService(db)
+            if status == "error":
+                await doc_svc.fail_ingestion(rag_document_id, error_message=error_message or "Unknown error")
+            elif status == "done":
+                # vector_document_id required for complete_ingestion; callers
+                # set status="done" directly in _run_ingestion with the ID.
+                pass
     except Exception as e:
         logger.warning(f"Failed to update RAGDocument status: {e}")
 
@@ -354,19 +346,11 @@ async def _notify_ws(rag_document_id: str, status: str, filename: str) -> None:
 
 
 async def _update_sync_log(sync_log_id: str, status: str, error_message: str | None = None) -> None:
-    from datetime import UTC, datetime
-    from uuid import UUID
     from app.db.session import get_worker_db_context
-    from app.db.models.sync_log import SyncLog
+    from app.services.rag_sync import RAGSyncService
     try:
         async with get_worker_db_context() as db:
-            sync_log = await db.get(SyncLog, UUID(sync_log_id))
-            if sync_log:
-                sync_log.status = status
-                sync_log.error_message = error_message
-                if status in ("done", "error"):
-                    sync_log.completed_at = datetime.now(UTC)
-                await db.commit()
+            await RAGSyncService(db).complete_sync(sync_log_id, status=status, error_message=error_message)
     except Exception as e:
         logger.warning(f"Failed to update SyncLog: {e}")
 

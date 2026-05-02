@@ -57,11 +57,24 @@ class ChannelBotService:
             )
         return bot
 
-    async def list(self, *, skip: int = 0, limit: int = 50) -> tuple[list[ChannelBot], int]:
+    async def find_active(self, bot_id: UUID) -> ChannelBot | None:
+        """Return an active bot by ID, or None (used by webhook handlers)."""
+        bot = await channel_bot_repo.get_by_id(self.db, bot_id)
+        if not bot or not bot.is_active:
+            return None
+        return bot
+
+    async def list_all(self, *, skip: int = 0, limit: int = 50) -> tuple[list[ChannelBot], int]:
         """List all bots with total count."""
         bots = await channel_bot_repo.list_all(self.db, skip=skip, limit=limit)
         total = await channel_bot_repo.count(self.db)
         return bots, total
+
+    async def list_by_platform(self, platform: str | None = None) -> list[ChannelBot]:
+        """Return bots, optionally filtered by platform."""
+        if platform:
+            return await channel_bot_repo.get_by_platform(self.db, platform)
+        return await channel_bot_repo.list_all(self.db)
 
     async def update(self, bot_id: UUID, data: ChannelBotUpdate) -> ChannelBot:
         """Update a channel bot."""
@@ -168,11 +181,24 @@ class ChannelBotService:
             )
         return bot
 
-    def list(self, *, skip: int = 0, limit: int = 50) -> tuple[list[ChannelBot], int]:
+    def find_active(self, bot_id: str) -> ChannelBot | None:
+        """Return an active bot by ID, or None (used by webhook handlers)."""
+        bot = channel_bot_repo.get_by_id(self.db, bot_id)
+        if not bot or not bot.is_active:
+            return None
+        return bot
+
+    def list_all(self, *, skip: int = 0, limit: int = 50) -> tuple[list[ChannelBot], int]:
         """List all bots with total count."""
         bots = channel_bot_repo.list_all(self.db, skip=skip, limit=limit)
         total = channel_bot_repo.count(self.db)
         return bots, total
+
+    def list_by_platform(self, platform: str | None = None) -> list[ChannelBot]:
+        """Return bots, optionally filtered by platform."""
+        if platform:
+            return channel_bot_repo.get_by_platform(self.db, platform)
+        return channel_bot_repo.list_all(self.db)
 
     def update(self, bot_id: str, data: ChannelBotUpdate) -> ChannelBot:
         """Update a channel bot."""
@@ -271,11 +297,24 @@ class ChannelBotService:
             )
         return bot
 
-    async def list(self, *, skip: int = 0, limit: int = 50) -> tuple[list[ChannelBot], int]:
+    async def find_active(self, bot_id: str) -> ChannelBot | None:
+        """Return an active bot by ID, or None (used by webhook handlers)."""
+        bot = await channel_bot_repo.get_by_id(bot_id)
+        if not bot or not bot.is_active:
+            return None
+        return bot
+
+    async def list_all(self, *, skip: int = 0, limit: int = 50) -> tuple[list[ChannelBot], int]:
         """List all bots with total count."""
         bots = await channel_bot_repo.list_all(skip=skip, limit=limit)
         total = await channel_bot_repo.count()
         return bots, total
+
+    async def list_by_platform(self, platform: str | None = None) -> list[ChannelBot]:
+        """Return bots, optionally filtered by platform."""
+        if platform:
+            return await channel_bot_repo.get_by_platform(platform)
+        return await channel_bot_repo.list_all()
 
     async def update(self, bot_id: str, data: ChannelBotUpdate) -> ChannelBot:
         """Update a channel bot."""

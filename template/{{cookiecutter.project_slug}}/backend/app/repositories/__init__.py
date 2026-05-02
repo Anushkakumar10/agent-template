@@ -28,6 +28,7 @@ from app.repositories import sync_source as sync_source_repo
 
 from app.repositories import chat_file as chat_file_repo
 from app.repositories import conversation_share as conversation_share_repo
+from app.repositories import message_rating as message_rating_repo
 {%- endif %}
 {%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
 
@@ -61,6 +62,7 @@ __all__ = [
 {%- if cookiecutter.use_jwt %}
     "chat_file_repo",
     "conversation_share_repo",
+    "message_rating_repo",
 {%- endif %}
 {%- if cookiecutter.use_pydantic_deep and cookiecutter.use_jwt %}
     "project_repo",

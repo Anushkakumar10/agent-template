@@ -3,7 +3,6 @@
 
 import logging
 from typing import Any
-from sqlalchemy import select
 {%- if cookiecutter.use_database %}
 from datetime import datetime, UTC
 {%- if cookiecutter.use_postgresql %}
@@ -338,7 +337,6 @@ async def agent_websocket(
 {%- if (cookiecutter.use_postgresql or cookiecutter.use_sqlite) %}
                 # Load attached files and build multimodal input
                 from pydantic_ai.messages import BinaryContent
-                from app.db.models.chat_file import ChatFile as ChatFileModel
                 from app.services.file_storage import get_file_storage
 
                 user_input: str | list[Any] = user_message
@@ -349,34 +347,28 @@ async def agent_websocket(
                     image_parts = []
 {%- if cookiecutter.use_postgresql %}
                     async with get_db_context() as file_db:
-                        for fid in file_ids:
+                        attached_files = await get_conversation_service(file_db).list_attached_files(file_ids)
+                        for chat_file in attached_files:
                             try:
-                                result = await file_db.execute(select(ChatFileModel).where(ChatFileModel.id == UUID(fid)))
-                                chat_file = result.scalar_one_or_none()
-                                if not chat_file:
-                                    continue
                                 if chat_file.file_type == "image":
                                     file_data = await storage.load(chat_file.storage_path)
                                     image_parts.append(BinaryContent(data=file_data, media_type=chat_file.mime_type))
                                 elif chat_file.parsed_content:
                                     file_context_parts.append(f"\n---\nAttached file: {chat_file.filename}\n```\n{chat_file.parsed_content}\n```")
                             except Exception as e:
-                                logger.warning(f"Failed to load file {fid}: {e}")
+                                logger.warning(f"Failed to load file {chat_file.id}: {e}")
 {%- else %}
                     with contextmanager(get_db_session)() as file_db:
-                        for fid in file_ids:
+                        attached_files = get_conversation_service(file_db).list_attached_files(file_ids)
+                        for chat_file in attached_files:
                             try:
-                                result = file_db.execute(select(ChatFileModel).where(ChatFileModel.id == fid))
-                                chat_file = result.scalar_one_or_none()
-                                if not chat_file:
-                                    continue
                                 if chat_file.file_type == "image":
                                     file_data = await storage.load(chat_file.storage_path)
                                     image_parts.append(BinaryContent(data=file_data, media_type=chat_file.mime_type))
                                 elif chat_file.parsed_content:
                                     file_context_parts.append(f"\n---\nAttached file: {chat_file.filename}\n```\n{chat_file.parsed_content}\n```")
                             except Exception as e:
-                                logger.warning(f"Failed to load file {fid}: {e}")
+                                logger.warning(f"Failed to load file {chat_file.id}: {e}")
 {%- endif %}
 
                     if image_parts:
@@ -1641,10 +1633,10 @@ from app.core.config import settings
 from app.db.session import get_db_context{% if cookiecutter.use_sqlite %}, get_db_session
 from contextlib import contextmanager{% endif %}
 from app.api.deps import ConversationSvc, get_conversation_service
-from app.schemas.conversation import ConversationCreate, MessageCreate
+from app.schemas.conversation import ConversationCreate, ConversationUpdate, MessageCreate
 {%- elif cookiecutter.use_mongodb %}
 from app.api.deps import ConversationSvc, get_conversation_service
-from app.schemas.conversation import ConversationCreate, MessageCreate
+from app.schemas.conversation import ConversationCreate, ConversationUpdate, MessageCreate
 {%- endif %}
 
 logger = logging.getLogger(__name__)
@@ -2135,9 +2127,6 @@ from uuid import UUID
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect{%- if cookiecutter.websocket_auth_jwt %}, Depends{%- endif %}{%- if cookiecutter.websocket_auth_api_key %}, Query{%- endif %}
 
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage, ToolMessage
-{%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
-from sqlalchemy import select
-{%- endif %}
 
 from app.agents.deepagents_assistant import AgentContext, Decision, InterruptData, get_agent
 {%- if cookiecutter.websocket_auth_jwt %}
@@ -2417,11 +2406,12 @@ async def agent_websocket(
 
             # Regular message handling
             user_message = raw_data.get("message", "")
+            file_ids = raw_data.get("file_ids", [])
             # Optionally accept history from client (or use server-side tracking)
             if "history" in raw_data:
                 conversation_history = raw_data["history"]
 
-            if not user_message:
+            if not user_message and not file_ids:
                 await manager.send_event(websocket, "error", {"message": "Empty message"})
                 continue
 
@@ -2565,52 +2555,23 @@ async def agent_websocket(
                 agent_input = user_message
 
                 if file_ids:
-                    from app.db.models.chat_file import ChatFile as ChatFileModel
-                    from app.services.file_storage import get_file_storage
-
-                    storage = get_file_storage()
                     file_refs: list[str] = []
 {%- if cookiecutter.use_postgresql %}
                     async with get_db_context() as file_db:
-                        for fid in file_ids:
-                            try:
-                                result = await file_db.execute(
-                                    select(ChatFileModel).where(ChatFileModel.id == UUID(fid))
-                                )
-                                chat_file = result.scalar_one_or_none()
-                                if not chat_file:
-                                    continue
-                                if chat_file.parsed_content:
-                                    file_refs.append(
-                                        f"- {chat_file.filename}:\n```\n{chat_file.parsed_content}\n```"
-                                    )
-                                elif chat_file.file_type == "image":
-                                    file_refs.append(f"- {chat_file.filename} (image file)")
-                                else:
-                                    file_refs.append(f"- {chat_file.filename} (binary file)")
-                            except Exception as e:
-                                logger.warning(f"Failed to load file {fid}: {e}")
+                        attached_files = await get_conversation_service(file_db).list_attached_files(file_ids)
 {%- else %}
                     with contextmanager(get_db_session)() as file_db:
-                        for fid in file_ids:
-                            try:
-                                result = file_db.execute(
-                                    select(ChatFileModel).where(ChatFileModel.id == fid)
-                                )
-                                chat_file = result.scalar_one_or_none()
-                                if not chat_file:
-                                    continue
-                                if chat_file.parsed_content:
-                                    file_refs.append(
-                                        f"- {chat_file.filename}:\n```\n{chat_file.parsed_content}\n```"
-                                    )
-                                elif chat_file.file_type == "image":
-                                    file_refs.append(f"- {chat_file.filename} (image file)")
-                                else:
-                                    file_refs.append(f"- {chat_file.filename} (binary file)")
-                            except Exception as e:
-                                logger.warning(f"Failed to load file {fid}: {e}")
+                        attached_files = get_conversation_service(file_db).list_attached_files(file_ids)
 {%- endif %}
+                    for chat_file in attached_files:
+                        if chat_file.parsed_content:
+                            file_refs.append(
+                                f"- {chat_file.filename}:\n```\n{chat_file.parsed_content}\n```"
+                            )
+                        elif chat_file.file_type == "image":
+                            file_refs.append(f"- {chat_file.filename} (image file)")
+                        else:
+                            file_refs.append(f"- {chat_file.filename} (binary file)")
 
                     if file_refs:
                         agent_input = user_message + "\n\nAttached files:\n" + "\n".join(file_refs)
@@ -2832,9 +2793,6 @@ from pydantic_ai import (
     ToolCallPartDelta,
 )
 from pydantic_ai.messages import TextPart
-{%- if cookiecutter.use_postgresql or cookiecutter.use_sqlite %}
-from sqlalchemy import select
-{%- endif %}
 
 from app.agents.pydantic_deep_assistant import PydanticDeepContext, get_agent
 {%- if cookiecutter.websocket_auth_jwt %}
@@ -3122,7 +3080,6 @@ async def agent_websocket(
 
                 # Load attached files → write to workspace + augment input
                 from pydantic_ai.messages import BinaryContent
-                from app.db.models.chat_file import ChatFile as ChatFileModel
                 from app.services.file_storage import get_file_storage
 
                 user_input: str | list[Any] = user_message
@@ -3141,85 +3098,42 @@ async def agent_websocket(
                     )
 {%- if cookiecutter.use_postgresql %}
                     async with get_db_context() as file_db:
-                        for fid in file_ids:
-                            try:
-                                result = await file_db.execute(
-                                    select(ChatFileModel).where(ChatFileModel.id == UUID(fid))
-                                )
-                                chat_file = result.scalar_one_or_none()
-                                if not chat_file:
-                                    continue
-
-                                rel_path = f"uploads/{chat_file.filename}"
-
-                                if chat_file.file_type == "image":
-                                    file_data = await storage.load(chat_file.storage_path)
-                                    image_parts.append(
-                                        BinaryContent(data=file_data, media_type=chat_file.mime_type)
-                                    )
-                                    if has_sandbox:
-                                        await assistant.write_file_to_workspace(rel_path, file_data)
-                                        file_refs.append(f"- {rel_path} (image, also attached inline for vision)")
-                                    else:
-                                        file_refs.append(f"- {chat_file.filename} (image attached inline)")
-                                elif chat_file.parsed_content:
-                                    if has_sandbox:
-                                        await assistant.write_file_to_workspace(rel_path, chat_file.parsed_content)
-                                        file_refs.append(f"- {rel_path}")
-                                    else:
-                                        file_refs.append(
-                                            f"- {chat_file.filename}:\n```\n{chat_file.parsed_content}\n```"
-                                        )
-                                else:
-                                    file_data = await storage.load(chat_file.storage_path)
-                                    if has_sandbox:
-                                        await assistant.write_file_to_workspace(rel_path, file_data)
-                                        file_refs.append(f"- {rel_path}")
-                                    else:
-                                        file_refs.append(f"- {chat_file.filename} (binary, not readable as text)")
-                            except Exception as e:
-                                logger.warning(f"Failed to load file {fid}: {e}")
+                        attached_files = await get_conversation_service(file_db).list_attached_files(file_ids)
 {%- else %}
                     with contextmanager(get_db_session)() as file_db:
-                        for fid in file_ids:
-                            try:
-                                result = file_db.execute(
-                                    select(ChatFileModel).where(ChatFileModel.id == fid)
-                                )
-                                chat_file = result.scalar_one_or_none()
-                                if not chat_file:
-                                    continue
-
-                                rel_path = f"uploads/{chat_file.filename}"
-
-                                if chat_file.file_type == "image":
-                                    file_data = await storage.load(chat_file.storage_path)
-                                    image_parts.append(
-                                        BinaryContent(data=file_data, media_type=chat_file.mime_type)
-                                    )
-                                    if has_sandbox:
-                                        await assistant.write_file_to_workspace(rel_path, file_data)
-                                        file_refs.append(f"- {rel_path} (image, also attached inline for vision)")
-                                    else:
-                                        file_refs.append(f"- {chat_file.filename} (image attached inline)")
-                                elif chat_file.parsed_content:
-                                    if has_sandbox:
-                                        await assistant.write_file_to_workspace(rel_path, chat_file.parsed_content)
-                                        file_refs.append(f"- {rel_path}")
-                                    else:
-                                        file_refs.append(
-                                            f"- {chat_file.filename}:\n```\n{chat_file.parsed_content}\n```"
-                                        )
-                                else:
-                                    file_data = await storage.load(chat_file.storage_path)
-                                    if has_sandbox:
-                                        await assistant.write_file_to_workspace(rel_path, file_data)
-                                        file_refs.append(f"- {rel_path}")
-                                    else:
-                                        file_refs.append(f"- {chat_file.filename} (binary, not readable as text)")
-                            except Exception as e:
-                                logger.warning(f"Failed to load file {fid}: {e}")
+                        attached_files = get_conversation_service(file_db).list_attached_files(file_ids)
 {%- endif %}
+                    for chat_file in attached_files:
+                        try:
+                            rel_path = f"uploads/{chat_file.filename}"
+
+                            if chat_file.file_type == "image":
+                                file_data = await storage.load(chat_file.storage_path)
+                                image_parts.append(
+                                    BinaryContent(data=file_data, media_type=chat_file.mime_type)
+                                )
+                                if has_sandbox:
+                                    await assistant.write_file_to_workspace(rel_path, file_data)
+                                    file_refs.append(f"- {rel_path} (image, also attached inline for vision)")
+                                else:
+                                    file_refs.append(f"- {chat_file.filename} (image attached inline)")
+                            elif chat_file.parsed_content:
+                                if has_sandbox:
+                                    await assistant.write_file_to_workspace(rel_path, chat_file.parsed_content)
+                                    file_refs.append(f"- {rel_path}")
+                                else:
+                                    file_refs.append(
+                                        f"- {chat_file.filename}:\n```\n{chat_file.parsed_content}\n```"
+                                    )
+                            else:
+                                file_data = await storage.load(chat_file.storage_path)
+                                if has_sandbox:
+                                    await assistant.write_file_to_workspace(rel_path, file_data)
+                                    file_refs.append(f"- {rel_path}")
+                                else:
+                                    file_refs.append(f"- {chat_file.filename} (binary, not readable as text)")
+                        except Exception as e:
+                            logger.warning(f"Failed to load file {chat_file.id}: {e}")
 
                     if file_refs:
                         if has_sandbox:
@@ -3230,10 +3144,7 @@ async def agent_websocket(
                     else:
                         augmented = user_message
 
-                    if image_parts:
-                        user_input = [augmented, *image_parts]
-                    else:
-                        user_input = augmented
+                    user_input = [augmented, *image_parts] if image_parts else augmented
 {%- endif %}
 
                 collected_tool_calls: list[dict[str, Any]] = []
@@ -3518,9 +3429,9 @@ async def project_chat_websocket(
             project_service = get_project_service(db)
             try:
 {%- if cookiecutter.websocket_auth_jwt %}
-                project = await project_service.get(project_id, user_id=user.id)
+                await project_service.get(project_id, user_id=user.id)
 {%- else %}
-                project = await project_service.get(project_id)
+                await project_service.get(project_id)
 {%- endif %}
             except Exception as exc:
                 await websocket.close(code=4003, reason=str(exc))

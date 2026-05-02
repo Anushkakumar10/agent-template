@@ -504,11 +504,14 @@ class ChannelMessageRouter:
             await identity.insert()
 {%- endif %}
 
-        if mode == "jwt_linked" and policy.get("require_link", False):
-            if not identity.user_id:
-                raise AuthorizationError(
-                    message="Please /link your account first before using this bot."
-                )
+        if (
+            mode == "jwt_linked"
+            and policy.get("require_link", False)
+            and not identity.user_id
+        ):
+            raise AuthorizationError(
+                message="Please /link your account first before using this bot."
+            )
 
         return identity
 

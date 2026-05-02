@@ -343,6 +343,16 @@ class ProjectConfig(BaseModel):
                 "PydanticDeep uses Logfire for observability."
             )
 
+        # CrewAI 1.13.x pins opentelemetry-sdk<1.35 which conflicts with
+        # logfire>=4.30 (needs opentelemetry-sdk>=1.39). Disable logfire when
+        # using CrewAI to keep dependencies resolvable.
+        if self.ai_framework == AIFrameworkType.CREWAI and self.enable_logfire:
+            raise ValueError(
+                "CrewAI is incompatible with Logfire — CrewAI pins an older "
+                "opentelemetry-sdk that conflicts with current logfire. "
+                "Disable Logfire (enable_logfire=False) when using CrewAI."
+            )
+
         # Admin panel requires SQLAlchemy (SQLAdmin doesn't fully support SQLModel)
         if self.enable_admin_panel and self.orm_type == OrmType.SQLMODEL:
             raise ValueError(

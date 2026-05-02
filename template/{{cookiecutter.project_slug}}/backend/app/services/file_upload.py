@@ -247,7 +247,10 @@ class FileUploadService:
         parsed_content: str | None = None,
     ) -> ChatFile:
         """Create a chat file record in the database."""
-        chat_file = ChatFile(
+        from app.repositories import chat_file_repo
+
+        return await chat_file_repo.create(
+            self.db,
             user_id=user_id,
             filename=filename,
             mime_type=mime_type,
@@ -256,11 +259,6 @@ class FileUploadService:
             file_type=file_type,
             parsed_content=parsed_content,
         )
-        self.db.add(chat_file)
-        await self.db.flush()
-        await self.db.commit()
-        await self.db.refresh(chat_file)
-        return chat_file
 
 
 {%- elif cookiecutter.use_jwt and cookiecutter.use_sqlite %}
@@ -516,7 +514,10 @@ class FileUploadService:
         parsed_content: str | None = None,
     ) -> ChatFile:
         """Create a chat file record in the database."""
-        chat_file = ChatFile(
+        from app.repositories import chat_file_repo
+
+        return chat_file_repo.create(
+            self.db,
             user_id=user_id,
             filename=filename,
             mime_type=mime_type,
@@ -525,11 +526,6 @@ class FileUploadService:
             file_type=file_type,
             parsed_content=parsed_content,
         )
-        self.db.add(chat_file)
-        self.db.flush()
-        self.db.commit()
-        self.db.refresh(chat_file)
-        return chat_file
 
 
 {%- else %}

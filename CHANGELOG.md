@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2026-04-25
+
+### Fixed
+
+- **Disabled features no longer leak generated files** — `post_gen_project.py` now removes channel adapters/routes/services/repos/schemas/models/commands/migrations when `use_telegram` and `use_slack` are both off, RAG sync infrastructure (`sync_log`, `sync_source`, `rag_document` files) when RAG is off, DeepAgents project scaffolding when not selected, leftover test stubs for disabled modules, and empty `docker-compose` placeholders when Docker is disabled
+- **`agent.py` (DeepAgents): undefined `file_ids`** — WebSocket payload parsing now extracts `file_ids = raw_data.get("file_ids", [])` before use (previously raised `NameError` at runtime)
+- **`agent.py` (CrewAI): missing `ConversationUpdate` import** — Added to imports so title-update path no longer crashes
+- **`rag.py`: `complete_sync` called on wrong service** — Was invoked on `SyncSourceService`; now correctly routed to `RAGSyncService`
+- **`IngestionService()` instantiated without required args** — Added `IngestionService.from_settings()` classmethod factory; routes/commands/workers now use it
+- **`message_rating_repo` not exported** — Added to `app/repositories/__init__.py`; admin ratings flow no longer fails on import
+- **`ConversationService.get_conversation_with_messages` missing on SQL backends** — Previously only existed on MongoDB; added to PostgreSQL + SQLite variants
+- **`ProjectService.list` / `ChannelBotService.list` shadowed builtin `list`** — Renamed to `list_for_user()` / `list_all()` (with `find_active()` and `list_by_platform()` helpers added)
+
+### Changed
+
+- **Strict layered architecture enforced across the template** — Routes call services only (via FastAPI `Depends`); services call repositories only; repositories are the sole layer permitted to talk to the database. Worker tasks, channel adapters, CLI commands, and webhook handlers no longer perform raw DB operations
+  - `admin_conversations.py` rewritten to use `ConversationSvc.admin_list_with_users()` and `UserSvc.admin_list_with_counts()`
+  - `telegram_webhook.py` / `slack_webhook.py` use `ChannelBotSvc` via `Depends` instead of opening their own DB sessions (`bot_service.find_active(bot_id)`)
+  - `agent.py` uses `conv_service.list_attached_files(file_ids)` instead of raw `select(ChatFile)` queries
+  - Worker tasks (`rag_tasks._run_ingestion`, `_run_sync`, `_update_status`, `_update_sync_log`) refactored onto the service layer
+  - CLI commands (`commands/channel.py`, `seed.py`, `rag.py`) refactored with a `_channel_service()` context-manager helper
+  - All `self.db.execute/commit/add` removed from services; sessions auto-commit via `get_db_session`/`get_db_context`/`get_worker_db_context`
+- **Repositories expanded with the queries services now need** — `conversation.admin_list_with_users()` + `export_chunk()` (3 backends); `user.list_query()` + `admin_list_with_counts()` + `delete_non_admins()` + `has_any()` (3 backends); `chat_file.get_many()` + `link_to_message()`; `message_rating.get_user_ratings_for_messages()` + `get_rating_counts_for_messages()` + `get_ratings_with_users_for_messages()`; `webhook.create_delivery()` + `save_delivery()`; `sync_log.create(sync_source_id=...)`; `rag_document.delete_by_collection()`
+
+### Added
+
+- **Config validator: CrewAI + Logfire combination rejected** — Raises `ValueError` at config time; documents an upstream OpenTelemetry/logfire ≥ 4.30 conflict with CrewAI
+- **Conditional pydantic pin for CrewAI** — Generated `pyproject.toml` pins `pydantic[email]>=2.11.0,<2.12` when CrewAI is selected (CrewAI is incompatible with pydantic 2.12)
+- **Stricter `ty` rules in generated `pyproject.toml`** — `unknown-argument`, `invalid-await`, `invalid-context-manager`, `missing-argument`, `not-iterable`, `invalid-return-type`, `invalid-type-form` promoted to `warn`
+- **Integration test matrix** — `TestGeneratedTemplateMatrix` now exercises 14 framework/database/RAG/channel combinations (project names prefixed with `matrix_` to avoid package-name collisions). Suite: **405 passed, 3 skipped**
+
 ## [0.2.6] - 2026-04-18
 
 ### Added

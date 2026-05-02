@@ -118,7 +118,7 @@ class ProjectService:
             await self._assert_access(project, user_id, min_role="viewer")
         return project
 
-    async def list(
+    async def list_for_user(
         self,
         user_id: UUID,
         *,
@@ -391,7 +391,7 @@ class ProjectService:
             self._assert_access(project, user_id, min_role="viewer")
         return project
 
-    def list(
+    def list_for_user(
         self, user_id: str, *, skip: int = 0, limit: int = 50, include_archived: bool = False
     ) -> tuple[list[Project], int]:
         items = project_repo.get_projects_for_user(
@@ -575,7 +575,7 @@ class ProjectService:
             await self._assert_access(project, user_id, min_role="viewer")
         return project
 
-    async def list(
+    async def list_for_user(
         self, user_id: str, *, skip: int = 0, limit: int = 50, include_archived: bool = False
     ) -> tuple[list[Project], int]:
         items = await project_repo.get_projects_for_user(

@@ -2,6 +2,7 @@
 """Telegram channel adapter using aiogram v3."""
 
 import asyncio
+import contextlib
 import hmac
 import logging
 from typing import Any
@@ -80,10 +81,8 @@ class TelegramAdapter(ChannelAdapter):
         task = self._polling_tasks.pop(bot_id, None)
         if task and not task.done():
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
         logger.info("Stopped Telegram polling for bot %s", bot_id)
 
     async def _polling_supervisor(self, bot_id: str, bot_token: str) -> None:

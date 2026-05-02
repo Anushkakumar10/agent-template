@@ -154,11 +154,9 @@ async def ingest_path_async(
 
     import hashlib
 {%- if cookiecutter.use_postgresql %}
-    from datetime import UTC, datetime
-
-    from app.db.models.rag_document import RAGDocument
-    from app.db.models.sync_log import SyncLog
     from app.db.session import get_db_context
+    from app.services.rag_document import RAGDocumentService
+    from app.services.rag_sync import RAGSyncService
 {%- endif %}
     from tqdm import tqdm
 
@@ -172,11 +170,10 @@ async def ingest_path_async(
 {%- if cookiecutter.use_postgresql %}
     # Create SyncLog
     async with get_db_context() as db:
-        sync_log = SyncLog(source="local", collection_name=collection, status="running", mode=sync_mode, total_files=len(files))
-        db.add(sync_log)
-        await db.commit()
-        await db.refresh(sync_log)
-        sync_log_id = sync_log.id
+        sync_log = await RAGSyncService(db).create_sync_log(
+            source="local", collection_name=collection, mode=sync_mode
+        )
+        sync_log_id = str(sync_log.id)
 {%- endif %}
 
     with tqdm(files, unit="file", desc="Syncing", ncols=80) as pbar:
@@ -212,17 +209,13 @@ async def ingest_path_async(
 
             # Create RAGDocument record in SQL
             async with get_db_context() as db:
-                rag_doc = RAGDocument(
+                rag_doc = await RAGDocumentService(db).create_document(
                     collection_name=collection,
                     filename=filepath.name,
                     filesize=filepath.stat().st_size,
                     filetype=filepath.suffix.lstrip(".").lower(),
-                    status="processing",
                 )
-                db.add(rag_doc)
-                await db.commit()
-                await db.refresh(rag_doc)
-                doc_id = rag_doc.id
+                doc_id = str(rag_doc.id)
 {%- endif %}
 
             try:
@@ -233,50 +226,39 @@ async def ingest_path_async(
                         replaced_count += 1
 {%- if cookiecutter.use_postgresql %}
                     async with get_db_context() as db:
-                        rag_doc_result: RAGDocument | None = await db.get(RAGDocument, doc_id)
-                        if rag_doc_result:
-                            rag_doc_result.status = "done"
-                            rag_doc_result.vector_document_id = result.document_id
-                            rag_doc_result.completed_at = datetime.now(UTC)
-                            await db.commit()
+                        await RAGDocumentService(db).complete_ingestion(
+                            doc_id, vector_document_id=result.document_id
+                        )
 {%- endif %}
                 else:
                     error_count += 1
                     tqdm.write(f"  ✗ {filepath.name}: {result.error_message}")
 {%- if cookiecutter.use_postgresql %}
                     async with get_db_context() as db:
-                        rag_doc_result = await db.get(RAGDocument, doc_id)
-                        if rag_doc_result:
-                            rag_doc_result.status = "error"
-                            rag_doc_result.error_message = result.error_message
-                            rag_doc_result.completed_at = datetime.now(UTC)
-                            await db.commit()
+                        await RAGDocumentService(db).fail_ingestion(
+                            doc_id, error_message=result.error_message or "Unknown error"
+                        )
 {%- endif %}
             except Exception as e:
                 error_count += 1
                 tqdm.write(f"  ✗ {filepath.name}: {str(e)}")
 {%- if cookiecutter.use_postgresql %}
                 async with get_db_context() as db:
-                    rag_doc_result = await db.get(RAGDocument, doc_id)
-                    if rag_doc_result:
-                        rag_doc_result.status = "error"
-                        rag_doc_result.error_message = str(e)
-                        rag_doc_result.completed_at = datetime.now(UTC)
-                        await db.commit()
+                    await RAGDocumentService(db).fail_ingestion(doc_id, error_message=str(e))
 {%- endif %}
 
 {%- if cookiecutter.use_postgresql %}
     # Update SyncLog
     async with get_db_context() as db:
-        sync_log_result: SyncLog | None = await db.get(SyncLog, sync_log_id)
-        if sync_log_result:
-            sync_log_result.status = "done" if error_count == 0 else "error"
-            sync_log_result.ingested = success_count - replaced_count
-            sync_log_result.updated = replaced_count
-            sync_log_result.skipped = skipped_count
-            sync_log_result.failed = error_count
-            sync_log_result.completed_at = datetime.now(UTC)
-            await db.commit()
+        await RAGSyncService(db).complete_sync(
+            sync_log_id,
+            status="done" if error_count == 0 else "error",
+            total_files=len(files),
+            ingested=success_count - replaced_count,
+            updated=replaced_count,
+            skipped=skipped_count,
+            failed=error_count,
+        )
 {%- endif %}
 
     click.echo()

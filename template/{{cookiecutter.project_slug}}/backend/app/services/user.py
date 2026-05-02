@@ -4,6 +4,7 @@
 Contains business logic for user operations. Uses UserRepository for database access.
 """
 
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,9 @@ from app.core.security import get_password_hash, verify_password
 from app.db.models.user import User
 from app.repositories import user_repo
 from app.schemas.user import UserCreate, UserUpdate
+
+if TYPE_CHECKING:
+    from app.schemas.conversation_share import AdminUserList
 
 
 class UserService:
@@ -47,6 +51,49 @@ class UserService:
     ) -> list[User]:
         """Get multiple users with pagination."""
         return await user_repo.get_multi(self.db, skip=skip, limit=limit)
+
+    async def list_paginated(self) -> Any:
+        """Return paginated user list (fastapi-pagination Page)."""
+        from fastapi_pagination.ext.sqlalchemy import paginate
+
+        return await paginate(self.db, user_repo.list_query())
+
+    async def delete_non_admins(self) -> int:
+        """Bulk-delete users without the admin role. Returns affected row count."""
+        return await user_repo.delete_non_admins(self.db)
+
+    async def has_any(self) -> bool:
+        """Return True if at least one user exists."""
+        return await user_repo.has_any(self.db)
+
+    async def admin_list_with_counts(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        search: str | None = None,
+    ) -> "AdminUserList":
+        """Admin: list users with conversation counts."""
+        from app.schemas.conversation_share import AdminUserList, AdminUserRead
+
+        rows, total = await user_repo.admin_list_with_counts(
+            self.db,
+            skip=skip,
+            limit=limit,
+            search=search,
+        )
+        items = [
+            AdminUserRead(
+                id=user.id,
+                email=user.email,
+                full_name=user.full_name,
+                is_active=user.is_active,
+                conversation_count=conv_count,
+                created_at=user.created_at,
+            )
+            for user, conv_count in rows
+        ]
+        return AdminUserList(items=items, total=total)
 
     async def register(self, user_in: UserCreate) -> User:
         """Register a new user.
@@ -179,6 +226,8 @@ class UserService:
 Contains business logic for user operations. Uses UserRepository for database access.
 """
 
+from typing import TYPE_CHECKING, Any
+
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AlreadyExistsError, AuthenticationError, NotFoundError
@@ -186,6 +235,9 @@ from app.core.security import get_password_hash, verify_password
 from app.db.models.user import User
 from app.repositories import user_repo
 from app.schemas.user import UserCreate, UserUpdate
+
+if TYPE_CHECKING:
+    from app.schemas.conversation_share import AdminUserList
 
 
 class UserService:
@@ -220,6 +272,49 @@ class UserService:
     ) -> list[User]:
         """Get multiple users with pagination."""
         return user_repo.get_multi(self.db, skip=skip, limit=limit)
+
+    def list_paginated(self) -> Any:
+        """Return paginated user list (fastapi-pagination Page)."""
+        from fastapi_pagination.ext.sqlalchemy import paginate
+
+        return paginate(self.db, user_repo.list_query())
+
+    def delete_non_admins(self) -> int:
+        """Bulk-delete users without the admin role. Returns affected row count."""
+        return user_repo.delete_non_admins(self.db)
+
+    def has_any(self) -> bool:
+        """Return True if at least one user exists."""
+        return user_repo.has_any(self.db)
+
+    def admin_list_with_counts(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        search: str | None = None,
+    ) -> "AdminUserList":
+        """Admin: list users with conversation counts."""
+        from app.schemas.conversation_share import AdminUserList, AdminUserRead
+
+        rows, total = user_repo.admin_list_with_counts(
+            self.db,
+            skip=skip,
+            limit=limit,
+            search=search,
+        )
+        items = [
+            AdminUserRead(
+                id=user.id,
+                email=user.email,
+                full_name=user.full_name,
+                is_active=user.is_active,
+                conversation_count=conv_count,
+                created_at=user.created_at,
+            )
+            for user, conv_count in rows
+        ]
+        return AdminUserList(items=items, total=total)
 
     def register(self, user_in: UserCreate) -> User:
         """Register a new user.
@@ -324,11 +419,16 @@ class UserService:
 Contains business logic for user operations. Uses UserRepository for database access.
 """
 
+from typing import TYPE_CHECKING
+
 from app.core.exceptions import AlreadyExistsError, AuthenticationError, NotFoundError
 from app.core.security import get_password_hash, verify_password
 from app.db.models.user import User
 from app.repositories import user_repo
 from app.schemas.user import UserCreate, UserUpdate
+
+if TYPE_CHECKING:
+    from app.schemas.conversation_share import AdminUserList
 
 
 class UserService:
@@ -360,6 +460,42 @@ class UserService:
     ) -> list[User]:
         """Get multiple users with pagination."""
         return await user_repo.get_multi(skip=skip, limit=limit)
+
+    async def delete_non_admins(self) -> int:
+        """Bulk-delete users without the admin role. Returns affected row count."""
+        return await user_repo.delete_non_admins()
+
+    async def has_any(self) -> bool:
+        """Return True if at least one user exists."""
+        return await user_repo.has_any()
+
+    async def admin_list_with_counts(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        search: str | None = None,
+    ) -> "AdminUserList":
+        """Admin: list users with conversation counts."""
+        from app.schemas.conversation_share import AdminUserList, AdminUserRead
+
+        rows, total = await user_repo.admin_list_with_counts(
+            skip=skip,
+            limit=limit,
+            search=search,
+        )
+        items = [
+            AdminUserRead(
+                id=str(user.id),
+                email=user.email,
+                full_name=user.full_name,
+                is_active=user.is_active,
+                conversation_count=conv_count,
+                created_at=user.created_at,
+            )
+            for user, conv_count in rows
+        ]
+        return AdminUserList(items=items, total=total)
 
     async def register(self, user_in: UserCreate) -> User:
         """Register a new user.

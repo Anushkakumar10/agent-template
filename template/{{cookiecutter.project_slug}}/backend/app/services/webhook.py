@@ -159,13 +159,12 @@ class WebhookService:
             "X-Webhook-Event": event_type,
         }
 
-        delivery = WebhookDelivery(
+        delivery = await webhook_repo.create_delivery(
+            self.db,
             webhook_id=webhook.id,
             event_type=event_type,
             payload=payload_json,
         )
-        self.db.add(delivery)
-        await self.db.flush()
 
         try:
             # SECURITY: follow_redirects defaults to False in httpx.
@@ -197,7 +196,7 @@ class WebhookService:
                 webhook.id, event_type, e,
             )
 
-        await self.db.flush()
+        await webhook_repo.save_delivery(self.db, delivery)
 
         return {
             "success": delivery.success,
@@ -373,13 +372,12 @@ class WebhookService:
             "X-Webhook-Event": event_type,
         }
 
-        delivery = WebhookDelivery(
+        delivery = webhook_repo.create_delivery(
+            self.db,
             webhook_id=webhook.id,
             event_type=event_type,
             payload=payload_json,
         )
-        self.db.add(delivery)
-        self.db.flush()
 
         try:
             # SECURITY: follow_redirects defaults to False in httpx.
@@ -401,7 +399,7 @@ class WebhookService:
             delivery.error_message = str(e)
             delivery.success = False
 
-        self.db.flush()
+        webhook_repo.save_delivery(self.db, delivery)
 
         return {
             "success": delivery.success,

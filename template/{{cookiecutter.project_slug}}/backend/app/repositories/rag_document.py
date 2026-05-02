@@ -93,6 +93,17 @@ async def delete(db: AsyncSession, doc_id: UUID) -> bool:
     return True
 
 
+async def delete_by_collection(db: AsyncSession, collection_name: str) -> int:
+    """Delete all RAG document records for a collection. Returns affected row count."""
+    from sqlalchemy import delete as sql_delete
+
+    result = await db.execute(
+        sql_delete(RAGDocument).where(RAGDocument.collection_name == collection_name)
+    )
+    await db.flush()
+    return result.rowcount  # type: ignore[no-any-return, attr-defined]
+
+
 {%- elif cookiecutter.use_sqlite %}
 """RAG document repository (SQLite sync).
 
@@ -184,6 +195,17 @@ def delete(db: Session, doc_id: str) -> bool:
     db.delete(doc)
     db.flush()
     return True
+
+
+def delete_by_collection(db: Session, collection_name: str) -> int:
+    """Delete all RAG document records for a collection. Returns affected row count."""
+    from sqlalchemy import delete as sql_delete
+
+    result = db.execute(
+        sql_delete(RAGDocument).where(RAGDocument.collection_name == collection_name)
+    )
+    db.flush()
+    return result.rowcount  # type: ignore[no-any-return, attr-defined]
 
 
 {%- endif %}
