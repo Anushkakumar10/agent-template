@@ -571,7 +571,6 @@ jobs:
           uv run ak-agent-template create test_mongo_teams \
             --database mongodb \
             --teams \
-            --admin-panel \
             --task-queue none \
             -o /tmp/projects
 
