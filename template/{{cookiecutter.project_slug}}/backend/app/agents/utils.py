@@ -1,10 +1,10 @@
-"""Date and time utilities for agents."""
+"""Shared agent utilities."""
 
 from datetime import UTC, datetime
 
 
 def get_current_datetime() -> dict[str, str]:
-    """Get the current date and time (UTC)."""
+    """Return the current UTC date and time."""
     now = datetime.now(UTC)
     return {
         "date": now.strftime("%Y-%m-%d"),
