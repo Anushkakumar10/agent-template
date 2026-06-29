@@ -21,7 +21,6 @@ export function DemoReplay({ rawMessages }: DemoReplayProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [hasPlayed, setHasPlayed] = useState(false);
   const [following, setFollowing] = useState(true);
-  const lastAutoY = useRef(0);
 
   const showPrePlay = !hasPlayed && !isReplaying;
   const progress = messages.length > 0 ? Math.round((displayMessages.length / messages.length) * 100) : 0;
@@ -42,7 +41,6 @@ export function DemoReplay({ rawMessages }: DemoReplayProps) {
       el.getBoundingClientRect().top - container.getBoundingClientRect().top - container.clientHeight * 0.66;
     if (delta > 2) {
       container.scrollBy({ top: delta, behavior: "auto" });
-      lastAutoY.current = container.scrollTop;
     }
   }, [tick, isReplaying, following]);
 
@@ -51,12 +49,32 @@ export function DemoReplay({ rawMessages }: DemoReplayProps) {
     if (!isReplaying) return;
     const container = scrollRef.current;
     if (!container) return;
-    const onScroll = () => {
-      if (Math.abs(container.scrollTop - lastAutoY.current) < 4) return;
-      if (container.scrollTop < lastAutoY.current) setFollowing(false);
+    let touchY = 0;
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0) setFollowing(false);
     };
-    container.addEventListener("scroll", onScroll, { passive: true });
-    return () => container.removeEventListener("scroll", onScroll);
+    const onTouchStart = (e: TouchEvent) => {
+      touchY = e.touches[0]?.clientY ?? 0;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY ?? 0;
+      if (y - touchY > 8) setFollowing(false);
+      touchY = y;
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const inScrollbar = e.clientX - container.getBoundingClientRect().left >= container.clientWidth;
+      if (inScrollbar) setFollowing(false);
+    };
+    container.addEventListener("wheel", onWheel, { passive: true });
+    container.addEventListener("touchstart", onTouchStart, { passive: true });
+    container.addEventListener("touchmove", onTouchMove, { passive: true });
+    container.addEventListener("pointerdown", onPointerDown, { passive: true });
+    return () => {
+      container.removeEventListener("wheel", onWheel);
+      container.removeEventListener("touchstart", onTouchStart);
+      container.removeEventListener("touchmove", onTouchMove);
+      container.removeEventListener("pointerdown", onPointerDown);
+    };
   }, [isReplaying]);
 
   const jumpToActive = () => {
@@ -67,7 +85,6 @@ export function DemoReplay({ rawMessages }: DemoReplayProps) {
     const delta =
       el.getBoundingClientRect().top - container.getBoundingClientRect().top - container.clientHeight * 0.66;
     container.scrollBy({ top: delta, behavior: "auto" });
-    lastAutoY.current = container.scrollTop;
   };
 
   const blurStyle = { filter: "blur(6px)", opacity: 0.25, pointerEvents: "none" as const, userSelect: "none" as const };
