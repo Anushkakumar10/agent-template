@@ -61,6 +61,7 @@ export function reconstructResearch(toolCalls: ToolCall[]): ResearchReplay | nul
           description: asString(args.description),
           status: "completed",
           error: null,
+          result: asString(tc.result) || null,
         });
         break;
     }
