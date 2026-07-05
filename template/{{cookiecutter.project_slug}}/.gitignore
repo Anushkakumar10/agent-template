@@ -105,4 +105,11 @@ Thumbs.db
 frontend/demo-export/dist/
 {%- endif %}
 
+# Template upgrade scratch files. `.ak-agent-template.json` itself IS committed —
+# these two are transient: the guide says to commit your resolved conflicts, and a
+# blanket `git add -A` would otherwise sweep the pending manifest into that commit,
+# only for `upgrade finalize` to delete it again a minute later.
+.ak-agent-template.json.pending
+.ak-agent-template.json.candidate
+
 # Project specific
