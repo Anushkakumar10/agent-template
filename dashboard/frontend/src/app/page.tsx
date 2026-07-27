@@ -5,10 +5,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Bot, Plus, Download, Rocket, Cpu, Layers, ArrowRight, Database, Plug, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
+
+// Unauthenticated Landing Components
+import { LandingNav } from "@/components/landing/landing-nav";
+import { HeroSection } from "@/components/landing/hero-section";
+import { TechMarquee } from "@/components/landing/tech-marquee";
+import { HowItWorks } from "@/components/landing/how-it-works";
+import { FeatureBentoGrid } from "@/components/landing/feature-bento-grid";
+import { ArchitectureDiagram } from "@/components/landing/architecture-diagram";
+import { ComparisonTable } from "@/components/landing/comparison-table";
+import { FaqSection } from "@/components/landing/faq-section";
 
 interface AgentProject {
   id: string;
@@ -50,73 +60,24 @@ export default function DashboardPage() {
   });
 
   /* ════════════════════════════════════════════════════════════════════
-     UNAUTHENTICATED LANDING
+     UNAUTHENTICATED MARKETING LANDING PAGE
      ════════════════════════════════════════════════════════════════════ */
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[75vh] text-center space-y-8 page-enter">
-        {/* Glow orb + icon */}
-        <div className="relative flex items-center justify-center">
-          <div className="glow-orb" />
-          <div className="relative z-10 flex h-18 w-18 items-center justify-center rounded-2xl bg-brand/12 border border-brand/20 text-brand">
-            <Bot className="h-9 w-9" />
-          </div>
-        </div>
-
-        {/* Hero text */}
-        <div className="space-y-3 max-w-lg">
-          <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight leading-tight">
-            <span className="gradient-text">Agent Template</span> Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
-            Visual workspace to create, configure, and deploy production-ready AI agents powered by FastAPI + Next.js.
-          </p>
-        </div>
-
-        {/* CTA buttons */}
-        <div className="flex items-center gap-3">
-          <Button asChild variant="brand" size="lg" className="h-11 px-7">
-            <Link href="/login">Sign In to Dashboard</Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-11 px-7">
-            <Link href="/register">Create Account</Link>
-          </Button>
-        </div>
-
-        {/* Feature cards */}
-        <div className="grid gap-4 sm:grid-cols-3 w-full max-w-2xl pt-6">
-          {[
-            {
-              icon: Cpu,
-              title: "5 AI Frameworks",
-              desc: "PydanticAI, LangChain, LangGraph, DeepAgents, and plain FastAPI.",
-              delay: "stagger-1",
-            },
-            {
-              icon: Database,
-              title: "4 Vector Stores",
-              desc: "Milvus, Qdrant, ChromaDB, and pgvector for RAG pipelines.",
-              delay: "stagger-2",
-            },
-            {
-              icon: Plug,
-              title: "20+ Integrations",
-              desc: "Stripe, MCP client, web search, code sandbox, and more.",
-              delay: "stagger-3",
-            },
-          ].map((f) => (
-            <div
-              key={f.title}
-              className={`${f.delay} rounded-xl border border-border/60 bg-card/50 p-5 text-left space-y-2 card-lift`}
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand">
-                <f.icon className="h-4.5 w-4.5" />
-              </div>
-              <h3 className="font-display font-semibold text-sm tracking-tight text-foreground">{f.title}</h3>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
+      <div className="-mx-4 sm:-mx-8 -mt-6 -mb-6 page-enter min-h-screen bg-background text-foreground">
+        <LandingNav />
+        <main>
+          <HeroSection />
+          <TechMarquee />
+          <HowItWorks />
+          <FeatureBentoGrid />
+          <ArchitectureDiagram />
+          <ComparisonTable />
+          <FaqSection />
+        </main>
+        <footer className="py-8 border-t border-border/40 text-center text-xs text-muted-foreground bg-background">
+          <p>© 2026 Agent Template Generator. Open source under MIT License.</p>
+        </footer>
       </div>
     );
   }

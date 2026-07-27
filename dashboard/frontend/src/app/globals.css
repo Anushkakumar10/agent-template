@@ -294,11 +294,67 @@
 }
 
 /* =========================================================================
+   Floating pills & Micro-animations for Landing Page
+   ========================================================================= */
+.float-y {
+  animation: floatY 6s ease-in-out infinite;
+}
+
+.float-y-delayed {
+  animation: floatY 6s ease-in-out infinite 3s;
+}
+
+@keyframes floatY {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* =========================================================================
+   Infinite Marquee Ticker
+   ========================================================================= */
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* =========================================================================
+   Spotlight Background Mask
+   ========================================================================= */
+.spotlight-bg {
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 30%),
+    oklch(var(--brand-l) var(--brand-c) var(--brand-h) / 0.12),
+    transparent 80%
+  );
+}
+
+/* =========================================================================
    Reduced motion
    ========================================================================= */
 @media (prefers-reduced-motion: reduce) {
   .glow-orb,
-  .status-dot--active {
+  .status-dot--active,
+  .float-y,
+  .float-y-delayed,
+  .animate-marquee {
     animation: none;
   }
   .card-lift:hover {
@@ -309,3 +365,4 @@
     opacity: 1;
   }
 }
+
