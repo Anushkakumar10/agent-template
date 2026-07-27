@@ -220,143 +220,485 @@ export default function NewAgentWizardPage() {
         )}
 
         {step === 2 && (
-          <div className="space-y-4">
-            <h3 className="font-semibold text-base">Step 2: AI Framework & LLM Provider</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">AI Agent Framework</label>
-                <select
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs"
-                  value={aiFramework}
-                  onChange={(e) => setAiFramework(e.target.value)}
-                >
-                  <option value="pydantic_ai" className="bg-background">PydanticAI (Recommended)</option>
-                  <option value="langchain" className="bg-background">LangChain</option>
-                  <option value="langgraph" className="bg-background">LangGraph</option>
-                  <option value="deepagents" className="bg-background">DeepAgents</option>
-                  <option value="none" className="bg-background">None (Plain SaaS)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">LLM Provider</label>
-                <select
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs"
-                  value={llmProvider}
-                  onChange={(e) => setLlmProvider(e.target.value)}
-                >
-                  <option value="google" className="bg-background">Google Gemini</option>
-                  <option value="openai" className="bg-background">OpenAI</option>
-                  <option value="anthropic" className="bg-background">Anthropic</option>
-                  <option value="all" className="bg-background">All Providers (Runtime Selection)</option>
-                </select>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold text-base">Step 2: AI Framework & LLM Provider</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Select your preferred AI agent framework, LLM provider, and built-in capabilities.
+              </p>
+            </div>
+
+            {/* AI Agent Framework Selection */}
+            <div className="space-y-3">
+              <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                Select AI Agent Framework
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: "pydantic_ai",
+                    name: "PydanticAI",
+                    logo: "/logos/pydantic.svg",
+                    badge: "Recommended",
+                    badgeVariant: "default",
+                    description: "Type-safe, production-ready framework built on Pydantic & Logfire.",
+                  },
+                  {
+                    id: "langchain",
+                    name: "LangChain",
+                    logo: "/logos/langchain.svg",
+                    badge: "Ecosystem",
+                    badgeVariant: "secondary",
+                    description: "Feature-packed ecosystem with hundreds of tools & integrations.",
+                  },
+                  {
+                    id: "langgraph",
+                    name: "LangGraph",
+                    logo: "/logos/langgraph.svg",
+                    badge: "Stateful Graphs",
+                    badgeVariant: "secondary",
+                    description: "Cyclical graph orchestration for complex multi-actor flows.",
+                  },
+                  {
+                    id: "deepagents",
+                    name: "DeepAgents",
+                    logo: "/logos/deepagents.svg",
+                    badge: "Multi-Agent",
+                    badgeVariant: "secondary",
+                    description: "Hierarchical multi-agent framework for team collaboration.",
+                  },
+                  {
+                    id: "none",
+                    name: "Plain SaaS (None)",
+                    logo: "/logos/python.svg",
+                    badge: "Lightweight",
+                    badgeVariant: "outline",
+                    description: "Standard FastAPI backend without pre-built agent orchestrators.",
+                  },
+                ].map((fw) => {
+                  const selected = aiFramework === fw.id;
+                  return (
+                    <button
+                      key={fw.id}
+                      type="button"
+                      onClick={() => setAiFramework(fw.id)}
+                      className={`relative flex flex-col justify-between p-4 rounded-xl border text-left transition-all group ${
+                        selected
+                          ? "border-brand bg-brand/10 ring-1 ring-brand shadow-sm"
+                          : "border-border hover:border-brand/50 hover:bg-secondary/40"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs">
+                              <img src={fw.logo} alt={fw.name} className="h-full w-full object-contain" />
+                            </div>
+                            <span className="font-semibold text-xs text-foreground group-hover:text-brand transition-colors">
+                              {fw.name}
+                            </span>
+                          </div>
+                          {selected ? (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-brand-foreground">
+                              <Check className="h-3 w-3" />
+                            </span>
+                          ) : (
+                            <Badge variant={fw.badgeVariant as any} className="text-[10px] px-1.5 py-0">
+                              {fw.badge}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">
+                          {fw.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
+            {/* LLM Provider Selection */}
             <div className="space-y-3 pt-2">
-              <label className="text-xs font-semibold text-foreground">Agent Capabilities & Tools</label>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center gap-2 p-3 rounded-lg border border-border text-xs cursor-pointer hover:bg-secondary/50">
-                  <input
-                    type="checkbox"
-                    checked={enableWebSearch}
-                    onChange={(e) => setEnableWebSearch(e.target.checked)}
-                  />
-                  <span>Web Search (Tavily)</span>
-                </label>
-                <label className="flex items-center gap-2 p-3 rounded-lg border border-border text-xs cursor-pointer hover:bg-secondary/50">
-                  <input
-                    type="checkbox"
-                    checked={enableWebFetch}
-                    onChange={(e) => setEnableWebFetch(e.target.checked)}
-                  />
-                  <span>Web Fetch / Scraping</span>
-                </label>
-                <label className="flex items-center gap-2 p-3 rounded-lg border border-border text-xs cursor-pointer hover:bg-secondary/50">
-                  <input
-                    type="checkbox"
-                    checked={enableCodeExecution}
-                    onChange={(e) => setEnableCodeExecution(e.target.checked)}
-                  />
-                  <span>Code Execution (Monty Sandbox)</span>
-                </label>
-                <label className="flex items-center gap-2 p-3 rounded-lg border border-border text-xs cursor-pointer hover:bg-secondary/50">
-                  <input
-                    type="checkbox"
-                    checked={enableMcpClient}
-                    onChange={(e) => setEnableMcpClient(e.target.checked)}
-                  />
-                  <span>MCP Client Integrations</span>
-                </label>
+              <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                Select LLM Provider
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  {
+                    id: "google",
+                    name: "Google Gemini",
+                    logo: "/logos/gemini.svg",
+                    badge: "Fast & Vision",
+                    description: "Gemini 1.5 Pro & Flash with long context support.",
+                  },
+                  {
+                    id: "openai",
+                    name: "OpenAI (ChatGPT)",
+                    logo: "/logos/openai.svg",
+                    badge: "Popular",
+                    description: "GPT-4o and o1 models with structured output.",
+                  },
+                  {
+                    id: "anthropic",
+                    name: "Anthropic Claude",
+                    logo: "/logos/anthropic.svg",
+                    badge: "Reasoning",
+                    description: "Claude 3.5 Sonnet & Haiku for deep reasoning.",
+                  },
+                  {
+                    id: "all",
+                    name: "All Providers",
+                    logo: "/logos/mcp.svg",
+                    badge: "Dynamic",
+                    description: "Runtime switching across Gemini, OpenAI & Claude.",
+                  },
+                ].map((prov) => {
+                  const selected = llmProvider === prov.id;
+                  return (
+                    <button
+                      key={prov.id}
+                      type="button"
+                      onClick={() => setLlmProvider(prov.id)}
+                      className={`relative flex flex-col justify-between p-3.5 rounded-xl border text-left transition-all group ${
+                        selected
+                          ? "border-brand bg-brand/10 ring-1 ring-brand shadow-sm"
+                          : "border-border hover:border-brand/50 hover:bg-secondary/40"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-background p-1 border border-border shadow-xs">
+                              <img src={prov.logo} alt={prov.name} className="h-full w-full object-contain" />
+                            </div>
+                            <span className="font-semibold text-xs text-foreground group-hover:text-brand transition-colors">
+                              {prov.name}
+                            </span>
+                          </div>
+                          {selected && (
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand text-brand-foreground">
+                              <Check className="h-2.5 w-2.5" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          {prov.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Agent Capabilities & Tools */}
+            <div className="space-y-3 pt-2">
+              <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                Agent Capabilities & Integrations
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  {
+                    key: "webSearch",
+                    checked: enableWebSearch,
+                    setter: setEnableWebSearch,
+                    title: "Web Search (Tavily)",
+                    logo: "/logos/tavily.svg",
+                    description: "Real-time AI web search engine with domain filtering & page parsing.",
+                  },
+                  {
+                    key: "webFetch",
+                    checked: enableWebFetch,
+                    setter: setEnableWebFetch,
+                    title: "Web Fetch & Scraping",
+                    logo: "/logos/nextjs.svg",
+                    description: "Fetch web pages and extract clean markdown content for context.",
+                  },
+                  {
+                    key: "codeExec",
+                    checked: enableCodeExecution,
+                    setter: setEnableCodeExecution,
+                    title: "Code Execution (Monty)",
+                    logo: "/logos/monty.svg",
+                    description: "Execute untrusted Python code inside a secure isolated sandbox.",
+                  },
+                  {
+                    key: "mcpClient",
+                    checked: enableMcpClient,
+                    setter: setEnableMcpClient,
+                    title: "MCP Client Integrations",
+                    logo: "/logos/mcp.svg",
+                    description: "Connect agent to external Model Context Protocol servers & tools.",
+                  },
+                ].map((tool) => (
+                  <button
+                    key={tool.key}
+                    type="button"
+                    onClick={() => tool.setter(!tool.checked)}
+                    className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                      tool.checked
+                        ? "border-brand/70 bg-brand/5 ring-1 ring-brand/50"
+                        : "border-border hover:bg-secondary/40"
+                    }`}
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs mt-0.5">
+                      <img src={tool.logo} alt={tool.title} className="h-full w-full object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs text-foreground">{tool.title}</span>
+                        <input
+                          type="checkbox"
+                          checked={tool.checked}
+                          onChange={() => {}} // handled by parent button click
+                          className="h-4 w-4 rounded border-border text-brand focus:ring-brand accent-brand cursor-pointer"
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{tool.description}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
         )}
 
         {step === 3 && (
-          <div className="space-y-4">
-            <h3 className="font-semibold text-base">Step 3: Database & Integrations</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">Database</label>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold text-base">Step 3: Database & SaaS Features</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Configure persistent storage, database ORM, and enterprise SaaS functionality.
+              </p>
+            </div>
+
+            {/* Database & ORM */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl border border-border space-y-3 bg-secondary/20">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs">
+                    <img src="/logos/postgresql.svg" alt="PostgreSQL" className="h-full w-full object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-xs text-foreground">Database Engine</p>
+                    <p className="text-[11px] text-muted-foreground">PostgreSQL with Asyncpg driver</p>
+                  </div>
+                </div>
                 <select
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-medium"
                   value={database}
                   onChange={(e) => setDatabase(e.target.value)}
                 >
-                  <option value="postgresql" className="bg-background">PostgreSQL (Asyncpg)</option>
+                  <option value="postgresql">PostgreSQL (Asyncpg - Recommended)</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">ORM</label>
+
+              <div className="p-4 rounded-xl border border-border space-y-3 bg-secondary/20">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs">
+                    <img src="/logos/python.svg" alt="Python ORM" className="h-full w-full object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-xs text-foreground">ORM Framework</p>
+                    <p className="text-[11px] text-muted-foreground">Async database models</p>
+                  </div>
+                </div>
                 <select
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-medium"
                   value={ormType}
                   onChange={(e) => setOrmType(e.target.value)}
                 >
-                  <option value="sqlalchemy" className="bg-background">SQLAlchemy 2.0</option>
-                  <option value="sqlmodel" className="bg-background">SQLModel</option>
+                  <option value="sqlalchemy">SQLAlchemy 2.0 (Async Session)</option>
+                  <option value="sqlmodel">SQLModel (Pydantic + SQLAlchemy)</option>
                 </select>
               </div>
             </div>
 
+            {/* SaaS Feature Toggles */}
             <div className="space-y-3 pt-2">
-              <label className="text-xs font-semibold text-foreground">SaaS Features</label>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center gap-2 p-3 rounded-lg border border-border text-xs cursor-pointer hover:bg-secondary/50">
-                  <input
-                    type="checkbox"
-                    checked={enableTeams}
-                    onChange={(e) => setEnableTeams(e.target.checked)}
-                  />
-                  <span>Multi-Tenant Teams / Organizations</span>
-                </label>
-                <label className="flex items-center gap-2 p-3 rounded-lg border border-border text-xs cursor-pointer hover:bg-secondary/50">
-                  <input
-                    type="checkbox"
-                    checked={enableBilling}
-                    onChange={(e) => {
-                      setEnableBilling(e.target.checked);
-                      if (e.target.checked) setEnableTeams(true);
-                    }}
-                  />
-                  <span>Stripe Billing & Subscriptions</span>
-                </label>
+              <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                Enterprise & SaaS Features
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEnableTeams(!enableTeams)}
+                  className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                    enableTeams
+                      ? "border-brand/70 bg-brand/5 ring-1 ring-brand/50"
+                      : "border-border hover:bg-secondary/40"
+                  }`}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs mt-0.5">
+                    <img src="/logos/nextjs.svg" alt="Teams" className="h-full w-full object-contain" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-foreground">Multi-Tenant Teams</span>
+                      <input
+                        type="checkbox"
+                        checked={enableTeams}
+                        onChange={() => {}}
+                        className="h-4 w-4 rounded border-border text-brand focus:ring-brand accent-brand cursor-pointer"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Organization workspace switching, team roles, and member invitations.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextVal = !enableBilling;
+                    setEnableBilling(nextVal);
+                    if (nextVal) setEnableTeams(true);
+                  }}
+                  className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                    enableBilling
+                      ? "border-brand/70 bg-brand/5 ring-1 ring-brand/50"
+                      : "border-border hover:bg-secondary/40"
+                  }`}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs mt-0.5">
+                    <img src="/logos/stripe.svg" alt="Stripe" className="h-full w-full object-contain" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-foreground">Stripe Billing</span>
+                      <input
+                        type="checkbox"
+                        checked={enableBilling}
+                        onChange={() => {}}
+                        className="h-4 w-4 rounded border-border text-brand focus:ring-brand accent-brand cursor-pointer"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Subscription tiers, usage metering, webhook handling, and customer portal.
+                    </p>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
         )}
 
         {step === 4 && (
-          <div className="space-y-4">
-            <h3 className="font-semibold text-base">Step 4: Review Configuration</h3>
-            <div className="rounded-xl border border-border p-4 space-y-3 bg-secondary/30">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                <div><span className="text-muted-foreground">Name:</span> <span className="font-semibold">{name}</span></div>
-                <div><span className="text-muted-foreground">Framework:</span> <span className="font-semibold">{aiFramework}</span></div>
-                <div><span className="text-muted-foreground">LLM:</span> <span className="font-semibold">{llmProvider}</span></div>
-                <div><span className="text-muted-foreground">Frontend:</span> <span className="font-semibold">{frontend}</span></div>
-                <div><span className="text-muted-foreground">Database:</span> <span className="font-semibold">{database}</span></div>
-                <div><span className="text-muted-foreground">Brand:</span> <span className="font-semibold capitalize">{brandColor}</span></div>
+          <div className="space-y-5">
+            <div>
+              <h3 className="font-semibold text-base">Step 4: Review Agent Configuration</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Verify your agent settings before initializing the project repository.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border p-5 space-y-4 bg-secondary/20">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-[11px] uppercase tracking-wider font-semibold">Project Details</span>
+                  <p className="font-semibold text-sm text-foreground">{name}</p>
+                  <p className="text-muted-foreground text-xs">{description}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-[11px] uppercase tracking-wider font-semibold">AI Framework</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-background p-1 border border-border">
+                      <img
+                        src={
+                          aiFramework === "pydantic_ai"
+                            ? "/logos/pydantic.svg"
+                            : aiFramework === "langchain"
+                            ? "/logos/langchain.svg"
+                            : aiFramework === "langgraph"
+                            ? "/logos/langgraph.svg"
+                            : aiFramework === "deepagents"
+                            ? "/logos/deepagents.svg"
+                            : "/logos/python.svg"
+                        }
+                        alt={aiFramework}
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <span className="font-medium text-foreground capitalize">{aiFramework.replace("_", " ")}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-[11px] uppercase tracking-wider font-semibold">LLM Provider</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-background p-1 border border-border">
+                      <img
+                        src={
+                          llmProvider === "google"
+                            ? "/logos/gemini.svg"
+                            : llmProvider === "openai"
+                            ? "/logos/openai.svg"
+                            : llmProvider === "anthropic"
+                            ? "/logos/anthropic.svg"
+                            : "/logos/mcp.svg"
+                        }
+                        alt={llmProvider}
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <span className="font-medium text-foreground capitalize">{llmProvider}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-[11px] uppercase tracking-wider font-semibold">Database & ORM</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-background p-1 border border-border">
+                      <img src="/logos/postgresql.svg" alt="PostgreSQL" className="h-full w-full object-contain" />
+                    </div>
+                    <span className="font-medium text-foreground capitalize">{database} ({ormType})</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border/60 pt-3">
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wider font-semibold block mb-2">Enabled Tools & Features</span>
+                <div className="flex flex-wrap gap-2">
+                  {enableWebSearch && (
+                    <Badge variant="outline" className="flex items-center gap-1.5 py-1 px-2.5 bg-background">
+                      <img src="/logos/tavily.svg" alt="Tavily" className="h-3.5 w-3.5 object-contain" />
+                      <span>Web Search (Tavily)</span>
+                    </Badge>
+                  )}
+                  {enableWebFetch && (
+                    <Badge variant="outline" className="flex items-center gap-1.5 py-1 px-2.5 bg-background">
+                      <img src="/logos/nextjs.svg" alt="Fetch" className="h-3.5 w-3.5 object-contain" />
+                      <span>Web Fetch</span>
+                    </Badge>
+                  )}
+                  {enableCodeExecution && (
+                    <Badge variant="outline" className="flex items-center gap-1.5 py-1 px-2.5 bg-background">
+                      <img src="/logos/monty.svg" alt="Monty" className="h-3.5 w-3.5 object-contain" />
+                      <span>Monty Sandbox</span>
+                    </Badge>
+                  )}
+                  {enableMcpClient && (
+                    <Badge variant="outline" className="flex items-center gap-1.5 py-1 px-2.5 bg-background">
+                      <img src="/logos/mcp.svg" alt="MCP" className="h-3.5 w-3.5 object-contain" />
+                      <span>MCP Client</span>
+                    </Badge>
+                  )}
+                  {enableTeams && (
+                    <Badge variant="outline" className="flex items-center gap-1.5 py-1 px-2.5 bg-background">
+                      <img src="/logos/nextjs.svg" alt="Teams" className="h-3.5 w-3.5 object-contain" />
+                      <span>Multi-Tenant Teams</span>
+                    </Badge>
+                  )}
+                  {enableBilling && (
+                    <Badge variant="outline" className="flex items-center gap-1.5 py-1 px-2.5 bg-background">
+                      <img src="/logos/stripe.svg" alt="Stripe" className="h-3.5 w-3.5 object-contain" />
+                      <span>Stripe Billing</span>
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </div>

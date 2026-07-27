@@ -115,29 +115,120 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase font-mono">Framework</p>
-                  <p className="font-medium text-sm mt-0.5">{agent.config.ai_framework || "pydantic_ai"}</p>
+                {/* Framework */}
+                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                  <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Framework</p>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
+                      <img
+                        src={
+                          (agent.config.ai_framework || "pydantic_ai") === "pydantic_ai"
+                            ? "/logos/pydantic.svg"
+                            : agent.config.ai_framework === "langchain"
+                            ? "/logos/langchain.svg"
+                            : agent.config.ai_framework === "langgraph"
+                            ? "/logos/langgraph.svg"
+                            : agent.config.ai_framework === "deepagents"
+                            ? "/logos/deepagents.svg"
+                            : "/logos/python.svg"
+                        }
+                        alt="Framework"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <span className="font-semibold text-xs text-foreground truncate">
+                      {agent.config.ai_framework || "pydantic_ai"}
+                    </span>
+                  </div>
                 </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase font-mono">LLM Provider</p>
-                  <p className="font-medium text-sm mt-0.5">{agent.config.llm_provider || "google"}</p>
+
+                {/* LLM Provider */}
+                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                  <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">LLM Provider</p>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
+                      <img
+                        src={
+                          (agent.config.llm_provider || "google") === "google"
+                            ? "/logos/gemini.svg"
+                            : agent.config.llm_provider === "openai"
+                            ? "/logos/openai.svg"
+                            : agent.config.llm_provider === "anthropic"
+                            ? "/logos/anthropic.svg"
+                            : "/logos/mcp.svg"
+                        }
+                        alt="LLM Provider"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <span className="font-semibold text-xs text-foreground truncate">
+                      {agent.config.llm_provider || "google"}
+                    </span>
+                  </div>
                 </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase font-mono">Database</p>
-                  <p className="font-medium text-sm mt-0.5">{agent.config.database || "postgresql"}</p>
+
+                {/* Database */}
+                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                  <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Database</p>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
+                      <img src="/logos/postgresql.svg" alt="Database" className="h-full w-full object-contain" />
+                    </div>
+                    <span className="font-semibold text-xs text-foreground truncate">
+                      {agent.config.database || "postgresql"}
+                    </span>
+                  </div>
                 </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase font-mono">ORM</p>
-                  <p className="font-medium text-sm mt-0.5">{agent.config.orm_type || "sqlalchemy"}</p>
+
+                {/* ORM */}
+                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                  <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">ORM</p>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
+                      <img src="/logos/python.svg" alt="ORM" className="h-full w-full object-contain" />
+                    </div>
+                    <span className="font-semibold text-xs text-foreground truncate">
+                      {agent.config.orm_type || "sqlalchemy"}
+                    </span>
+                  </div>
                 </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase font-mono">Frontend</p>
-                  <p className="font-medium text-sm mt-0.5">{agent.config.frontend || "nextjs"}</p>
+
+                {/* Frontend */}
+                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                  <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Frontend</p>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
+                      <img
+                        src={agent.config.frontend === "none" ? "/logos/python.svg" : "/logos/nextjs.svg"}
+                        alt="Frontend"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <span className="font-semibold text-xs text-foreground truncate">
+                      {agent.config.frontend || "nextjs"}
+                    </span>
+                  </div>
                 </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase font-mono">Brand Color</p>
-                  <p className="font-medium text-sm mt-0.5 capitalize">{agent.config.brand_color || "blue"}</p>
+
+                {/* Brand Color */}
+                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                  <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Brand Color</p>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span
+                      className={`h-4 w-4 rounded-full border border-background shadow-xs ${
+                        agent.config.brand_color === "green"
+                          ? "bg-emerald-500"
+                          : agent.config.brand_color === "violet"
+                          ? "bg-violet-500"
+                          : agent.config.brand_color === "orange"
+                          ? "bg-amber-500"
+                          : "bg-blue-500"
+                      }`}
+                    />
+                    <span className="font-semibold text-xs text-foreground capitalize">
+                      {agent.config.brand_color || "blue"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -210,27 +301,37 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 <button
                   type="button"
                   onClick={() => setSelectedProvider("vercel")}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 ${
                     selectedProvider === "vercel"
-                      ? "border-brand bg-brand/5 shadow-sm"
+                      ? "border-brand bg-brand/5 shadow-sm ring-1 ring-brand/50"
                       : "border-border hover:border-foreground/20"
                   }`}
                 >
-                  <p className="font-semibold text-sm">Vercel</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Frontend Next.js App</p>
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background p-1 border border-border shadow-xs mt-0.5">
+                    <img src="/logos/nextjs.svg" alt="Vercel Next.js" className="h-full w-full object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Vercel</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Frontend Next.js App</p>
+                  </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSelectedProvider("render")}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 ${
                     selectedProvider === "render"
-                      ? "border-brand bg-brand/5 shadow-sm"
+                      ? "border-brand bg-brand/5 shadow-sm ring-1 ring-brand/50"
                       : "border-border hover:border-foreground/20"
                   }`}
                 >
-                  <p className="font-semibold text-sm">Render</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">FastAPI Backend API</p>
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background p-1 border border-border shadow-xs mt-0.5">
+                    <img src="/logos/python.svg" alt="Render FastAPI" className="h-full w-full object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Render</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">FastAPI Backend API</p>
+                  </div>
                 </button>
               </div>
 
