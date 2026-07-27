@@ -1,0 +1,23 @@
+[project]
+name = "agent-template-dashboard-backend"
+version = "0.1.0"
+description = "Backend for Agent Template Management Dashboard"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "sqlalchemy>=2.0.30",
+    "asyncpg>=0.30.0",
+    "aiosqlite>=0.20.0",
+    "pyjwt>=2.9.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.12",
+    "httpx>=0.28.0",
+    "cookiecutter>=2.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
