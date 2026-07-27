@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bot, Download, Rocket, ArrowLeft, Check, Layers, ExternalLink, RefreshCw, Terminal } from "lucide-react";
+import { Bot, Download, Rocket, ArrowLeft, Check, Layers, ExternalLink, RefreshCw, Terminal, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,14 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
 
   const [selectedProvider, setSelectedProvider] = useState<"vercel" | "render">("vercel");
   const [deploying, setDeploying] = useState(false);
+  const [jsonExpanded, setJsonExpanded] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
+
+  const handleCopyJson = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedJson(true);
+    setTimeout(() => setCopiedJson(false), 2000);
+  };
 
   // Fetch Agent Project
   const { data: agent, isLoading } = useQuery<AgentProject>({
@@ -232,11 +240,55 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
               </div>
 
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">JSON Configuration (.ak-agent-template.json)</p>
-                <pre className="p-4 rounded-xl bg-secondary/50 font-mono text-xs overflow-x-auto max-h-80 border border-border">
-                  {JSON.stringify(agent.config, null, 2)}
-                </pre>
+              {/* Collapsible JSON Configuration Panel */}
+              <div className="rounded-xl border border-border bg-secondary/20 overflow-hidden mt-2">
+                <div
+                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-secondary/40 transition-colors select-none"
+                  onClick={() => setJsonExpanded(!jsonExpanded)}
+                >
+                  <div className="flex items-center gap-2">
+                    {jsonExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="text-xs font-semibold text-foreground">
+                      JSON Configuration (.ak-agent-template.json)
+                    </span>
+                  </div>
+                  {jsonExpanded && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyJson(JSON.stringify(agent.config, null, 2));
+                      }}
+                    >
+                      {copiedJson ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 mr-1 text-emerald-500" />
+                          <span className="text-emerald-500 font-medium">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5 mr-1" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {jsonExpanded && (
+                  <div className="border-t border-border p-4 bg-background/60 relative group">
+                    <pre className="font-mono text-xs overflow-x-auto max-h-80 text-foreground leading-relaxed">
+                      {JSON.stringify(agent.config, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
