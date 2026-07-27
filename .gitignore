@@ -221,3 +221,6 @@ website/.astro/
 
 # Custom
 .playground/
+
+# Sample AI Agent
+ai_agent/
