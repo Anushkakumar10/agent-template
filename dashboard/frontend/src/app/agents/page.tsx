@@ -42,7 +42,6 @@ export default function AgentRegistryPage() {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        eyebrow="Registry"
         title="Agent Projects"
         description="View, manage, download as ZIP, and deploy your registered AI agent templates."
         actions={

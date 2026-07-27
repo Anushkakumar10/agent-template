@@ -98,7 +98,6 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           </Link>
         </Button>
         <PageHeader
-          eyebrow={`Slug: ${agent.slug}`}
           title={agent.name}
           description={agent.description || "Configured full-stack AI agent project."}
           actions={

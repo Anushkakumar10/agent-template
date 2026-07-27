@@ -59,7 +59,6 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 pb-12">
       <PageHeader
-        eyebrow="Management Dashboard"
         title={`Welcome back, ${user?.username || "Developer"}`}
         description="Configure, download, and manage your FastAPI + Next.js AI agent projects."
         actions={

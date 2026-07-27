@@ -104,7 +104,6 @@ export default function NewAgentWizardPage() {
           </Link>
         </Button>
         <PageHeader
-          eyebrow="Interactive Generator"
           title="Create Agent Project"
           description="Configure your full-stack AI agent with interactive choices and live validation."
         />
