@@ -30,9 +30,9 @@ class VercelDeployer(BaseDeployer):
 
         logs = [
             f"[Vercel] Initializing deployment for project '{agent_name}' ({agent_slug})",
-            f"[Vercel] Target Framework: Next.js 15 (App Router)",
-            f"[Vercel] Build Command: bun run build",
-            f"[Vercel] Root Directory: frontend/",
+            "[Vercel] Target Framework: Next.js 15 (App Router)",
+            "[Vercel] Build Command: bun run build",
+            "[Vercel] Root Directory: frontend/",
             "[Vercel] Provisioning SSL certificate...",
             "[Vercel] Deployment successful!",
         ]

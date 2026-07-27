@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 from pydantic import ValidationError
 
 from fastapi_gen.config import (
@@ -11,20 +11,14 @@ from fastapi_gen.config import (
     BrandColorType,
     CIType,
     DatabaseType,
-    DocumentParserType,
     EmailProviderType,
-    EmbeddingProviderType,
     FrontendType,
     LLMProviderType,
-    LogfireFeatures,
-    NewsletterProviderType,
     OAuthProvider,
     OrmType,
     PaymentProviderType,
     PdfParserType,
     ProjectConfig,
-    RAGFeatures,
-    RateLimitStorageType,
     RerankerType,
     ReverseProxyType,
     TenancyMode,

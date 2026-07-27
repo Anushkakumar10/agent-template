@@ -32,9 +32,9 @@ class RenderDeployer(BaseDeployer):
 
         logs = [
             f"[Render] Initializing Web Service for '{agent_name}' ({agent_slug})",
-            f"[Render] Environment: Python 3.12",
-            f"[Render] Build Command: uv sync",
-            f"[Render] Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+            "[Render] Environment: Python 3.12",
+            "[Render] Build Command: uv sync",
+            "[Render] Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT",
             f"[Render] Attached Database: {db_type.upper()}",
             f"[Render] AI Framework: {ai_framework}",
             "[Render] Service live and accepting requests.",

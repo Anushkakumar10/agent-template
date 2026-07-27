@@ -81,10 +81,10 @@ async def deploy_agent(
         logs=result.logs,
     )
     db.add(deployment)
-    
+
     # Update project status
     project.status = "deployed"
-    
+
     await db.flush()
     await db.refresh(deployment)
 
