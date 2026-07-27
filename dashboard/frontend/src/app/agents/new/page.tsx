@@ -20,6 +20,14 @@ interface Preset {
   config: Record<string, any>;
 }
 
+/* ── Wizard step config ──────────────────────────────────────────── */
+const STEPS = [
+  { num: 1, label: "Basic Info" },
+  { num: 2, label: "AI Framework" },
+  { num: 3, label: "Features" },
+  { num: 4, label: "Review & Generate" },
+];
+
 export default function NewAgentWizardPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
@@ -96,7 +104,7 @@ export default function NewAgentWizardPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-4xl mx-auto">
+    <div className="space-y-6 pb-12 max-w-4xl mx-auto page-enter">
       <div>
         <Button asChild variant="ghost" size="sm" className="mb-4 text-xs">
           <Link href="/agents">
@@ -124,7 +132,7 @@ export default function NewAgentWizardPage() {
                 key={p.id}
                 type="button"
                 onClick={() => applyPreset(p)}
-                className="p-4 rounded-xl border border-border hover:border-brand/50 hover:bg-brand/5 text-left transition-all space-y-1 group"
+                className="p-4 rounded-xl border border-border/60 hover:border-brand/50 hover:bg-brand/5 text-left transition-all space-y-1 group card-lift"
               >
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-xs group-hover:text-brand transition-colors">{p.name}</p>
@@ -137,34 +145,57 @@ export default function NewAgentWizardPage() {
         </CardContent>
       </Card>
 
-      {/* Step Indicators */}
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        {[
-          { num: 1, label: "Basic Info" },
-          { num: 2, label: "AI Framework" },
-          { num: 3, label: "Features" },
-          { num: 4, label: "Review & Generate" },
-        ].map((s) => (
-          <button
-            key={s.num}
-            type="button"
-            onClick={() => setStep(s.num)}
-            className={`flex items-center gap-2 text-xs font-medium transition-colors ${
-              step === s.num ? "text-brand" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
-                step === s.num
-                  ? "bg-brand text-brand-foreground"
-                  : "bg-secondary text-secondary-foreground"
-              }`}
-            >
-              {s.num}
-            </span>
-            <span>{s.label}</span>
-          </button>
-        ))}
+      {/* ── Connected Step Progress Bar ──────────────────────────────── */}
+      <div className="flex items-center px-2">
+        {STEPS.map((s, idx) => {
+          const isActive = step === s.num;
+          const isCompleted = step > s.num;
+          const isLast = idx === STEPS.length - 1;
+
+          return (
+            <div key={s.num} className={`flex items-center ${isLast ? "" : "flex-1"}`}>
+              {/* Step circle + label */}
+              <button
+                type="button"
+                onClick={() => setStep(s.num)}
+                className="flex items-center gap-2 group shrink-0"
+              >
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-300 ${
+                    isActive
+                      ? "bg-brand text-brand-foreground shadow-md shadow-brand/25 scale-110"
+                      : isCompleted
+                      ? "bg-brand/80 text-brand-foreground"
+                      : "bg-secondary text-secondary-foreground group-hover:bg-secondary/80"
+                  }`}
+                >
+                  {isCompleted ? <Check className="h-3.5 w-3.5" /> : s.num}
+                </span>
+                <span
+                  className={`text-xs font-medium transition-colors hidden sm:inline ${
+                    isActive
+                      ? "text-brand"
+                      : isCompleted
+                      ? "text-foreground"
+                      : "text-muted-foreground group-hover:text-foreground"
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </button>
+
+              {/* Connector line */}
+              {!isLast && (
+                <div className="flex-1 mx-3 h-[2px] rounded-full overflow-hidden bg-border/40">
+                  <div
+                    className="h-full bg-brand transition-all duration-500 ease-out rounded-full"
+                    style={{ width: isCompleted ? "100%" : "0%" }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Form Wizard Steps */}
@@ -284,7 +315,7 @@ export default function NewAgentWizardPage() {
                       className={`relative flex flex-col justify-between p-4 rounded-xl border text-left transition-all group ${
                         selected
                           ? "border-brand bg-brand/10 ring-1 ring-brand shadow-sm"
-                          : "border-border hover:border-brand/50 hover:bg-secondary/40"
+                          : "border-border/60 hover:border-brand/50 hover:bg-secondary/40"
                       }`}
                     >
                       <div>
@@ -362,7 +393,7 @@ export default function NewAgentWizardPage() {
                       className={`relative flex flex-col justify-between p-3.5 rounded-xl border text-left transition-all group ${
                         selected
                           ? "border-brand bg-brand/10 ring-1 ring-brand shadow-sm"
-                          : "border-border hover:border-brand/50 hover:bg-secondary/40"
+                          : "border-border/60 hover:border-brand/50 hover:bg-secondary/40"
                       }`}
                     >
                       <div>
@@ -438,7 +469,7 @@ export default function NewAgentWizardPage() {
                     className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
                       tool.checked
                         ? "border-brand/70 bg-brand/5 ring-1 ring-brand/50"
-                        : "border-border hover:bg-secondary/40"
+                        : "border-border/60 hover:bg-secondary/40"
                     }`}
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs mt-0.5">
@@ -474,7 +505,7 @@ export default function NewAgentWizardPage() {
 
             {/* Database & ORM */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl border border-border space-y-3 bg-secondary/20">
+              <div className="p-4 rounded-xl border border-border/60 space-y-3 bg-secondary/20">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs">
                     <img src="/logos/postgresql.svg" alt="PostgreSQL" className="h-full w-full object-contain" />
@@ -493,7 +524,7 @@ export default function NewAgentWizardPage() {
                 </select>
               </div>
 
-              <div className="p-4 rounded-xl border border-border space-y-3 bg-secondary/20">
+              <div className="p-4 rounded-xl border border-border/60 space-y-3 bg-secondary/20">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs">
                     <img src="/logos/python.svg" alt="Python ORM" className="h-full w-full object-contain" />
@@ -526,7 +557,7 @@ export default function NewAgentWizardPage() {
                   className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
                     enableTeams
                       ? "border-brand/70 bg-brand/5 ring-1 ring-brand/50"
-                      : "border-border hover:bg-secondary/40"
+                      : "border-border/60 hover:bg-secondary/40"
                   }`}
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs mt-0.5">
@@ -558,7 +589,7 @@ export default function NewAgentWizardPage() {
                   className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
                     enableBilling
                       ? "border-brand/70 bg-brand/5 ring-1 ring-brand/50"
-                      : "border-border hover:bg-secondary/40"
+                      : "border-border/60 hover:bg-secondary/40"
                   }`}
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background p-1.5 border border-border shadow-xs mt-0.5">
@@ -593,7 +624,7 @@ export default function NewAgentWizardPage() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-border p-5 space-y-4 bg-secondary/20">
+            <div className="rounded-xl border border-brand/20 p-5 space-y-4 bg-brand/[0.03] gradient-border-top">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="space-y-1">
                   <span className="text-muted-foreground text-[11px] uppercase tracking-wider font-semibold">Project Details</span>
@@ -704,7 +735,7 @@ export default function NewAgentWizardPage() {
         )}
 
         {/* Wizard Controls */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
+        <div className="flex items-center justify-between pt-4 border-t border-border/60">
           <Button
             type="button"
             variant="outline"

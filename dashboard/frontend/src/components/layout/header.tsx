@@ -11,6 +11,10 @@ export function Header() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
 
+  // Hide header on auth pages — they have their own branding
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+  if (isAuthPage) return null;
+
   const handleLogout = () => {
     logout();
     router.push("/login");

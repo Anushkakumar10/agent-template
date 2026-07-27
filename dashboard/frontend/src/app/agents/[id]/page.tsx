@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bot, Download, Rocket, ArrowLeft, Check, Layers, ExternalLink, RefreshCw, Terminal, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { Bot, Download, Rocket, ArrowLeft, Check, Layers, ExternalLink, RefreshCw, Terminal, ChevronDown, ChevronRight, Copy, Clock } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,7 +90,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 page-enter">
       <div>
         <Button asChild variant="ghost" size="sm" className="mb-4 text-xs">
           <Link href="/agents">
@@ -98,7 +98,22 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           </Link>
         </Button>
         <PageHeader
-          title={agent.name}
+          title={
+            <span className="flex items-center gap-3">
+              {agent.name}
+              <Badge
+                variant={agent.status === "deployed" ? "success" : "secondary"}
+                className="text-xs ml-1"
+              >
+                <span
+                  className={`status-dot mr-1.5 ${
+                    agent.status === "deployed" ? "status-dot--active" : "status-dot--idle"
+                  }`}
+                />
+                {agent.status}
+              </Badge>
+            </span>
+          }
           description={agent.description || "Configured full-stack AI agent project."}
           actions={
             <div className="flex items-center gap-2">
@@ -123,7 +138,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {/* Framework */}
-                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                <div className="rounded-xl border border-border/60 p-3 space-y-1 bg-secondary/20 transition-colors hover:bg-secondary/30">
                   <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Framework</p>
                   <div className="flex items-center gap-2 pt-0.5">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
@@ -150,7 +165,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* LLM Provider */}
-                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                <div className="rounded-xl border border-border/60 p-3 space-y-1 bg-secondary/20 transition-colors hover:bg-secondary/30">
                   <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">LLM Provider</p>
                   <div className="flex items-center gap-2 pt-0.5">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
@@ -175,7 +190,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Database */}
-                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                <div className="rounded-xl border border-border/60 p-3 space-y-1 bg-secondary/20 transition-colors hover:bg-secondary/30">
                   <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Database</p>
                   <div className="flex items-center gap-2 pt-0.5">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
@@ -188,7 +203,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* ORM */}
-                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                <div className="rounded-xl border border-border/60 p-3 space-y-1 bg-secondary/20 transition-colors hover:bg-secondary/30">
                   <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">ORM</p>
                   <div className="flex items-center gap-2 pt-0.5">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
@@ -201,7 +216,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Frontend */}
-                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                <div className="rounded-xl border border-border/60 p-3 space-y-1 bg-secondary/20 transition-colors hover:bg-secondary/30">
                   <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Frontend</p>
                   <div className="flex items-center gap-2 pt-0.5">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background p-1 border border-border shadow-xs">
@@ -218,7 +233,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Brand Color */}
-                <div className="rounded-xl border border-border p-3 space-y-1 bg-secondary/20">
+                <div className="rounded-xl border border-border/60 p-3 space-y-1 bg-secondary/20 transition-colors hover:bg-secondary/30">
                   <p className="text-[10px] text-muted-foreground uppercase font-mono font-semibold">Brand Color</p>
                   <div className="flex items-center gap-2 pt-0.5">
                     <span
@@ -240,7 +255,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {/* Collapsible JSON Configuration Panel */}
-              <div className="rounded-xl border border-border bg-secondary/20 overflow-hidden mt-2">
+              <div className="rounded-xl border border-border/60 bg-secondary/20 overflow-hidden mt-2">
                 <div
                   className="flex items-center justify-between p-3 cursor-pointer hover:bg-secondary/40 transition-colors select-none"
                   onClick={() => setJsonExpanded(!jsonExpanded)}
@@ -282,7 +297,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {jsonExpanded && (
-                  <div className="border-t border-border p-4 bg-background/60 relative group">
+                  <div className="border-t border-border/60 p-4 bg-background/60 relative group">
                     <pre className="font-mono text-xs overflow-x-auto max-h-80 text-foreground leading-relaxed">
                       {JSON.stringify(agent.config, null, 2)}
                     </pre>
@@ -300,38 +315,57 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             </CardHeader>
             <CardContent>
               {deployments.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No deployments triggered yet.</p>
+                <div className="py-8 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary/50 text-muted-foreground mx-auto mb-3">
+                    <Rocket className="h-5 w-5" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">No deployments yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Deploy your first service using the panel on the right to see deployment history here.
+                  </p>
+                </div>
               ) : (
-                <div className="space-y-4">
-                  {deployments.map((d) => (
-                    <div key={d.id} className="rounded-xl border border-border p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="brand" className="uppercase font-mono text-[10px]">
-                            {d.provider}
+                <div className="space-y-0 relative">
+                  {/* Timeline connector */}
+                  <div className="absolute left-[15px] top-4 bottom-4 w-[2px] bg-border/40 rounded-full" />
+
+                  {deployments.map((d, idx) => (
+                    <div key={d.id} className="relative pl-10 pb-6 last:pb-0">
+                      {/* Timeline dot */}
+                      <div className="absolute left-[10px] top-1 w-[12px] h-[12px] rounded-full border-2 border-brand bg-background z-10" />
+
+                      <div className="rounded-xl border border-border/60 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="brand" className="uppercase font-mono text-[10px]">
+                              {d.provider}
+                            </Badge>
+                            <span className="text-xs font-semibold">{d.target_type}</span>
+                          </div>
+                          <Badge variant="success">
+                            <span className="status-dot status-dot--active mr-1.5" />
+                            Active
                           </Badge>
-                          <span className="text-xs font-semibold">{d.target_type}</span>
                         </div>
-                        <Badge variant="success">Active</Badge>
+
+                        {d.deployment_url && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-muted-foreground">URL:</span>
+                            <a href={d.deployment_url} target="_blank" rel="noreferrer" className="text-brand font-medium hover:underline flex items-center gap-1">
+                              {d.deployment_url} <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </div>
+                        )}
+
+                        {d.logs && (
+                          <div>
+                            <p className="text-[10px] font-mono text-muted-foreground mb-1">Deployment Logs</p>
+                            <pre className="p-3 rounded-lg bg-black/80 text-emerald-400 font-mono text-[11px] overflow-x-auto">
+                              {d.logs}
+                            </pre>
+                          </div>
+                        )}
                       </div>
-
-                      {d.deployment_url && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-muted-foreground">URL:</span>
-                          <a href={d.deployment_url} target="_blank" rel="noreferrer" className="text-brand font-medium hover:underline flex items-center gap-1">
-                            {d.deployment_url} <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </div>
-                      )}
-
-                      {d.logs && (
-                        <div>
-                          <p className="text-[10px] font-mono text-muted-foreground mb-1">Deployment Logs</p>
-                          <pre className="p-3 rounded-lg bg-black/80 text-emerald-400 font-mono text-[11px] overflow-x-auto">
-                            {d.logs}
-                          </pre>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -355,7 +389,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                   className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 ${
                     selectedProvider === "vercel"
                       ? "border-brand bg-brand/5 shadow-sm ring-1 ring-brand/50"
-                      : "border-border hover:border-foreground/20"
+                      : "border-border/60 hover:border-foreground/20"
                   }`}
                 >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background p-1 border border-border shadow-xs mt-0.5">
@@ -373,7 +407,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                   className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 ${
                     selectedProvider === "render"
                       ? "border-brand bg-brand/5 shadow-sm ring-1 ring-brand/50"
-                      : "border-border hover:border-foreground/20"
+                      : "border-border/60 hover:border-foreground/20"
                   }`}
                 >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background p-1 border border-border shadow-xs mt-0.5">
