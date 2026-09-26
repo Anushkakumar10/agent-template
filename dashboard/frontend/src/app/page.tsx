@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, Plus, Download, Rocket, Cpu, Layers, ArrowRight, Database, Plug, Sparkles } from "lucide-react";
+import { Bot, Plus, Download, Rocket, Cpu, Layers, ArrowRight, Database, Plug, Sparkles, Github, Terminal, BookOpen, Shield } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,8 +14,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { HeroSection } from "@/components/landing/hero-section";
 import { TechMarquee } from "@/components/landing/tech-marquee";
-import { HowItWorks } from "@/components/landing/how-it-works";
 import { FeatureBentoGrid } from "@/components/landing/feature-bento-grid";
+import { HowItWorks } from "@/components/landing/how-it-works";
 import { ArchitectureDiagram } from "@/components/landing/architecture-diagram";
 import { ComparisonTable } from "@/components/landing/comparison-table";
 import { FaqSection } from "@/components/landing/faq-section";
@@ -60,23 +60,102 @@ export default function DashboardPage() {
   });
 
   /* ════════════════════════════════════════════════════════════════════
-     UNAUTHENTICATED MARKETING LANDING PAGE
+     UNAUTHENTICATED MARKETING LANDING PAGE (Vanguard System)
      ════════════════════════════════════════════════════════════════════ */
   if (!isAuthenticated) {
     return (
-      <div className="-mx-4 sm:-mx-8 -mt-6 -mb-6 page-enter min-h-screen bg-background text-foreground">
+      <div className="landing-root w-full min-h-screen bg-background text-foreground page-enter">
         <LandingNav />
         <main>
           <HeroSection />
           <TechMarquee />
-          <HowItWorks />
           <FeatureBentoGrid />
+          <HowItWorks />
           <ArchitectureDiagram />
           <ComparisonTable />
           <FaqSection />
         </main>
-        <footer className="py-8 border-t border-border/40 text-center text-xs text-muted-foreground bg-background">
-          <p>© 2026 Agent Template Generator. Open source under MIT License.</p>
+
+        {/* Global Studio 4-Column Footer */}
+        <footer className="border-t border-white/8 bg-[#07090F] py-16 text-xs text-muted-foreground">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+              {/* Column 1: Brand & Matrix Mark (2 cols) */}
+              <div className="col-span-2 space-y-4">
+                <Link href="/" className="flex items-center gap-2.5 font-semibold text-foreground tracking-tight">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand/10 border border-brand/30 text-brand">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="5" r="2" fill="currentColor" fillOpacity="0.2" />
+                      <circle cx="5" cy="18" r="2" fill="currentColor" fillOpacity="0.2" />
+                      <circle cx="19" cy="18" r="2" fill="currentColor" fillOpacity="0.2" />
+                      <path d="M12 7v10M6.5 16.5l11-9M17.5 16.5l-11-9" strokeOpacity="0.5" />
+                    </svg>
+                  </span>
+                  <span>Agent Template</span>
+                </Link>
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
+                  Production-grade FastAPI and Next.js full-stack scaffolding engine for autonomous AI agents, dense vector RAG, and enterprise connectors.
+                </p>
+                <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground/80">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span>Open Source under MIT License</span>
+                </div>
+              </div>
+
+              {/* Column 2: Frameworks */}
+              <div className="space-y-3">
+                <p className="font-mono text-xs uppercase tracking-wider text-foreground font-semibold">
+                  Frameworks
+                </p>
+                <ul className="space-y-2 text-xs">
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">PydanticAI</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">LangGraph</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">DeepAgents</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">LangChain</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">FastAPI Core</span></li>
+                </ul>
+              </div>
+
+              {/* Column 3: RAG & Infrastructure */}
+              <div className="space-y-3">
+                <p className="font-mono text-xs uppercase tracking-wider text-foreground font-semibold">
+                  Vector & Data
+                </p>
+                <ul className="space-y-2 text-xs">
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">Qdrant VectorStore</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">PostgreSQL pgvector</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">Milvus Distributed</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">Google Drive Sync</span></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">Amazon S3 Connector</span></li>
+                </ul>
+              </div>
+
+              {/* Column 4: Resources & CLI */}
+              <div className="space-y-3">
+                <p className="font-mono text-xs uppercase tracking-wider text-foreground font-semibold">
+                  Resources
+                </p>
+                <ul className="space-y-2 text-xs">
+                  <li><a href="#architecture" className="hover:text-foreground transition-colors">Architecture Guide</a></li>
+                  <li><a href="#comparison" className="hover:text-foreground transition-colors">Stack Comparison</a></li>
+                  <li><a href="#faq" className="hover:text-foreground transition-colors">FAQ</a></li>
+                  <li><Link href="/login" className="hover:text-foreground transition-colors">Developer Portal</Link></li>
+                  <li><span className="hover:text-foreground transition-colors cursor-pointer">CLI Reference</span></li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Bottom Row */}
+            <div className="pt-8 border-t border-white/6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-muted-foreground">
+              <p>© 2026 Agent Template Generator. Built for autonomous AI engineering teams.</p>
+              <div className="flex items-center gap-6 font-mono text-[11px]">
+                <span className="hover:text-foreground transition-colors cursor-pointer">Privacy</span>
+                <span className="hover:text-foreground transition-colors cursor-pointer">Terms</span>
+                <span className="hover:text-foreground transition-colors cursor-pointer">Security</span>
+                <span className="hover:text-foreground transition-colors cursor-pointer">MIT License</span>
+              </div>
+            </div>
+          </div>
         </footer>
       </div>
     );
@@ -89,7 +168,7 @@ export default function DashboardPage() {
   const deployedAgents = agents.filter((a) => a.status === "deployed").length;
 
   return (
-    <div className="space-y-8 pb-12 page-enter">
+    <div className="px-4 py-6 sm:px-8 max-w-7xl w-full mx-auto space-y-8 pb-12 page-enter">
       <PageHeader
         title={`Welcome back, ${user?.username || "Developer"}`}
         description="Configure, download, and manage your FastAPI + Next.js AI agent projects."

@@ -1,155 +1,306 @@
 "use client";
 
-import { Cpu, Database, RefreshCw, Shield, Zap, Lock, Search, FileText, CheckCircle2, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import {
+  Cpu,
+  Database,
+  RefreshCw,
+  Shield,
+  Zap,
+  Lock,
+  Search,
+  FileText,
+  CheckCircle2,
+  ArrowRight,
+  Terminal,
+  Activity,
+  Layers,
+  Sparkles,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function FeatureBentoGrid() {
+  const [selectedFwTab, setSelectedFwTab] = useState<"pydantic" | "langgraph" | "deep">("pydantic");
+  const [similarityScore, setSimilarityScore] = useState(0.94);
+
   return (
-    <section id="features" className="py-20 md:py-28 border-b border-border/40 bg-secondary/10 relative">
-      <div className="mx-auto max-w-6xl px-4 sm:px-8 space-y-14">
+    <section id="frameworks" className="py-24 md:py-32 relative overflow-hidden">
+      {/* Ambient Radial Accent Glow */}
+      <div className="ambient-glow-accent top-1/3 left-1/4" />
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Section Header */}
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand mb-4">
-            FEATURE BENTO
-          </div>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-            Everything your agent needs, <span className="gradient-text italic font-normal">pre-configured.</span>
+        <div className="max-w-3xl space-y-3">
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            Architecture built for autonomous production.
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-            Stop spending weeks wiring up vector databases, PDF parsers, background task queues, and authentication. Everything is built and ready for day one.
+          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">
+            Every layer of the generated repository is modular, strictly typed, and verified with automated test suites before you write a single line of business logic.
           </p>
         </div>
 
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: 5 AI Frameworks (Wide 2 columns) */}
-          <div className="md:col-span-2 rounded-2xl border border-border/60 bg-card p-6 space-y-6 card-lift gradient-border-top flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-semibold text-brand uppercase tracking-wider">AI Frameworks</span>
-                <Badge variant="outline" className="font-mono text-[10px]">5 Framework Options</Badge>
+        {/* Asymmetrical Bento Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* =========================================================================
+              Card 1: Multi-Framework Orchestration Engine (8 Columns)
+             ========================================================================= */}
+          <div className="lg:col-span-8 double-bezel">
+            <div className="double-bezel-inner p-6 sm:p-8 flex flex-col justify-between h-full space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs uppercase tracking-wider text-brand font-semibold flex items-center gap-1.5">
+                    <Cpu className="h-3.5 w-3.5" />
+                    Agent Orchestration Engine
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground bg-white/5 px-2.5 py-0.5 rounded-full border border-white/8">
+                    5 Framework Blueprints
+                  </span>
+                </div>
+                <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                  Choose the orchestrator tailored to your execution model.
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-xl">
+                  Whether your system requires type-safe Pydantic structured output, LangGraph cyclical state graphs, or DeepAgents hierarchical actor teams.
+                </p>
               </div>
-              <h3 className="font-display text-xl font-bold text-foreground tracking-tight">
-                Pick the perfect orchestrator for your agent flow.
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed max-w-lg">
-                Whether you need PydanticAI for type-safe structured data, LangGraph for cyclical stateful graphs, or DeepAgents for multi-actor teams.
-              </p>
-            </div>
 
-            {/* Framework Badges Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-              {[
-                { name: "PydanticAI", logo: "/logos/pydantic.svg", desc: "Type-safe + Logfire" },
-                { name: "LangChain", logo: "/logos/langchain.svg", desc: "Standard Ecosystem" },
-                { name: "LangGraph", logo: "/logos/langgraph.svg", desc: "Cyclical Graphs" },
-                { name: "DeepAgents", logo: "/logos/deepagents.svg", desc: "Hierarchical Teams" },
-                { name: "PydanticDeep", logo: "/logos/pydantic.svg", desc: "Deep Reasoning" },
-                { name: "FastAPI Core", logo: "/logos/python.svg", desc: "Raw Async Backend" },
-              ].map((fw) => (
-                <div key={fw.name} className="p-3 rounded-xl border border-border/60 bg-secondary/30 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <img src={fw.logo} alt="" className="h-4 w-4 object-contain" />
-                    <span className="font-semibold text-xs text-foreground">{fw.name}</span>
+              {/* Interactive Framework Demonstrator Tabs */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 border-b border-white/8 pb-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFwTab("pydantic")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
+                      selectedFwTab === "pydantic"
+                        ? "bg-brand text-brand-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    }`}
+                  >
+                    PydanticAI (Type-Safe)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFwTab("langgraph")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
+                      selectedFwTab === "langgraph"
+                        ? "bg-brand text-brand-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    }`}
+                  >
+                    LangGraph (Cyclic Graph)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFwTab("deep")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
+                      selectedFwTab === "deep"
+                        ? "bg-brand text-brand-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    }`}
+                  >
+                    DeepAgents (Multi-Actor)
+                  </button>
+                </div>
+
+                {/* Tab Output Body */}
+                <div className="rounded-xl border border-white/8 bg-[#090B12] p-4 font-mono text-xs text-muted-foreground space-y-2">
+                  {selectedFwTab === "pydantic" && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-foreground font-semibold">
+                        <span>PydanticAI + Logfire Observability</span>
+                        <span className="text-emerald-400 font-mono text-[10px]">Zero Schema Errors</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Guaranteed JSON schema output with runtime Pydantic V2 validation and zero-configuration OpenTelemetry tracing via Logfire.
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedFwTab === "langgraph" && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-foreground font-semibold">
+                        <span>Cyclical State Machine + Checkpointing</span>
+                        <span className="text-brand font-mono text-[10px]">LangSmith Ready</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Stateful workflows with conditional looping, human-in-the-loop intervention approval hooks, and persistent Postgres checkpoints.
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedFwTab === "deep" && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-foreground font-semibold">
+                        <span>Hierarchical Multi-Agent Swarms</span>
+                        <span className="text-purple-400 font-mono text-[10px]">Parallel Consensus</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Coordinated actor teams featuring specialized research, verification, and summarization agents with unanimous synthesis.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* =========================================================================
+              Card 2: Production Vector RAG Pipeline (4 Columns)
+             ========================================================================= */}
+          <div id="rag" className="lg:col-span-4 double-bezel">
+            <div className="double-bezel-inner p-6 sm:p-8 flex flex-col justify-between h-full space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs uppercase tracking-wider text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <Database className="h-3.5 w-3.5" />
+                    Vector RAG Core
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground bg-white/5 px-2.5 py-0.5 rounded-full border border-white/8">
+                    4 Engines
+                  </span>
+                </div>
+                <h3 className="font-display text-lg sm:text-xl font-bold text-foreground tracking-tight">
+                  Dense & Hybrid Similarity Search
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Plug-and-play vector store abstractions for Qdrant, Milvus, ChromaDB, and PostgreSQL pgvector.
+                </p>
+              </div>
+
+              {/* Similarity Distance Meter */}
+              <div className="space-y-2.5 pt-2">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-muted-foreground">Simulated Relevance Score:</span>
+                  <span className="text-emerald-400 font-bold">{similarityScore.toFixed(3)}</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-brand to-emerald-400 rounded-full transition-all duration-300"
+                    style={{ width: `${similarityScore * 100}%` }}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-2 text-[10px] font-mono text-center">
+                  <div className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
+                    <div className="text-foreground font-semibold">Qdrant</div>
+                    <div className="text-emerald-400">0.962</div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">{fw.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Card 2: 4 Vector DBs */}
-          <div className="rounded-2xl border border-border/60 bg-card p-6 space-y-6 card-lift flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-semibold text-brand uppercase tracking-wider">Vector Store RAG</span>
-                <Badge variant="outline" className="font-mono text-[10px]">4 Stores</Badge>
-              </div>
-              <h3 className="font-display text-lg font-bold text-foreground tracking-tight">
-                Vector DBs & Embeddings
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Connect Milvus, Qdrant, ChromaDB, or pgvector for similarity & hybrid search.
-              </p>
-            </div>
-
-            {/* Simulated Relevance Results */}
-            <div className="space-y-2 pt-2 font-mono text-[11px]">
-              <div className="p-2.5 rounded-lg border border-border/60 bg-background/80 flex items-center justify-between">
-                <span className="text-foreground truncate max-w-[140px]">Qdrant VectorStore</span>
-                <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">0.96 score</span>
-              </div>
-              <div className="p-2.5 rounded-lg border border-border/60 bg-background/80 flex items-center justify-between">
-                <span className="text-foreground truncate max-w-[140px]">pgvector Hybrid</span>
-                <span className="text-brand font-bold bg-brand/10 px-1.5 py-0.5 rounded">0.91 score</span>
-              </div>
-              <div className="p-2.5 rounded-lg border border-border/60 bg-background/80 flex items-center justify-between">
-                <span className="text-foreground truncate max-w-[140px]">Milvus / Chroma</span>
-                <span className="text-purple-400 font-bold bg-purple-500/10 px-1.5 py-0.5 rounded">0.88 score</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Multi-Source Sync */}
-          <div className="rounded-2xl border border-border/60 bg-card p-6 space-y-6 card-lift flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-semibold text-brand uppercase tracking-wider">Sync Connectors</span>
-                <Badge variant="outline" className="font-mono text-[10px]">Auto Sync</Badge>
-              </div>
-              <h3 className="font-display text-lg font-bold text-foreground tracking-tight">
-                Document Source Connectors
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Sync files from Google Drive, Amazon S3, local directory CLI commands, and API uploads.
-              </p>
-            </div>
-
-            <div className="space-y-2 pt-2 text-xs">
-              {[
-                { icon: RefreshCw, title: "Scheduled Sync", desc: "Automatic background document indexing." },
-                { icon: FileText, title: "PDF Parsers", desc: "PyMuPDF, LiteParse, LlamaParse runtime selection." },
-                { icon: Lock, title: "Granular Security", desc: "Row-level security and permission controls." },
-              ].map((b, idx) => (
-                <div key={idx} className="flex items-start gap-2.5">
-                  <b.icon className="h-4 w-4 text-brand shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-foreground">{b.title}</span>
-                    <p className="text-[11px] text-muted-foreground">{b.desc}</p>
+                  <div className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
+                    <div className="text-foreground font-semibold">pgvector</div>
+                    <div className="text-brand">0.914</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
+                    <div className="text-foreground font-semibold">Milvus</div>
+                    <div className="text-purple-400">0.898</div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
 
-          {/* Card 4: Enterprise Battery (Wide 2 columns) */}
-          <div className="md:col-span-2 rounded-2xl border border-border/60 bg-card p-6 space-y-6 card-lift gradient-border-top flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-semibold text-brand uppercase tracking-wider">Enterprise Ready</span>
-                <Badge variant="outline" className="font-mono text-[10px]">Production Grade</Badge>
-              </div>
-              <h3 className="font-display text-xl font-bold text-foreground tracking-tight">
-                Full-stack infrastructure built-in out of the box.
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed max-w-lg">
-                No need to assemble auth, billing, background task workers, or containerization from scratch.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              {[
-                { title: "Stripe Billing", desc: "Subscriptions & Webhooks", logo: "/logos/stripe.svg" },
-                { title: "JWT Auth", desc: "Multi-tenant Teams", logo: "/logos/nextjs.svg" },
-                { title: "Celery Queue", desc: "Redis Background Tasks", logo: "/logos/python.svg" },
-                { title: "Docker Compose", desc: "PostgreSQL & Vector DBs", logo: "/logos/postgresql.svg" },
-              ].map((ent) => (
-                <div key={ent.title} className="p-3 rounded-xl border border-border/60 bg-secondary/30 space-y-1">
-                  <img src={ent.logo} alt="" className="h-4 w-4 object-contain mb-1" />
-                  <span className="font-semibold text-xs text-foreground block">{ent.title}</span>
-                  <p className="text-[10px] text-muted-foreground">{ent.desc}</p>
+          {/* =========================================================================
+              Card 3: Scheduled Document Connectors (4 Columns)
+             ========================================================================= */}
+          <div id="connectors" className="lg:col-span-4 double-bezel">
+            <div className="double-bezel-inner p-6 sm:p-8 flex flex-col justify-between h-full space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs uppercase tracking-wider text-brand font-semibold flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Sync Connectors
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground bg-white/5 px-2.5 py-0.5 rounded-full border border-white/8">
+                    Auto Indexing
+                  </span>
                 </div>
-              ))}
+                <h3 className="font-display text-lg sm:text-xl font-bold text-foreground tracking-tight">
+                  Multi-Source Sync Pipelines
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Background document sync with scheduled chron daemons and PDF parser selection.
+                </p>
+              </div>
+
+              {/* Source List */}
+              <div className="space-y-2 pt-1 text-xs">
+                {[
+                  { name: "Google Drive Service Account", schedule: "Every 15m", status: "Active" },
+                  { name: "Amazon S3 / MinIO Buckets", schedule: "Real-time Event", status: "Listening" },
+                  { name: "Local Directory CLI Command", schedule: "On-demand", status: "Ready" },
+                ].map((s) => (
+                  <div
+                    key={s.name}
+                    className="p-2.5 rounded-lg border border-white/6 bg-white/[0.02] flex items-center justify-between"
+                  >
+                    <div>
+                      <span className="font-medium text-foreground text-xs block">{s.name}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{s.schedule}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      {s.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* =========================================================================
+              Card 4: Full-Stack Enterprise Battery (8 Columns)
+             ========================================================================= */}
+          <div className="lg:col-span-8 double-bezel">
+            <div className="double-bezel-inner p-6 sm:p-8 flex flex-col justify-between h-full space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs uppercase tracking-wider text-foreground font-semibold flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-brand" />
+                    Full-Stack Battery
+                  </span>
+                  <span className="font-mono text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                    Production Infrastructure
+                  </span>
+                </div>
+                <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                  Zero scaffold assembly. Complete foundation on day one.
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-xl">
+                  Auth, billing, asynchronous background queues, and container recipes ship pre-configured in your generated repository.
+                </p>
+              </div>
+
+              {/* Enterprise Capabilities 4-Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                {[
+                  {
+                    title: "Stripe Billing",
+                    desc: "Webhooks & Subscriptions",
+                    icon: Zap,
+                  },
+                  {
+                    title: "JWT & Multi-Tenant",
+                    desc: "Role-based Team Access",
+                    icon: Lock,
+                  },
+                  {
+                    title: "Celery + Redis",
+                    desc: "Distributed Background Jobs",
+                    icon: Activity,
+                  },
+                  {
+                    title: "Docker Compose",
+                    desc: "Postgres + Vector DB Recipes",
+                    icon: Layers,
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    className="p-3.5 rounded-xl border border-white/6 bg-white/[0.02] space-y-1.5 hover:border-brand/40 transition-colors"
+                  >
+                    <item.icon className="h-4 w-4 text-brand" />
+                    <span className="font-semibold text-xs text-foreground block">{item.title}</span>
+                    <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -1,72 +1,109 @@
 "use client";
 
-import { Sliders, Download, Terminal, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { Sliders, Download, Terminal, ArrowRight, Check, Code, Rocket, CheckCircle2 } from "lucide-react";
 
-const STEPS = [
+const PIPELINE_STEPS = [
   {
     num: "01",
-    icon: Sliders,
-    title: "Configure Your Stack",
-    description: "Choose your AI framework (PydanticAI, LangGraph, etc.), LLM provider, vector database, and extra capabilities like Stripe billing or MCP tools.",
-    detail: "Interactive wizard or Click CLI",
+    title: "Configure Stack",
+    summary: "CLI wizard or declarative flags",
+    description:
+      "Select your AI agent framework, LLM provider, vector database, and enterprise features via Questionary interactive prompts or single-command flags.",
+    snippet: "ak-agent-template create my_agent \\\n  --framework pydantic_ai \\\n  --database postgresql \\\n  --rag --task-queue celery",
   },
   {
     num: "02",
-    icon: Download,
-    title: "Generate Production Code",
-    description: "Click generate to invoke Cookiecutter with post-gen formatting hooks. Download a clean ZIP package with FastAPI backend and optional Next.js frontend.",
-    detail: "Clean modular repository",
+    title: "Generate Repository",
+    summary: "Cookiecutter + Post-Gen Hooks",
+    description:
+      "Cookiecutter generates clean modular Python and TypeScript code. Post-generation hooks immediately validate syntax, run Ruff formatting, and set up git tracking.",
+    snippet: "[ok] Generated FastAPI backend (/backend)\n[ok] Generated Next.js 15 UI (/frontend)\n[ok] Configured Qdrant & pgvector adapters\n[ok] Formatted with Ruff (100% compliant)",
   },
   {
     num: "03",
-    icon: Terminal,
-    title: "Run Local & Deploy Cloud",
-    description: "Run `uv sync` to install dependencies, spin up Docker services, and deploy seamlessly to Vercel (frontend) or Render (backend API).",
-    detail: "Instant docker compose up",
+    title: "Run & Deploy",
+    summary: "uv sync & Instant Docker boot",
+    description:
+      "Install dependencies with uv in under 2 seconds, spin up local vector stores with Docker Compose, and push to production on Render and Vercel.",
+    snippet: "$ uv sync\n$ docker compose up -d\n$ uv run uvicorn app.main:app --reload\n-> Application active on http://localhost:8000",
   },
 ];
 
 export function HowItWorks() {
+  const [activeStep, setActiveStep] = useState(0);
+
   return (
-    <section id="how-it-works" className="py-20 md:py-28 border-b border-border/40 bg-background relative">
-      <div className="mx-auto max-w-6xl px-4 sm:px-8 space-y-14">
+    <section id="how-it-works" className="py-24 md:py-32 border-t border-white/6 bg-[#090B12]/60 relative">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Section Header */}
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand mb-4">
-            HOW IT WORKS
-          </div>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-            Get started in <span className="gradient-text italic font-normal">three simple steps.</span>
+        <div className="max-w-3xl space-y-3">
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            From zero to running agent in three steps.
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-            From initial stack selection to local execution, experience a frictionless developer workflow designed to get AI agents into production fast.
+          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">
+            A frictionless developer experience designed for engineering velocity and strict code cleanliness.
           </p>
         </div>
 
-        {/* 3 Steps Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {STEPS.map((step) => (
-            <div
-              key={step.num}
-              className="rounded-2xl border border-border/60 bg-card/60 p-6 space-y-4 card-lift flex flex-col justify-between"
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-2xl font-bold text-brand">{step.num}</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand border border-brand/20">
-                    <step.icon className="h-5 w-5" />
+        {/* 3 Steps Pipeline Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Step Selectors (Left 5 Cols) */}
+          <div className="lg:col-span-5 space-y-4">
+            {PIPELINE_STEPS.map((step, idx) => {
+              const isSelected = activeStep === idx;
+              return (
+                <button
+                  key={step.num}
+                  type="button"
+                  onClick={() => setActiveStep(idx)}
+                  className={`w-full text-left p-5 rounded-2xl border transition-all duration-300 ${
+                    isSelected
+                      ? "border-brand/60 bg-brand/10 ring-1 ring-brand/30 shadow-lg"
+                      : "border-white/6 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/12"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono text-xs font-bold text-brand">{step.num}</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">{step.summary}</span>
                   </div>
-                </div>
-                <h3 className="font-display text-lg font-semibold text-foreground tracking-tight">{step.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{step.description}</p>
+                  <h3 className="font-display text-lg font-bold text-foreground tracking-tight">
+                    {step.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    {step.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Step Execution Inspector (Right 7 Cols) */}
+          <div className="lg:col-span-7 double-bezel">
+            <div className="double-bezel-inner p-5 sm:p-7 flex flex-col justify-between h-full space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-white/8 text-xs font-mono text-muted-foreground">
+                <span className="flex items-center gap-2 text-foreground font-semibold">
+                  <Terminal className="h-4 w-4 text-brand" />
+                  Step {PIPELINE_STEPS[activeStep].num}: {PIPELINE_STEPS[activeStep].title} Terminal Execution
+                </span>
+                <span className="text-[11px] text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> Ready
+                </span>
               </div>
 
-              <div className="pt-4 border-t border-border/40 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                <span>{step.detail}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-brand" />
+              {/* Terminal Code Execution Output */}
+              <div className="rounded-xl border border-white/6 bg-[#07080D] p-5 font-mono text-xs overflow-x-auto min-h-[220px]">
+                <pre className="text-foreground/90 leading-relaxed font-mono">
+                  <code>{PIPELINE_STEPS[activeStep].snippet}</code>
+                </pre>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                <span>Deterministic Cookiecutter output</span>
+                <span className="text-brand">uv · ruff · mypy</span>
               </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>
