@@ -55,7 +55,7 @@ export default function RegisterPage() {
         {/* Subtle grid overlay */}
         <div className="absolute inset-0 dot-grid opacity-40" />
 
-        {/* Glow accent — shifted position for visual variety */}
+        {/* Glow accent: shifted position for visual variety */}
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-brand/10 blur-[80px]" />
 
         <div className="relative z-10">
@@ -79,7 +79,7 @@ export default function RegisterPage() {
           {/* Highlights */}
           <div className="space-y-3 pt-2">
             {[
-              { icon: Bot, text: "5 AI frameworks — PydanticAI, LangChain, LangGraph, DeepAgents" },
+              { icon: Bot, text: "5 AI frameworks: PydanticAI, LangChain, LangGraph, DeepAgents" },
               { icon: Zap, text: "One-click project generation with ZIP download" },
               { icon: Shield, text: "Full-stack: FastAPI backend + Next.js frontend" },
             ].map((item, i) => (

@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agent Template — Production FastAPI + Next.js AI Agent Generator",
+  title: "Agent Template | Production FastAPI + Next.js AI Agent Generator",
   description: "Configure and generate production-ready full-stack AI agent projects with 5 frameworks, 4 vector databases, and 20+ enterprise integrations.",
 };
 
@@ -32,10 +32,16 @@ export default function RootLayout({
         className="min-h-screen bg-background text-foreground font-sans antialiased selection:bg-brand/20 selection:text-brand"
         suppressHydrationWarning
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-brand focus:text-brand-foreground focus:rounded-md focus:shadow-xl focus:outline-none"
+        >
+          Skip to main content
+        </a>
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 sm:px-8 [&:has(.landing-root)]:max-w-none [&:has(.landing-root)]:p-0">
+            <main id="main-content" className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 sm:px-8 [&:has(.landing-root)]:max-w-none [&:has(.landing-root)]:p-0">
               {children}
             </main>
           </div>

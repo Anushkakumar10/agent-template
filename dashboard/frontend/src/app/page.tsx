@@ -187,13 +187,13 @@ export default function DashboardPage() {
         {[
           {
             label: "Total Projects",
-            value: isLoading ? "—" : activeAgents,
+            value: isLoading ? "-" : activeAgents,
             sub: "Configured AI projects",
             icon: Bot,
           },
           {
             label: "Deployed Services",
-            value: isLoading ? "—" : deployedAgents,
+            value: isLoading ? "-" : deployedAgents,
             sub: "Active cloud deployments",
             icon: Rocket,
           },

@@ -167,7 +167,7 @@ export function HeroSection() {
           {/* Restrained Eyebrow Badge (1 of allowed 3 across the entire page) */}
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-mono tracking-wider text-muted-foreground">
             <span className="status-dot status-dot--active" />
-            <span className="text-foreground font-medium">v2.4 RELEASE</span>
+            <span className="text-foreground font-medium">FULL-STACK AGENT ARCHITECTURE</span>
             <span className="text-white/30">•</span>
             <span>FASTAPI + NEXT.JS 15</span>
           </div>
@@ -193,7 +193,7 @@ export function HeroSection() {
               className="btn-island group h-12 px-5 py-2 text-sm font-semibold shadow-lg shadow-brand/25 border border-brand/40"
             >
               <Link href="/register">
-                <span>Initialize Stack Free</span>
+                <span>Initialize Stack</span>
                 <span className="btn-island-badge h-7 w-7 bg-white/20">
                   <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                 </span>

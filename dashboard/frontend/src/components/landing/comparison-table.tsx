@@ -101,7 +101,7 @@ function RenderStatus(status: string) {
 
 export function ComparisonTable() {
   return (
-    <section id="comparison" className="py-24 md:py-32 border-t border-white/6 bg-[#090B12]/50 relative">
+    <section id="comparison" className="py-24 md:py-32 border-t border-white/6 bg-[#090B12]/50 relative scroll-mt-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Section Header */}
         <div className="max-w-3xl space-y-3">

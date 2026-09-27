@@ -38,8 +38,8 @@ export function LandingNav() {
           <span className="font-semibold text-sm tracking-tight text-foreground">
             Agent Template
           </span>
-          <span className="hidden sm:inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
-            v2.4
+          <span className="hidden sm:inline-flex items-center rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-mono text-brand font-medium">
+            Open Source
           </span>
         </Link>
 
@@ -178,7 +178,7 @@ export function LandingNav() {
               </Button>
               <Button asChild variant="brand" size="sm" className="w-full justify-center">
                 <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                  Initialize Stack Free
+                  Initialize Stack
                 </Link>
               </Button>
             </div>

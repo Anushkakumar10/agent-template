@@ -34,7 +34,7 @@ export function HowItWorks() {
   const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <section id="how-it-works" className="py-24 md:py-32 border-t border-white/6 bg-[#090B12]/60 relative">
+    <section id="how-it-works" className="py-24 md:py-32 border-t border-white/6 bg-[#090B12]/60 relative scroll-mt-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Section Header */}
         <div className="max-w-3xl space-y-3">

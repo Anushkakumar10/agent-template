@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 /* =========================================================================
-   Vanguard Design Tokens — Dark Developer / Builder System
+   Vanguard Design Tokens: Dark Developer / Builder System
    Perceptually uniform OKLCH color space.
    ========================================================================= */
 
 @theme {
-  /* Brand Primary Accent — Electric Cobalt */
+  /* Brand Primary Accent: Electric Cobalt */
   --brand-h: 258;
   --brand-c: 0.22;
   --brand-l: 62%;
@@ -57,7 +57,7 @@
   --duration-slow: 450ms;
 }
 
-/* Dark theme — Cohesive Slate Obsidian System */
+/* Dark theme: Cohesive Slate Obsidian System */
 :root.dark {
   --color-background: oklch(11% 0.012 260);           /* #08090E Canvas */
   --color-foreground: oklch(98% 0.005 260);           /* High contrast Text */
@@ -192,7 +192,7 @@
   z-index: 0;
 }
 
-/* Dot grid — subtle texture */
+/* Dot grid: subtle texture */
 .dot-grid {
   background-image: radial-gradient(
     circle,

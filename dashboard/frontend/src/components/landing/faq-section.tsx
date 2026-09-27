@@ -45,7 +45,7 @@ export function FaqSection() {
   };
 
   return (
-    <section id="faq" className="py-24 md:py-32 relative overflow-hidden">
+    <section id="faq" className="py-24 md:py-32 relative overflow-hidden scroll-mt-24">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-20">
         {/* Section Header */}
         <div className="text-center space-y-3 max-w-xl mx-auto">
@@ -129,7 +129,7 @@ export function FaqSection() {
                   className="btn-island group h-12 px-6 py-2 text-sm font-semibold shadow-xl shadow-brand/30 border border-brand/40"
                 >
                   <Link href="/register">
-                    <span>Initialize Stack Free</span>
+                    <span>Initialize Stack</span>
                     <span className="btn-island-badge h-7 w-7 bg-white/20">
                       <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                     </span>

@@ -70,7 +70,7 @@ export function ArchitectureDiagram() {
   const [selectedNode, setSelectedNode] = useState(0);
 
   return (
-    <section id="architecture" className="py-24 md:py-32 relative overflow-hidden">
+    <section id="architecture" className="py-24 md:py-32 relative overflow-hidden scroll-mt-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Section Header */}
         <div className="max-w-3xl space-y-3">

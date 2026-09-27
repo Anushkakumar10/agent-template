@@ -24,7 +24,7 @@ export function FeatureBentoGrid() {
   const [similarityScore, setSimilarityScore] = useState(0.94);
 
   return (
-    <section id="frameworks" className="py-24 md:py-32 relative overflow-hidden">
+    <section id="frameworks" className="py-24 md:py-32 relative overflow-hidden scroll-mt-24">
       {/* Ambient Radial Accent Glow */}
       <div className="ambient-glow-accent top-1/3 left-1/4" />
 
@@ -147,7 +147,7 @@ export function FeatureBentoGrid() {
           {/* =========================================================================
               Card 2: Production Vector RAG Pipeline (4 Columns)
              ========================================================================= */}
-          <div id="rag" className="lg:col-span-4 double-bezel">
+          <div id="rag" className="lg:col-span-4 double-bezel scroll-mt-24">
             <div className="double-bezel-inner p-6 sm:p-8 flex flex-col justify-between h-full space-y-6">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -200,7 +200,7 @@ export function FeatureBentoGrid() {
           {/* =========================================================================
               Card 3: Scheduled Document Connectors (4 Columns)
              ========================================================================= */}
-          <div id="connectors" className="lg:col-span-4 double-bezel">
+          <div id="connectors" className="lg:col-span-4 double-bezel scroll-mt-24">
             <div className="double-bezel-inner p-6 sm:p-8 flex flex-col justify-between h-full space-y-6">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
